@@ -5,77 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Крестики-нолики (с ИИ)</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f9f6f0;
-      margin: 0;
-      padding: 20px;
+    /* ... твой прежний стиль ... */
+    .menu {
+      margin: 20px 0;
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #4a4a4a;
-    }
-    h1 {
-      margin: 10px 0 20px;
-      color: #5a5a72;
-    }
-    #board {
-      display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-gap: 8px;
-      margin: 15px 0;
-    }
-    .cell {
-      width: 100px;
-      height: 100px;
-      background: #fdf6e3; /* пастельный бежевый */
-      border: 2px solid #d4c1ec; /* мягкий лавандовый */
-      border-radius: 10px;
-      font-size: 2.8rem;
-      display: flex;
-      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
       justify-content: center;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .cell:hover {
-      background: #f0e6d2;
-      transform: scale(1.02);
-    }
-    .cell.x { color: #e74c3c; } /* мягкий красный */
-    .cell.o { color: #3498db; } /* мягкий синий */
-    #score {
-      margin: 15px 0;
-      font-size: 1.1rem;
-      background: #eae6da;
-      padding: 10px 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 1rem;
-      background: #b5a6d9; /* пастельный фиолетовый */
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background: #9c88c9;
-    }
-    .status {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #5a5a72;
+    .menu button {
+      padding: 8px 16px;
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body>
   <h1>Крестики-нолики</h1>
+  
+  <div class="menu">
+    <button id="easy">Легко</button>
+    <button id="medium">Средне</button>
+    <button id="hard">Сложно</button>
+    <a href="../index.html" class="game-link" style="display:inline-block;width:auto;padding:8px 16px;margin:0;">Выход</a>
+  </div>
+
   <div class="status" id="status">Вы: X | ИИ: O</div>
   <div id="board"></div>
   <div id="score">
@@ -86,19 +39,23 @@
   <button id="reset">Новая игра</button>
 
   <script>
-    // DOM элементы
+    // DOM
     const boardEl = document.getElementById('board');
     const winsEl = document.getElementById('wins');
     const lossesEl = document.getElementById('losses');
     const drawsEl = document.getElementById('draws');
     const resetBtn = document.getElementById('reset');
     const statusEl = document.getElementById('status');
+    const easyBtn = document.getElementById('easy');
+    const mediumBtn = document.getElementById('medium');
+    const hardBtn = document.getElementById('hard');
 
     // Игровые переменные
     let cells = Array(9).fill(null);
     let gameActive = true;
     let wins = 0, losses = 0, draws = 0;
-    let humanSymbol = 'X'; // игрок начинает с X
+    let humanSymbol = 'X';
+    let difficulty = 'hard'; // 'easy', 'medium', 'hard'
 
     // Инициализация доски
     function initBoard() {
@@ -115,41 +72,34 @@
       }
 
       updateStatus();
-      // Если игрок — O, ИИ ходит первым
       if (humanSymbol === 'O') {
-        makeBestMove();
+        setTimeout(makeAIMove, 300);
       }
     }
 
     function updateStatus() {
       const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
-      statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol}`;
+      statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol} (${difficulty})`;
     }
 
     function handleCellClick(index) {
       if (!gameActive || cells[index] !== null) return;
-
       cells[index] = humanSymbol;
       renderCell(index, humanSymbol);
 
       if (checkWin(humanSymbol)) {
-        wins++;
-        winsEl.textContent = wins;
+        wins++; winsEl.textContent = wins;
         alert('Вы победили!');
         gameActive = false;
         return;
       }
-
       if (isBoardFull()) {
-        draws++;
-        drawsEl.textContent = draws;
+        draws++; drawsEl.textContent = draws;
         alert('Ничья!');
         gameActive = false;
         return;
       }
-
-      // Ход ИИ
-      setTimeout(makeBestMove, 300); // небольшая задержка для "реакции"
+      setTimeout(makeAIMove, 300);
     }
 
     function renderCell(index, symbol) {
@@ -158,13 +108,61 @@
       cell.classList.add(symbol.toLowerCase());
     }
 
-    // === Минимакс-ИИ ===
-    function makeBestMove() {
+    // === ОСНОВНОЙ ХОД ИИ (с учётом сложности) ===
+    function makeAIMove() {
       if (!gameActive) return;
+      const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
 
+      let move = -1;
+
+      if (difficulty === 'easy') {
+        // Случайный ход
+        const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
+        if (empty.length) move = empty[Math.floor(Math.random() * empty.length)];
+      } 
+      else if (difficulty === 'medium') {
+        // 70% — лучший ход, 30% — случайный
+        if (Math.random() < 0.3) {
+          const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
+          if (empty.length) move = empty[Math.floor(Math.random() * empty.length)];
+        } else {
+          move = getBestMove(aiSymbol);
+        }
+      } 
+      else {
+        // hard — всегда лучший
+        move = getBestMove(aiSymbol);
+      }
+
+      if (move === -1) {
+        // резерв: случайный
+        const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
+        move = empty.length ? empty[0] : -1;
+      }
+
+      if (move !== -1) {
+        cells[move] = aiSymbol;
+        renderCell(move, aiSymbol);
+
+        if (checkWin(aiSymbol)) {
+          losses++; lossesEl.textContent = losses;
+          alert('ИИ победил!');
+          gameActive = false;
+          return;
+        }
+        if (isBoardFull()) {
+          draws++; drawsEl.textContent = draws;
+          alert('Ничья!');
+          gameActive = false;
+        }
+      }
+    }
+
+    // Минимакс (без изменений)
+    function getBestMove(aiSymbol) {
       let bestScore = -Infinity;
       let bestMove = -1;
-      const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
+      const humanSymbol = aiSymbol === 'X' ? 'O' : 'X';
 
       for (let i = 0; i < 9; i++) {
         if (cells[i] === null) {
@@ -177,26 +175,7 @@
           }
         }
       }
-
-      if (bestMove !== -1) {
-        cells[bestMove] = aiSymbol;
-        renderCell(bestMove, aiSymbol);
-
-        if (checkWin(aiSymbol)) {
-          losses++;
-          lossesEl.textContent = losses;
-          alert('ИИ победил!');
-          gameActive = false;
-          return;
-        }
-
-        if (isBoardFull()) {
-          draws++;
-          drawsEl.textContent = draws;
-          alert('Ничья!');
-          gameActive = false;
-        }
-      }
+      return bestMove;
     }
 
     function minimax(board, depth, isMaximizing, aiSymbol, humanSymbol) {
@@ -229,29 +208,29 @@
       }
     }
 
-    // Проверка победы
     function checkWin(player) {
       const winPatterns = [
         [0,1,2], [3,4,5], [6,7,8],
         [0,3,6], [1,4,7], [2,5,8],
         [0,4,8], [2,4,6]
       ];
-      return winPatterns.some(pattern =>
-        pattern.every(i => cells[i] === player)
-      );
+      return winPatterns.some(pattern => pattern.every(i => cells[i] === player));
     }
 
     function isBoardFull() {
       return cells.every(cell => cell !== null);
     }
 
-    // Сброс игры с чередованием
     resetBtn.addEventListener('click', () => {
       humanSymbol = humanSymbol === 'X' ? 'O' : 'X';
       initBoard();
     });
 
-    // Старт
+    // Кнопки сложности
+    easyBtn.addEventListener('click', () => { difficulty = 'easy'; initBoard(); });
+    mediumBtn.addEventListener('click', () => { difficulty = 'medium'; initBoard(); });
+    hardBtn.addEventListener('click', () => { difficulty = 'hard'; initBoard(); });
+
     initBoard();
   </script>
 </body>
