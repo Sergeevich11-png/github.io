@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Крестики-нолики (с ИИ)</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f6f0;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #4a4a4a;
+    }
+    h1 {
+      margin: 10px 0 20px;
+      color: #5a5a72;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 8px;
+      margin: 15px 0;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: #fdf6e3; /* пастельный бежевый */
+      border: 2px solid #d4c1ec; /* мягкий лавандовый */
+      border-radius: 10px;
+      font-size: 2.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .cell:hover {
+      background: #f0e6d2;
+      transform: scale(1.02);
+    }
+    .cell.x { color: #e74c3c; } /* мягкий красный */
+    .cell.o { color: #3498db; } /* мягкий синий */
+    #score {
+      margin: 15px 0;
+      font-size: 1.1rem;
+      background: #eae6da;
+      padding: 10px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #b5a6d9; /* пастельный фиолетовый */
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #9c88c9;
+    }
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #5a5a72;
+    }
+  </style>
+</head>
+<body>
+  <h1>Крестики-нолики</h1>
+  <div class="status" id="status">Вы: X | ИИ: O</div>
+  <div id="board"></div>
+  <div id="score">
+    Победы: <span id="wins">0</span> |
+    Поражения: <span id="losses">0</span> |
+    Ничьи: <span id="draws">0</span>
+  </div>
+  <button id="reset">Новая игра</button>
+
+  <script>
+    // DOM элементы
+    const boardEl = document.getElementById('board');
+    const winsEl = document.getElementById('wins');
+    const lossesEl = document.getElementById('losses');
+    const drawsEl = document.getElementById('draws');
+    const resetBtn = document.getElementById('reset');
+    const statusEl = document.getElementById('status');
+
+    // Игровые переменные
+    let cells = Array(9).fill(null);
+    let gameActive = true;
+    let wins = 0, losses = 0, draws = 0;
+    let humanSymbol = 'X'; // игрок начинает с X
+
+    // Инициализация доски
+    function initBoard() {
+      boardEl.innerHTML = '';
+      cells = Array(9).fill(null);
+      gameActive = true;
+
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', () => handleCellClick(i));
+        boardEl.appendChild(cell);
+      }
+
+      updateStatus();
+      // Если игрок — O, ИИ ходит первым
+      if (humanSymbol === 'O') {
+        makeBestMove();
+      }
+    }
+
+    function updateStatus() {
+      const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
+      statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol}`;
+    }
+
+    function handleCellClick(index) {
+      if (!gameActive || cells[index] !== null) return;
+
+      cells[index] = humanSymbol;
+      renderCell(index, humanSymbol);
+
+      if (checkWin(humanSymbol)) {
+        wins++;
+        winsEl.textContent = wins;
+        alert('Вы победили!');
+        gameActive = false;
+        return;
+      }
+
+      if (isBoardFull()) {
+        draws++;
+        drawsEl.textContent = draws;
+        alert('Ничья!');
+        gameActive = false;
+        return;
+      }
+
+      // Ход ИИ
+      setTimeout(makeBestMove, 300); // небольшая задержка для "реакции"
+    }
+
+    function renderCell(index, symbol) {
+      const cell = document.querySelector(`.cell[data-index="${index}"]`);
+      cell.textContent = symbol;
+      cell.classList.add(symbol.toLowerCase());
+    }
+
+    // === Минимакс-ИИ ===
+    function makeBestMove() {
+      if (!gameActive) return;
+
+      let bestScore = -Infinity;
+      let bestMove = -1;
+      const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
+
+      for (let i = 0; i < 9; i++) {
+        if (cells[i] === null) {
+          cells[i] = aiSymbol;
+          let score = minimax(cells, 0, false, aiSymbol, humanSymbol);
+          cells[i] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = i;
+          }
+        }
+      }
+
+      if (bestMove !== -1) {
+        cells[bestMove] = aiSymbol;
+        renderCell(bestMove, aiSymbol);
+
+        if (checkWin(aiSymbol)) {
+          losses++;
+          lossesEl.textContent = losses;
+          alert('ИИ победил!');
+          gameActive = false;
+          return;
+        }
+
+        if (isBoardFull()) {
+          draws++;
+          drawsEl.textContent = draws;
+          alert('Ничья!');
+          gameActive = false;
+        }
+      }
+    }
+
+    function minimax(board, depth, isMaximizing, aiSymbol, humanSymbol) {
+      if (checkWin(aiSymbol)) return 10 - depth;
+      if (checkWin(humanSymbol)) return depth - 10;
+      if (isBoardFull()) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = aiSymbol;
+            let score = minimax(board, depth + 1, false, aiSymbol, humanSymbol);
+            board[i] = null;
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = humanSymbol;
+            let score = minimax(board, depth + 1, true, aiSymbol, humanSymbol);
+            board[i] = null;
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    // Проверка победы
+    function checkWin(player) {
+      const winPatterns = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+      ];
+      return winPatterns.some(pattern =>
+        pattern.every(i => cells[i] === player)
+      );
+    }
+
+    function isBoardFull() {
+      return cells.every(cell => cell !== null);
+    }
+
+    // Сброс игры с чередованием
+    resetBtn.addEventListener('click', () => {
+      humanSymbol = humanSymbol === 'X' ? 'O' : 'X';
+      initBoard();
+    });
+
+    // Старт
+    initBoard();
+  </script>
+</body>
+</html>
