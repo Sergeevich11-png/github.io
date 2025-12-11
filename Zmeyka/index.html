@@ -51,14 +51,15 @@
             width: 100%;
         }
         button {
-            padding: 8px 16px;
+            padding: 10px 18px;
             font-size: 16px;
             cursor: pointer;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
-            margin: 5px;
+            border-radius: 6px;
+            margin: 6px;
+            min-width: 120px;
         }
         button:hover {
             background-color: #45a049;
@@ -76,16 +77,18 @@
             align-items: center;
             color: white;
             z-index: 10;
+            padding: 20px;
         }
         #menu h1 {
-            margin-bottom: 30px;
-            font-size: 36px;
+            margin-bottom: 25px;
+            font-size: 32px;
             color: #4CAF50;
         }
-        #menu-buttons {
+        #difficulty-buttons, #menu-buttons {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
+            align-items: center;
         }
         #exit-btn {
             background-color: #f44336;
@@ -103,12 +106,15 @@
         <div id="score">Счёт: 0</div>
         <canvas id="game-board"></canvas>
         <div id="controls">Свайпайте, чтобы управлять змейкой</div>
+        
         <div id="menu">
             <h1>ЗМЕЙКА</h1>
-            <div id="menu-buttons">
-                <button id="new-game-btn">Новая игра</button>
-                <button id="exit-btn">Выход</button>
+            <div id="difficulty-buttons">
+                <button id="easy-btn">Легко</button>
+                <button id="medium-btn">Средне</button>
+                <button id="hard-btn">Сложно</button>
             </div>
+            <button id="exit-btn">Выход</button>
         </div>
     </div>
 
@@ -117,11 +123,13 @@
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score');
         const menu = document.getElementById('menu');
-        const newGameBtn = document.getElementById('new-game-btn');
         const exitBtn = document.getElementById('exit-btn');
+        const easyBtn = document.getElementById('easy-btn');
+        const mediumBtn = document.getElementById('medium-btn');
+        const hardBtn = document.getElementById('hard-btn');
 
-        // Константы
-        const GRID_SIZE_CELLS = 20; // количество ячеек по ширине/высоте
+        // Константы сетки
+        const GRID_SIZE_CELLS = 20;
         let cellSize = 0;
         let gameWidth = 0;
         let gameHeight = 0;
@@ -132,7 +140,7 @@
         let direction = 'right';
         let nextDirection = 'right';
         let score = 0;
-        let gameSpeed = 120;
+        let gameSpeed = 120; // по умолчанию — средне
         let gameLoop;
         let gameRunning = false;
 
@@ -140,28 +148,28 @@
         let touchStartX = 0;
         let touchStartY = 0;
 
-        // Пересчёт размеров
+        // Настройки скорости по сложности (мс между шагами)
+        const SPEEDS = {
+            easy: 180,
+            medium: 120,
+            hard: 80
+        };
+
+        // Пересчёт размеров canvas
         function resizeCanvas() {
             const container = document.getElementById('game-container');
             const size = Math.min(container.clientWidth, container.clientHeight);
-            
-            // Установим размеры canvas
             canvas.width = size;
             canvas.height = size;
-
-            // Вычислим размер одной ячейки
             cellSize = size / GRID_SIZE_CELLS;
-
-            // Обновим глобальные размеры сетки
             gameWidth = GRID_SIZE_CELLS;
             gameHeight = GRID_SIZE_CELLS;
-
-            // Перерисуем, если игра активна
             if (gameRunning) draw();
         }
 
-        // Инициализация
-        function initGame() {
+        // Инициализация игры с заданной сложностью
+        function startGame(difficulty) {
+            gameSpeed = SPEEDS[difficulty];
             snake = [
                 {x: 5, y: 10},
                 {x: 4, y: 10},
@@ -179,13 +187,11 @@
             resizeCanvas();
         }
 
-        // Генерация еды
         function generateFood() {
             food = {
                 x: Math.floor(Math.random() * gameWidth),
                 y: Math.floor(Math.random() * gameHeight)
             };
-
             for (let segment of snake) {
                 if (segment.x === food.x && segment.y === food.y) {
                     return generateFood();
@@ -193,11 +199,10 @@
             }
         }
 
-        // Обновление
         function update() {
             direction = nextDirection;
-
             const head = {...snake[0]};
+
             switch (direction) {
                 case 'up': head.y -= 1; break;
                 case 'down': head.y += 1; break;
@@ -205,7 +210,7 @@
                 case 'right': head.x += 1; break;
             }
 
-            // Безстеночная логика
+            // Проход сквозь стены
             if (head.x < 0) head.x = gameWidth - 1;
             if (head.x >= gameWidth) head.x = 0;
             if (head.y < 0) head.y = gameHeight - 1;
@@ -225,7 +230,8 @@
                 score += 10;
                 scoreDisplay.textContent = `Счёт: ${score}`;
                 generateFood();
-                if (score % 50 === 0 && gameSpeed > 50) {
+                // Ускорение каждые 50 очков (но не быстрее hard-скорости)
+                if (score % 50 === 0 && gameSpeed > SPEEDS.hard) {
                     gameSpeed -= 10;
                     clearInterval(gameLoop);
                     gameLoop = setInterval(update, gameSpeed);
@@ -237,7 +243,6 @@
             draw();
         }
 
-        // Отрисовка
         function draw() {
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -255,7 +260,6 @@
             ctx.strokeRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
         }
 
-        // Конец игры
         function gameOver() {
             clearInterval(gameLoop);
             gameRunning = false;
@@ -273,7 +277,7 @@
             }, 1500);
         }
 
-        // Свайпы
+        // Управление свайпами
         canvas.addEventListener('touchstart', (e) => {
             if (!gameRunning) return;
             touchStartX = e.touches[0].clientX;
@@ -308,19 +312,19 @@
             e.preventDefault();
         });
 
-        // Кнопки
-        newGameBtn.addEventListener('click', initGame);
+        // Обработчики кнопок
+        easyBtn.addEventListener('click', () => startGame('easy'));
+        mediumBtn.addEventListener('click', () => startGame('medium'));
+        hardBtn.addEventListener('click', () => startGame('hard'));
+
         exitBtn.addEventListener('click', () => {
-            menu.classList.remove('hidden');
+            window.location.href = '../index.html';
         });
 
-        // Загрузка и ресайз
+        // Адаптация на загрузку и поворот
         window.addEventListener('load', resizeCanvas);
         window.addEventListener('resize', resizeCanvas);
         window.addEventListener('orientationchange', resizeCanvas);
-
-        // Показать меню при старте
-        menu.classList.remove('hidden');
     </script>
 </body>
 </html>
