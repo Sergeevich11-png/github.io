@@ -3,61 +3,248 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Крестики-нолики (с ИИ)</title>
+  <title>Крестики-нолики</title>
   <style>
-    /* ... твой прежний стиль ... */
-    .menu {
-      margin: 20px 0;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    .menu button {
-      padding: 8px 16px;
-      font-size: 0.95rem;
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f6f0;
+      color: #4a4a4a;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      color: #5a5a72;
+      font-size: 1.8rem;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: #fdf6e3;
+      border: 2px solid #d4c1ec;
+      border-radius: 10px;
+      font-size: 48px;
+      font-family: 'Segoe UI', sans-serif;
+      font-weight: bold;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      user-select: none;
+    }
+
+    .cell:hover {
+      background: #f0e6d2;
+      transform: scale(1.02);
+    }
+
+    .cell.x { color: #e74c3c; }
+    .cell.o { color: #3498db; }
+
+    #score {
+      margin: 16px 0;
+      font-size: 1.1rem;
+      background: #eae6da;
+      padding: 10px 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .status {
+      margin: 8px 0;
+      font-weight: bold;
+      color: #5a5a72;
+      text-align: center;
+    }
+
+    /* === Меню выбора сложности (согласовано с end-dialog) === */
+    #menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 10;
+      padding: 20px;
+    }
+
+    #menu h2 {
+      margin-bottom: 20px;
+      font-size: 26px;
+      color: #b5a6d9;
+    }
+
+    #menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    #menu button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 140px;
+    }
+
+    #menu #easy,
+    #menu #medium,
+    #menu #hard {
+      background: #4CAF50;
+    }
+
+    #menu #easy:hover,
+    #menu #medium:hover,
+    #menu #hard:hover {
+      background: #45a049;
+    }
+
+    #menu .exit-btn {
+      background: #f44336;
+    }
+
+    #menu .exit-btn:hover {
+      background: #d32f2f;
+    }
+
+    /* === Диалог окончания игры === */
+    #end-dialog {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 11;
+      padding: 20px;
+    }
+
+    #end-dialog h2 {
+      margin-bottom: 20px;
+      font-size: 26px;
+      color: #b5a6d9;
+    }
+
+    #end-dialog .buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    #end-dialog button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 140px;
+    }
+
+    #end-dialog #play-again {
+      background: #4CAF50;
+    }
+
+    #end-dialog #to-menu {
+      background: #b5a6d9;
+    }
+
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 <body>
   <h1>Крестики-нолики</h1>
-  
-  <div class="menu">
-    <button id="easy">Легко</button>
-    <button id="medium">Средне</button>
-    <button id="hard">Сложно</button>
-    <a href="../index.html" class="game-link" style="display:inline-block;width:auto;padding:8px 16px;margin:0;">Выход</a>
-  </div>
 
-  <div class="status" id="status">Вы: X | ИИ: O</div>
+  <div class="status" id="status">Загрузка...</div>
   <div id="board"></div>
   <div id="score">
     Победы: <span id="wins">0</span> |
     Поражения: <span id="losses">0</span> |
     Ничьи: <span id="draws">0</span>
   </div>
-  <button id="reset">Новая игра</button>
+
+  <!-- Меню выбора сложности -->
+  <div id="menu" class="hidden">
+    <h2>Выберите сложность</h2>
+    <div id="menu-buttons">
+      <button id="easy">Легко</button>
+      <button id="medium">Средне</button>
+      <button id="hard">Сложно</button>
+      <button class="exit-btn" id="exit">Выход</button>
+    </div>
+  </div>
+
+  <!-- Диалог окончания игры -->
+  <div id="end-dialog" class="hidden">
+    <h2 id="end-message">Игра окончена</h2>
+    <div class="buttons">
+      <button id="play-again">Заново</button>
+      <button id="to-menu">Меню</button>
+    </div>
+  </div>
 
   <script>
-    // DOM
     const boardEl = document.getElementById('board');
     const winsEl = document.getElementById('wins');
     const lossesEl = document.getElementById('losses');
     const drawsEl = document.getElementById('draws');
-    const resetBtn = document.getElementById('reset');
     const statusEl = document.getElementById('status');
+    const menuEl = document.getElementById('menu');
+    const endDialog = document.getElementById('end-dialog');
+    const endMessage = document.getElementById('end-message');
+    const playAgainBtn = document.getElementById('play-again');
+    const toMenuBtn = document.getElementById('to-menu');
     const easyBtn = document.getElementById('easy');
     const mediumBtn = document.getElementById('medium');
     const hardBtn = document.getElementById('hard');
+    const exitBtn = document.getElementById('exit');
 
-    // Игровые переменные
     let cells = Array(9).fill(null);
     let gameActive = true;
     let wins = 0, losses = 0, draws = 0;
     let humanSymbol = 'X';
-    let difficulty = 'hard'; // 'easy', 'medium', 'hard'
+    let difficulty = null;
+    let firstRun = true;
 
-    // Инициализация доски
     function initBoard() {
       boardEl.innerHTML = '';
       cells = Array(9).fill(null);
@@ -79,7 +266,7 @@
 
     function updateStatus() {
       const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
-      statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol} (${difficulty})`;
+      statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol} | Сложность: ${difficulty}`;
     }
 
     function handleCellClick(index) {
@@ -89,16 +276,16 @@
 
       if (checkWin(humanSymbol)) {
         wins++; winsEl.textContent = wins;
-        alert('Вы победили!');
-        gameActive = false;
+        showEndDialog('Вы победили!');
         return;
       }
+
       if (isBoardFull()) {
         draws++; drawsEl.textContent = draws;
-        alert('Ничья!');
-        gameActive = false;
+        showEndDialog('Ничья!');
         return;
       }
+
       setTimeout(makeAIMove, 300);
     }
 
@@ -108,34 +295,26 @@
       cell.classList.add(symbol.toLowerCase());
     }
 
-    // === ОСНОВНОЙ ХОД ИИ (с учётом сложности) ===
     function makeAIMove() {
       if (!gameActive) return;
       const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
-
       let move = -1;
 
       if (difficulty === 'easy') {
-        // Случайный ход
         const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
         if (empty.length) move = empty[Math.floor(Math.random() * empty.length)];
-      } 
-      else if (difficulty === 'medium') {
-        // 70% — лучший ход, 30% — случайный
+      } else if (difficulty === 'medium') {
         if (Math.random() < 0.3) {
           const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
           if (empty.length) move = empty[Math.floor(Math.random() * empty.length)];
         } else {
           move = getBestMove(aiSymbol);
         }
-      } 
-      else {
-        // hard — всегда лучший
+      } else {
         move = getBestMove(aiSymbol);
       }
 
       if (move === -1) {
-        // резерв: случайный
         const empty = cells.map((c, i) => c === null ? i : -1).filter(i => i !== -1);
         move = empty.length ? empty[0] : -1;
       }
@@ -146,19 +325,18 @@
 
         if (checkWin(aiSymbol)) {
           losses++; lossesEl.textContent = losses;
-          alert('ИИ победил!');
-          gameActive = false;
+          showEndDialog('ИИ победил!');
           return;
         }
+
         if (isBoardFull()) {
           draws++; drawsEl.textContent = draws;
-          alert('Ничья!');
-          gameActive = false;
+          showEndDialog('Ничья!');
+          return;
         }
       }
     }
 
-    // Минимакс (без изменений)
     function getBestMove(aiSymbol) {
       let bestScore = -Infinity;
       let bestMove = -1;
@@ -221,17 +399,55 @@
       return cells.every(cell => cell !== null);
     }
 
-    resetBtn.addEventListener('click', () => {
+    function startNewGame() {
       humanSymbol = humanSymbol === 'X' ? 'O' : 'X';
       initBoard();
+    }
+
+    function showEndDialog(message) {
+      gameActive = false;
+      endMessage.textContent = message;
+      endDialog.classList.remove('hidden');
+    }
+
+    // Обработчики кнопок диалога
+    playAgainBtn.addEventListener('click', () => {
+      endDialog.classList.add('hidden');
+      startNewGame();
     });
 
-    // Кнопки сложности
-    easyBtn.addEventListener('click', () => { difficulty = 'easy'; initBoard(); });
-    mediumBtn.addEventListener('click', () => { difficulty = 'medium'; initBoard(); });
-    hardBtn.addEventListener('click', () => { difficulty = 'hard'; initBoard(); });
+    toMenuBtn.addEventListener('click', () => {
+      endDialog.classList.add('hidden');
+      menuEl.classList.remove('hidden');
+    });
 
-    initBoard();
+    // Меню сложности
+    easyBtn.addEventListener('click', () => {
+      difficulty = 'easy';
+      menuEl.classList.add('hidden');
+      if (firstRun) firstRun = false;
+      startNewGame();
+    });
+    mediumBtn.addEventListener('click', () => {
+      difficulty = 'medium';
+      menuEl.classList.add('hidden');
+      if (firstRun) firstRun = false;
+      startNewGame();
+    });
+    hardBtn.addEventListener('click', () => {
+      difficulty = 'hard';
+      menuEl.classList.add('hidden');
+      if (firstRun) firstRun = false;
+      startNewGame();
+    });
+
+    exitBtn.addEventListener('click', () => {
+      window.location.href = '../index.html';
+    });
+
+    if (firstRun) {
+      menuEl.classList.remove('hidden');
+    }
   </script>
 </body>
 </html>
