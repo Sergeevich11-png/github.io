@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Поддержка</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      background: #f9f9f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #333;
+    }
+    .container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .donate-header {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #e74c3c;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    p {
+      margin: 12px 0;
+      max-width: 500px;
+    }
+    .card-link {
+      display: inline-block;
+      margin: 16px 0;
+      padding: 12px 24px;
+      background: #e3f2fd;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      color: #1976d2;
+      border: 2px solid #bbdefb;
+      transition: background 0.2s;
+    }
+    .card-link:hover {
+      background: #bbdefb;
+    }
+    .back-btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 10px 20px;
+      background: #ecf5ff;
+      color: #3498db;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .back-btn:hover {
+      background: #d6eaf8;
+    }
+    .legal-toggle {
+      margin-top: 28px;
+      color: #7f8c8d;
+      cursor: pointer;
+      font-size: 0.95rem;
+      text-decoration: underline;
+    }
+    .legal-content {
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.5;
+      display: none;
+      padding: 16px;
+      background: #fff;
+      border-radius: 8px;
+      border-left: 4px solid #ccc;
+      max-width: 500px;
+    }
+    .legal-content strong {
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="donate-header">Добровольные донаты</div>
+
+    <p>Если вам понравились мои работы, вы можете выразить свою поддержку, отправив любой взнос на мою карту Сбербанка:</p>
+
+    <a href="https://qr.nspk.ru/______ВАША_ССЫЛКА______" class="card-link" target="_blank">
+      Перевести на карту Сбербанка
+    </a>
+
+    <p>Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!</p>
+
+    <div class="legal-toggle" onclick="toggleLegal()">Правовая информация и важные нюансы ▼</div>
+    <div class="legal-content" id="legal">
+      <p><strong>Безвозмездность:</strong> Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.</p>
+      <p><strong>Назначение платежа:</strong> Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.</p>
+      <p><strong>Использование банковских реквизитов:</strong> Ваши персональные данные и банковская информация используются исключительно для обработки денежного перевода и обеспечиваются защитой согласно законодательству Российской Федерации о защите персональных данных (№152-ФЗ).</p>
+      <p><strong>Самостоятельная ответственность:</strong> Подтверждая перечисление средств, вы осознаете возможные налоговые последствия своего решения и несёте полную ответственность за уплату налогов самостоятельно, если применимы соответствующие требования закона.</p>
+      <p><strong>Возврат средств:</strong> Возможность возврата внесённых вами средств отсутствует, кроме случаев доказанного неправомерного списания средств банком или ошибочного зачисления платежа. Любые претензии о возврате сумм рассматриваются индивидually и требуют предоставления документальных доказательств нарушения.</p>
+    </div>
+
+    <a href="../" class="back-btn">← Назад в меню</a>
+  </div>
+
+  <script>
+    function toggleLegal() {
+      const content = document.getElementById('legal');
+      content.style.display = content.style.display === 'block' ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>
