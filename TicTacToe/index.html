@@ -123,13 +123,15 @@
 
     #menu #easy,
     #menu #medium,
-    #menu #hard {
+    #menu #hard,
+    #menu #online-btn {
       background: #4CAF50;
     }
 
     #menu #easy:hover,
     #menu #medium:hover,
-    #menu #hard:hover {
+    #menu #hard:hover,
+    #menu #online-btn:hover {
       background: #45a049;
     }
 
@@ -204,11 +206,12 @@
 
   <!-- Меню выбора сложности -->
   <div id="menu" class="hidden">
-    <h2>Выберите сложность</h2>
+    <h2>Выберите режим</h2>
     <div id="menu-buttons">
       <button id="easy">Легко</button>
       <button id="medium">Средне</button>
       <button id="hard">Сложно</button>
+      <button id="online-btn">Играть онлайн</button>
       <button class="exit-btn" id="exit">Выход</button>
     </div>
   </div>
@@ -236,6 +239,7 @@
     const easyBtn = document.getElementById('easy');
     const mediumBtn = document.getElementById('medium');
     const hardBtn = document.getElementById('hard');
+    const onlineBtn = document.getElementById('online-btn');
     const exitBtn = document.getElementById('exit');
 
     let cells = Array(9).fill(null);
@@ -244,6 +248,10 @@
     let humanSymbol = 'X';
     let difficulty = null;
     let firstRun = true;
+
+    // ===== ONLINE MODE VARIABLES =====
+    let socket = null;
+    let onlineMode = false;
 
     function initBoard() {
       boardEl.innerHTML = '';
@@ -259,17 +267,31 @@
       }
 
       updateStatus();
-      if (humanSymbol === 'O') {
+      if (!onlineMode && humanSymbol === 'O') {
         setTimeout(makeAIMove, 300);
       }
     }
 
     function updateStatus() {
+      if (onlineMode) {
+        statusEl.textContent = 'Онлайн-игра';
+        return;
+      }
       const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
       statusEl.textContent = `Вы: ${humanSymbol} | ИИ: ${aiSymbol} | Сложность: ${difficulty}`;
     }
 
+    // ===== ОБНОВЛЁННАЯ ФУНКЦИЯ =====
     function handleCellClick(index) {
+      // ONLINE MODE
+      if (onlineMode) {
+        if (gameActive && cells[index] === null && socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'move', index }));
+        }
+        return;
+      }
+
+      // AI MODE (ORIGINAL)
       if (!gameActive || cells[index] !== null) return;
       cells[index] = humanSymbol;
       renderCell(index, humanSymbol);
@@ -295,8 +317,22 @@
       cell.classList.add(symbol.toLowerCase());
     }
 
+    // НОВАЯ ФУНКЦИЯ: полная перерисовка доски (для онлайн)
+    function renderBoard() {
+      cells.forEach((symbol, i) => {
+        const cell = document.querySelector(`.cell[data-index="${i}"]`);
+        cell.className = 'cell';
+        if (symbol !== null) {
+          cell.textContent = symbol;
+          cell.classList.add(symbol.toLowerCase());
+        } else {
+          cell.textContent = '';
+        }
+      });
+    }
+
     function makeAIMove() {
-      if (!gameActive) return;
+      if (!gameActive || onlineMode) return;
       const aiSymbol = humanSymbol === 'X' ? 'O' : 'X';
       let move = -1;
 
@@ -413,11 +449,22 @@
     // Обработчики кнопок диалога
     playAgainBtn.addEventListener('click', () => {
       endDialog.classList.add('hidden');
-      startNewGame();
+      if (onlineMode) {
+        // В онлайн-режиме просто перезапускаем доску локально (сервер сам управляет)
+        // Но лучше — создать НОВУЮ ИГРУ (выходим и заходим заново)
+        alert('Для новой онлайн-игры нажмите "Меню" → "Играть онлайн"');
+      } else {
+        startNewGame();
+      }
     });
 
     toMenuBtn.addEventListener('click', () => {
       endDialog.classList.add('hidden');
+      if (socket) {
+        socket.close();
+        socket = null;
+      }
+      onlineMode = false;
       menuEl.classList.remove('hidden');
     });
 
@@ -426,22 +473,86 @@
       difficulty = 'easy';
       menuEl.classList.add('hidden');
       if (firstRun) firstRun = false;
+      onlineMode = false;
+      if (socket) socket.close();
       startNewGame();
     });
     mediumBtn.addEventListener('click', () => {
       difficulty = 'medium';
       menuEl.classList.add('hidden');
       if (firstRun) firstRun = false;
+      onlineMode = false;
+      if (socket) socket.close();
       startNewGame();
     });
     hardBtn.addEventListener('click', () => {
       difficulty = 'hard';
       menuEl.classList.add('hidden');
       if (firstRun) firstRun = false;
+      onlineMode = false;
+      if (socket) socket.close();
       startNewGame();
     });
 
+    // === ONLINE BUTTON ===
+    onlineBtn.addEventListener('click', () => {
+      const roomId = Math.floor(1000 + Math.random() * 9000);
+      const serverUrl = `wss://krestii-noliki.onrender.com/${roomId}`;
+
+      menuEl.classList.add('hidden');
+      onlineMode = true;
+      gameActive = true;
+
+      // Закрываем старый сокет
+      if (socket) socket.close();
+
+      socket = new WebSocket(serverUrl);
+
+      statusEl.textContent = 'Ожидание соперника...';
+      initBoard();
+
+      socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'init') {
+          cells = [...msg.board];
+          renderBoard();
+          statusEl.textContent = msg.opponentJoined ? 'Игра началась!' : 'Ожидание соперника...';
+        }
+        if (msg.type === 'opponentJoined') {
+          statusEl.textContent = 'Соперник присоединился!';
+        }
+        if (msg.type === 'move') {
+          cells = [...msg.board];
+          renderBoard();
+          gameActive = true;
+          statusEl.textContent = `Ходит: ${msg.turn}`;
+        }
+        if (msg.type === 'gameOver') {
+          cells = [...msg.board];
+          renderBoard();
+          gameActive = false;
+          const result = msg.winner 
+            ? (msg.winner === 'X' ? 'Крестики' : 'Нолики') + ' победили!' 
+            : 'Ничья!';
+          showEndDialog(result);
+        }
+        if (msg.type === 'opponentLeft') {
+          statusEl.textContent = 'Соперник вышел. Ожидание нового игрока...';
+          gameActive = false;
+        }
+      };
+
+      socket.onclose = () => {
+        if (onlineMode) {
+          statusEl.textContent = 'Соединение потеряно';
+          gameActive = false;
+        }
+      };
+    });
+
     exitBtn.addEventListener('click', () => {
+      if (socket) socket.close();
       window.location.href = '../index.html';
     });
 
