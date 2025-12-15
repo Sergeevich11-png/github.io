@@ -35,6 +35,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 1em;
+      margin: 8px;
     }
     .btn:hover {
       opacity: 0.9;
@@ -54,6 +55,8 @@
   <input type="file" id="imageInput" accept="image/*">
   <div id="preview"></div>
   <div id="result"></div>
+  <br>
+  <button class="btn" onclick="goToMenu()">В меню</button>
 
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script>
@@ -71,12 +74,10 @@
       img.onload = () => {
         URL.revokeObjectURL(url);
 
-        // Показать превью
         preview.innerHTML = '';
         preview.style.display = 'block';
         preview.appendChild(img);
 
-        // Создаём canvas для анализа
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = img.width;
@@ -105,6 +106,10 @@
       } else {
         alert('Ссылка не начинается с http/https. Открывать нельзя.');
       }
+    }
+
+    function goToMenu() {
+      window.location.href = './';
     }
   </script>
 </body>
