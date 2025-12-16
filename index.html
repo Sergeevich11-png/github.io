@@ -28,28 +28,37 @@
       margin: 12px auto;
       padding: 14px 0;
       width: 240px;
-      background: #4CAF50;
       color: white;
       text-decoration: none;
       border-radius: 8px;
       font-size: 1.1rem;
       transition: background 0.2s;
     }
-    .support-link {
-      background: #9c27b0; /* фиолетовый — чтобы выделялась */
+
+    /* Основной цвет для обычных игр */
+    .game-link.default {
+      background: #4CAF50;
     }
-    .support-link:hover {
-      background: #7b1fa2;
-    }
-    .github-game-link {
-      background: #333; /* тёмно-серый для GitHub-игры */
-    }
-    .github-game-link:hover {
-      background: #222;
-    }
-    .game-link:hover {
+    .game-link.default:hover {
       background: #45a049;
     }
+
+    /* Цвет для "На кофе" */
+    .game-link.support {
+      background: #9c27b0;
+    }
+    .game-link.support:hover {
+      background: #7b1fa2;
+    }
+
+    /* Цвет для "QR с экрана" */
+    .game-link.qr {
+      background: #2196F3;
+    }
+    .game-link.qr:hover {
+      background: #1976D2;
+    }
+
     .footer {
       margin-top: 50px;
       color: #888;
@@ -60,13 +69,14 @@
 <body>
   <h1>Выберите игру</h1>
   
-  <a href="Zmeyka/index.html" class="game-link">Лоза</a>
-  <a href="TicTacToe/index.html" class="game-link">Крестики-нолики</a>
-  <a href="ugaday-chislo/index.html" class="game-link">Угадай число</a>
-  <a href="support/index.html" class="game-link support-link">На кофе</a>
+  <a href="Zmeyka/index.html" class="game-link default">Лоза</a>
+  <a href="TicTacToe/index.html" class="game-link default">Крестики-нолики</a>
+  <a href="ugaday-chislo/index.html" class="game-link default">Угадай число</a>
+  <a href="From_1to_3/index.html" class="game-link default">Ход от 1 до 3</a>
 
-  <!-- Новая кнопка: Игра "Ход от 1 до 3" -->
-  <a href="From_1to_3/index.html" class="game-link github-game-link">Ход от 1 до 3</a>
+  <a href="support/index.html" class="game-link support">На кофе</a>
+  
+  <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
 
   <div class="footer">
     © 2025 • Спасибо за интерес к моим работам ! ❤️
