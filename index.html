@@ -35,7 +35,7 @@
       transition: background 0.2s;
     }
 
-    /* Основной цвет для обычных игр */
+    /* Обычные игры — зелёный */
     .game-link.default {
       background: #4CAF50;
     }
@@ -43,7 +43,7 @@
       background: #45a049;
     }
 
-    /* Цвет для "На кофе" */
+    /* Поддержка — фиолетовый */
     .game-link.support {
       background: #9c27b0;
     }
@@ -51,7 +51,7 @@
       background: #7b1fa2;
     }
 
-    /* Цвет для "QR с экрана" */
+    /* QR — голубой */
     .game-link.qr {
       background: #2196F3;
     }
@@ -59,8 +59,16 @@
       background: #1976D2;
     }
 
+    /* Поделиться — оранжевый */
+    .game-link.share {
+      background: #ff9800;
+    }
+    .game-link.share:hover {
+      background: #f57c00;
+    }
+
     .footer {
-      margin-top: 50px;
+      margin-top: 40px;
       color: #888;
       font-size: 0.9rem;
     }
@@ -78,8 +86,36 @@
   
   <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
 
+  <button id="share-btn" class="game-link share">Поделиться</button>
+
   <div class="footer">
-    © 2025 • Спасибо за интерес к моим работам ! ❤️
+    © 2025 • Спасибо за интерес к моим работам! ❤️
   </div>
+
+  <script>
+    document.getElementById('share-btn').addEventListener('click', async () => {
+      const url = window.location.href;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Мои игры',
+            text: 'Попробуй мои игры!',
+            url: url
+          });
+        } catch (err) {
+          // Пользователь отменил — ничего не делаем
+        }
+      } else {
+        // Резерв: копирование в буфер
+        try {
+          await navigator.clipboard.writeText(url);
+          alert('Ссылка скопирована! Отправь её кому хочешь.');
+        } catch (err) {
+          alert('Не удалось скопировать ссылку. Скопируй вручную:\n\n' + url);
+        }
+      }
+    });
+  </script>
 </body>
 </html>
