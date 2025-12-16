@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Лабиринт</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: none;
+    }
+    body {
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #gameCanvas {
+      display: block;
+      background: #222;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
+    }
+    #ui {
+      position: absolute;
+      top: 20px;
+      text-align: center;
+      width: 100%;
+      font-size: 18px;
+      padding: 0 20px;
+    }
+    #startBtn {
+      padding: 12px 30px;
+      font-size: 20px;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #startBtn:hover {
+      background: #0056cc;
+    }
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div id="message">Наклоняй телефон, чтобы катать шарик!</div>
+    <button id="startBtn">Начать игру</button>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    // Настройки
+    const RADIUS = Math.min(window.innerWidth, window.innerHeight) * 0.4;
+    const BALL_RADIUS = 12;
+    const WALL_WIDTH = 20;
+    const EXIT_SIZE = 40; // ширина выхода в градусах
+    const EXIT_ANGLE = 0; // направление выхода (в радианах, 0 = вправо)
+
+    // Состояния
+    let ball = { x: 0, y: 0 }; // относительно центра
+    let gameActive = false;
+    let gameOver = false;
+    let accelerationX = 0;
+    let accelerationY = 0;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = document.getElementById('ui');
+    const message = document.getElementById('message');
+    const startBtn = document.getElementById('startBtn');
+
+    // Масштабируем canvas
+    function resize() {
+      const size = RADIUS * 2;
+      canvas.width = size;
+      canvas.height = size;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Простой "лабиринт": кольцо с одним выходом
+    function drawMaze() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      // Фон
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Нарисуем кольцо — стену лабиринта
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = WALL_WIDTH;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, RADIUS - WALL_WIDTH / 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Нарисуем выход (разрыв в кольце)
+      const startAngle = EXIT_ANGLE - (EXIT_SIZE * Math.PI / 180) / 2;
+      const endAngle = EXIT_ANGLE + (EXIT_SIZE * Math.PI / 180) / 2;
+
+      ctx.strokeStyle = '#0f0';
+      ctx.lineWidth = WALL_WIDTH + 4;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, RADIUS - WALL_WIDTH / 2, startAngle, endAngle);
+      ctx.stroke();
+
+      // Шарик
+      if (gameActive && !gameOver) {
+        ctx.fillStyle = '#ff5555';
+        ctx.beginPath();
+        ctx.arc(centerX + ball.x, centerY + ball.y, BALL_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Проверка, достиг ли шарик выхода
+    function checkWin() {
+      const distFromCenter = Math.hypot(ball.x, ball.y);
+      const angle = Math.atan2(ball.y, ball.x); // угол шарика
+      const angleDiff = Math.abs(angle - EXIT_ANGLE);
+      const normalizedDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff) * (180 / Math.PI);
+
+      if (distFromCenter >= RADIUS - WALL_WIDTH / 2 - BALL_RADIUS &&
+          normalizedDiff <= EXIT_SIZE / 2 + 5) {
+        win();
+      }
+    }
+
+    function win() {
+      gameActive = false;
+      gameOver = true;
+      message.textContent = '🏆 Ты победил! Молодец!';
+      startBtn.textContent = 'Играть снова';
+      startBtn.classList.remove('hidden');
+    }
+
+    // Обновление позиции шарика
+    function updateBall(deltaTime) {
+      // Простая физика: ускорение → скорость → позиция
+      const speedFactor = 80; // чувствительность
+      ball.x += accelerationX * speedFactor * deltaTime;
+      ball.y -= accelerationY * speedFactor * deltaTime; // Y инвертирован
+
+      // Ограничение внутри лабиринта (упрощённо)
+      const maxDist = RADIUS - WALL_WIDTH / 2 - BALL_RADIUS;
+      const currentDist = Math.hypot(ball.x, ball.y);
+      if (currentDist > maxDist) {
+        // Отталкиваем от стены
+        const ratio = maxDist / currentDist;
+        ball.x *= ratio;
+        ball.y *= ratio;
+      }
+    }
+
+    // Основной цикл
+    let lastTime = 0;
+    function gameLoop(timestamp) {
+      const deltaTime = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      if (gameActive && !gameOver) {
+        updateBall(deltaTime);
+        checkWin();
+      }
+
+      drawMaze();
+      if (gameActive) requestAnimationFrame(gameLoop);
+    }
+
+    // Обработка сенсоров
+    function handleMotion(event) {
+      if (!gameActive) return;
+
+      // Поддержка разных браузеров
+      accelerationX = event.accelerationIncludingGravity?.x || event.acceleration.x || 0;
+      accelerationY = event.accelerationIncludingGravity?.y || event.acceleration.y || 0;
+    }
+
+    // Запрос разрешения на iOS
+    async function startGame() {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceMotionEvent.requestPermission();
+          if (permission !== 'granted') {
+            message.textContent = 'Нужно разрешить доступ к сенсорам!';
+            return;
+          }
+        } catch (err) {
+          message.textContent = 'Ошибка доступа к сенсорам.';
+          console.error(err);
+          return;
+        }
+      }
+
+      // Запуск
+      gameActive = true;
+      gameOver = false;
+      ball = { x: 0, y: 0 };
+      message.textContent = 'Наклоняй телефон!';
+      startBtn.classList.add('hidden');
+      window.addEventListener('devicemotion', handleMotion);
+      requestAnimationFrame(gameLoop);
+    }
+
+    startBtn.addEventListener('click', startGame);
+  </script>
+</body>
+</html>
