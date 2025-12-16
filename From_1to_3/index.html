@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Ход от 1 до 3</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body {
+      background: #f8f8f8;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #222;
+      touch-action: manipulation;
+    }
+    h1 {
+      margin: 16px 0;
+      font-size: 22px;
+      text-align: center;
+    }
+    .screen { width: 100%; max-width: 400px; }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      font-size: 17px;
+      border: none;
+      border-radius: 8px;
+      background: #4a90e2;
+      color: white;
+      cursor: pointer;
+    }
+    #exitBtn { background: #e74c3c; }
+    #board {
+      display: grid;
+      gap: 2px;
+      margin: 16px 0;
+      background: #aaa;
+      padding: 4px;
+      border-radius: 6px;
+    }
+    .cell {
+      aspect-ratio: 1;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .cell.mine { background: #ffdddd; color: #c00; }
+    .cell.player { background: #d0e8ff; }
+    .cell.ai { background: #e0e0e0; }
+    .cell.free { background: #ffffff; cursor: pointer; }
+    .cell.selected { background: #b3d9ff; }
+    #status {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin: 12px 0;
+      min-height: 24px;
+    }
+    #passBtn { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Ход от 1 до 3</h1>
+
+  <div id="menu" class="screen">
+    <button class="btn" onclick="game.startGame(4,5,1)">Лёгкий</button>
+    <button class="btn" onclick="game.startGame(4,6,2)">Средний</button>
+    <button class="btn" onclick="game.startGame(5,6,3)">Сложный</button>
+    <button id="exitBtn" class="btn" onclick="window.location.href='https://sergeevich11-png.github.io/github.io/'">Выход</button>
+  </div>
+
+  <div id="gameScreen" class="screen" style="display:none;">
+    <div id="status">Выберите 1–3 связные клетки (по сторонам)</div>
+    <div id="board"></div>
+    <button id="passBtn" class="btn" disabled>Передать ход</button>
+    <button class="btn" style="background:#888;" onclick="game.showMenu()">Назад в меню</button>
+  </div>
+
+  <script>
+    // === ЧИСТЫЕ ФУНКЦИИ ===
+    function isValidMove(selected, newCell) {
+      if (selected.length >= 3) return false;
+      if (selected.length === 0) return true;
+      return selected.some(p =>
+        (Math.abs(p.r - newCell.r) === 1 && p.c === newCell.c) ||
+        (Math.abs(p.c - newCell.c) === 1 && p.r === newCell.r)
+      );
+    }
+
+    function generateAllConnectedGroups(freeCells, rows, cols) {
+      const freeSet = new Set(freeCells.map(p => `${p.r},${p.c}`));
+      const groups = [];
+      const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+      for (const p of freeCells) groups.push([p]);
+
+      for (const p of freeCells) {
+        for (const [dr,dc] of dirs) {
+          const n = {r: p.r+dr, c: p.c+dc};
+          if (freeSet.has(`${n.r},${n.c}`)) {
+            const key = [`${p.r},${p.c}`, `${n.r},${n.c}`].sort().join('|');
+            if (!groups.some(g => g.length === 2 && g.map(x => `${x.r},${x.c}`).sort().join('|') === key)) {
+              groups.push([p, n]);
+            }
+          }
+        }
+      }
+
+      for (const pair of groups.filter(g => g.length === 2)) {
+        const used = new Set(pair.map(p => `${p.r},${p.c}`));
+        for (const p of pair) {
+          for (const [dr,dc] of dirs) {
+            const n = {r: p.r+dr, c: p.c+dc};
+            const key = `${n.r},${n.c}`;
+            if (freeSet.has(key) && !used.has(key)) {
+              const triple = [...pair, n];
+              const tKey = triple.map(x => `${x.r},${x.c}`).sort().join('|');
+              if (!groups.some(g => g.length === 3 && g.map(x => `${x.r},${x.c}`).sort().join('|') === tKey)) {
+                groups.push(triple);
+              }
+            }
+          }
+        }
+      }
+
+      return groups;
+    }
+
+    function countFreeCells(board) {
+      let count = 0;
+      for (let r = 0; r < board.length; r++)
+        for (let c = 0; c < board[r].length; c++)
+          if (board[r][c] === null) count++;
+      return count;
+    }
+
+    function getFreeCells(board) {
+      const cells = [];
+      for (let r = 0; r < board.length; r++)
+        for (let c = 0; c < board[r].length; c++)
+          if (board[r][c] === null) cells.push({r, c});
+      return cells;
+    }
+
+    function cloneBoard(board) {
+      return board.map(row => [...row]);
+    }
+
+    function evaluatePosition(board, minePos, isAITurn) {
+      const free = getFreeCells(board);
+      const freeCount = free.length;
+      if (freeCount === 0) return isAITurn ? -100 : 100;
+
+      const parityScore = (freeCount % 2 === 0) ? -10 : 10;
+      const visited = new Set();
+      let components = 0;
+      const freeSet = new Set(free.map(p => `${p.r},${p.c}`));
+      const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+
+      for (const p of free) {
+        const key = `${p.r},${p.c}`;
+        if (visited.has(key)) continue;
+        components++;
+        const stack = [p];
+        while (stack.length) {
+          const cur = stack.pop();
+          const curKey = `${cur.r},${cur.c}`;
+          if (visited.has(curKey)) continue;
+          visited.add(curKey);
+          for (const [dr,dc] of dirs) {
+            const nb = {r: cur.r+dr, c: cur.c+dc};
+            const nbKey = `${nb.r},${nb.c}`;
+            if (freeSet.has(nbKey) && !visited.has(nbKey)) {
+              stack.push(nb);
+            }
+          }
+        }
+      }
+      const fragScore = components * 5;
+
+      const playerGroups = generateAllConnectedGroups(free, board.length, board[0].length);
+      let maxPlayerLen = 0;
+      for (const g of playerGroups) {
+        if (g.length > maxPlayerLen) maxPlayerLen = g.length;
+      }
+      const moveLenScore = (3 - maxPlayerLen) * 4;
+
+      return parityScore + fragScore + moveLenScore;
+    }
+
+    function minimax(board, minePos, depth, alpha, beta, isMaximizing, rows, cols) {
+      const freeCount = countFreeCells(board);
+      if (depth === 0 || freeCount === 0) {
+        return { score: evaluatePosition(board, minePos, !isMaximizing) };
+      }
+
+      const freeCells = getFreeCells(board).filter(p => !(p.r === minePos.r && p.c === minePos.c));
+      const allGroups = generateAllConnectedGroups(freeCells, rows, cols);
+
+      if (allGroups.length === 0) {
+        return { score: isMaximizing ? -100 : 100 };
+      }
+
+      let bestScore = isMaximizing ? -Infinity : Infinity;
+      let bestMove = allGroups[0];
+
+      for (const group of allGroups) {
+        const newBoard = cloneBoard(board);
+        for (const p of group) newBoard[p.r][p.c] = isMaximizing ? 'ai' : 'player';
+
+        const result = minimax(newBoard, minePos, depth - 1, alpha, beta, !isMaximizing, rows, cols);
+
+        if (isMaximizing) {
+          if (result.score > bestScore) {
+            bestScore = result.score;
+            bestMove = group;
+          }
+          alpha = Math.max(alpha, bestScore);
+        } else {
+          if (result.score < bestScore) {
+            bestScore = result.score;
+            bestMove = group;
+          }
+          beta = Math.min(beta, bestScore);
+        }
+
+        if (beta <= alpha) break;
+      }
+
+      return { score: bestScore, move: bestMove };
+    }
+
+    // === КЛАСС ИГРЫ ===
+    class MineGame {
+      constructor() {
+        this.state = this.resetState();
+        this.ui = {
+          menu: document.getElementById('menu'),
+          gameScreen: document.getElementById('gameScreen'),
+          board: document.getElementById('board'),
+          status: document.getElementById('status'),
+          passBtn: document.getElementById('passBtn')
+        };
+        this.init();
+      }
+
+      resetState() {
+        return {
+          rows: 0,
+          cols: 0,
+          difficulty: 1,
+          board: [],
+          minePos: { r: -1, c: -1 },
+          gameActive: false,
+          playerTurn: true,
+          selectedCells: []
+        };
+      }
+
+      init() {
+        this.ui.passBtn.addEventListener('click', () => this.passTurn());
+      }
+
+      showMenu() {
+        // Возврат в локальное меню выбора сложности
+        this.ui.menu.style.display = 'block';
+        this.ui.gameScreen.style.display = 'none';
+        this.state.gameActive = false;
+        this.state = this.resetState();
+      }
+
+      startGame(rows, cols, difficulty) {
+        this.state = this.resetState();
+        this.state.rows = rows;
+        this.state.cols = cols;
+        this.state.difficulty = difficulty;
+        this.state.board = Array(rows).fill().map(() => Array(cols).fill(null));
+        this.state.minePos = {
+          r: Math.floor(Math.random() * rows),
+          c: Math.floor(Math.random() * cols)
+        };
+        this.state.board[this.state.minePos.r][this.state.minePos.c] = 'mine';
+        this.state.gameActive = true;
+        this.state.playerTurn = true;
+        this.state.selectedCells = [];
+
+        this.ui.menu.style.display = 'none';
+        this.ui.gameScreen.style.display = 'block';
+        this.ui.passBtn.disabled = true;
+        this.updateStatus('Выберите 1–3 связные клетки (по сторонам)');
+
+        this.ui.board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        this.ui.board.innerHTML = '';
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (this.state.board[r][c] === 'mine') {
+              cell.classList.add('mine');
+              cell.textContent = '💣';
+            }
+            this.ui.board.appendChild(cell);
+          }
+        }
+
+        this.renderAll();
+      }
+
+      renderCell(r, c) {
+        const idx = r * this.state.cols + c;
+        const cell = this.ui.board.children[idx];
+        if (!cell) return;
+
+        cell.className = 'cell';
+        cell.textContent = '';
+
+        const val = this.state.board[r][c];
+        if (val === 'mine') {
+          cell.classList.add('mine');
+          cell.textContent = '💣';
+        } else if (val === 'player') {
+          cell.classList.add('player');
+          cell.textContent = '●';
+        } else if (val === 'ai') {
+          cell.classList.add('ai');
+          cell.textContent = '○';
+        } else if (this.state.playerTurn && this.state.gameActive) {
+          cell.classList.add('free');
+          cell.onclick = () => this.toggleCell(r, c);
+        } else {
+          cell.onclick = null;
+        }
+
+        if (this.state.selectedCells.some(p => p.r === r && p.c === c)) {
+          cell.classList.add('selected');
+        }
+      }
+
+      renderAll() {
+        for (let r = 0; r < this.state.rows; r++) {
+          for (let c = 0; c < this.state.cols; c++) {
+            this.renderCell(r, c);
+          }
+        }
+      }
+
+      toggleCell(r, c) {
+        if (!this.state.playerTurn || !this.state.gameActive || this.state.board[r][c] !== null) return;
+
+        const idx = this.state.selectedCells.findIndex(p => p.r === r && p.c === c);
+        if (idx >= 0) {
+          this.state.selectedCells.splice(idx, 1);
+        } else {
+          if (!isValidMove(this.state.selectedCells, {r, c})) return;
+          this.state.selectedCells.push({ r, c });
+        }
+
+        this.renderAll();
+        this.ui.passBtn.disabled = this.state.selectedCells.length === 0;
+      }
+
+      passTurn() {
+        if (!this.state.gameActive || this.state.selectedCells.length === 0) return;
+
+        const hitMine = this.state.selectedCells.some(p => 
+          p.r === this.state.minePos.r && p.c === this.state.minePos.c
+        );
+
+        if (hitMine) {
+          this.state.selectedCells.forEach(p => {
+            this.state.board[p.r][p.c] = 'player';
+          });
+          this.renderAll();
+          this.endGame(false);
+          return;
+        }
+
+        this.state.selectedCells.forEach(p => {
+            this.state.board[p.r][p.c] = 'player';
+        });
+        this.state.selectedCells = [];
+
+        const free = countFreeCells(this.state.board);
+        if (free === 0) {
+          setTimeout(() => {
+            this.state.board[this.state.minePos.r][this.state.minePos.c] = 'ai';
+            this.renderAll();
+            this.endGame(true);
+          }, 600);
+          return;
+        }
+
+        this.state.playerTurn = false;
+        this.updateStatus('Ход ИИ...');
+        this.ui.passBtn.disabled = true;
+        setTimeout(() => this.aiTurn(), 800);
+      }
+
+      aiTurn() {
+        if (!this.state.gameActive) return;
+
+        const freeCells = getFreeCells(this.state.board);
+        if (freeCells.length === 0) {
+          this.updateStatus('Нет ходов');
+          this.state.gameActive = false;
+          return;
+        }
+
+        let aiGroup;
+
+        if (this.state.difficulty === 1) {
+          const allGroups = generateAllConnectedGroups(freeCells, this.state.rows, this.state.cols);
+          aiGroup = allGroups.length ? allGroups[Math.floor(Math.random() * allGroups.length)] : [freeCells[0]];
+        } else if (this.state.difficulty === 2) {
+          const safeGroups = generateAllConnectedGroups(freeCells, this.state.rows, this.state.cols)
+            .filter(g => !g.some(p => p.r === this.state.minePos.r && p.c === this.state.minePos.c));
+          if (safeGroups.length === 0) {
+            aiGroup = [freeCells[0]];
+          } else {
+            let best = [];
+            let bestParity = -1;
+            for (const g of safeGroups) {
+              const rem = freeCells.length - g.length;
+              const odd = rem % 2;
+              if (odd > bestParity) {
+                bestParity = odd;
+                best = [g];
+              } else if (odd === bestParity) {
+                best.push(g);
+              }
+            }
+            aiGroup = best[Math.floor(Math.random() * best.length)];
+          }
+        } else if (this.state.difficulty === 3) {
+          const safeGroups = generateAllConnectedGroups(freeCells, this.state.rows, this.state.cols)
+            .filter(g => !g.some(p => p.r === this.state.minePos.r && p.c === this.state.minePos.c));
+          if (safeGroups.length === 0) {
+            aiGroup = [freeCells[0]];
+          } else {
+            const result = minimax(
+              this.state.board,
+              this.state.minePos,
+              2,
+              -Infinity,
+              Infinity,
+              true,
+              this.state.rows,
+              this.state.cols
+            );
+            aiGroup = result.move;
+          }
+        }
+
+        const hitMine = aiGroup.some(p => p.r === this.state.minePos.r && p.c === this.state.minePos.c);
+        aiGroup.forEach(p => {
+          this.state.board[p.r][p.c] = 'ai';
+        });
+        this.renderAll();
+
+        if (hitMine) {
+          this.endGame(true);
+          return;
+        }
+
+        const free = countFreeCells(this.state.board);
+        if (free === 0) {
+          setTimeout(() => {
+            this.state.board[this.state.minePos.r][this.state.minePos.c] = 'player';
+            this.renderAll();
+            this.endGame(false);
+          }, 1000);
+          return;
+        }
+
+        this.state.playerTurn = true;
+        this.updateStatus('Выберите 1–3 связные клетки (по сторонам)');
+        this.ui.passBtn.disabled = this.state.selectedCells.length === 0;
+        this.renderAll();
+      }
+
+      updateStatus(text) {
+        this.ui.status.textContent = text;
+      }
+
+      endGame(playerWon) {
+        this.state.gameActive = false;
+        if (playerWon) {
+          this.updateStatus('ИИ попал на мину! Победа!');
+        } else {
+          this.updateStatus('Вы попали на мину! Поражение.');
+        }
+        setTimeout(() => this.showMenu(), 2000);
+      }
+    }
+
+    const game = new MineGame();
+  </script>
+</body>
+</html>
