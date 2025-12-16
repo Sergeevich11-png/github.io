@@ -1,269 +1,216 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Лабиринт</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      touch-action: none;
+<script>
+  // === Настройки уровней ===
+  const levels = {
+    easy: {
+      rings: 3,
+      ringGap: 60,
+      exitWidth: 50,
+      exitOffsets: [0, Math.PI/2, Math.PI] // радианы
+    },
+    medium: {
+      rings: 5,
+      ringGap: 45,
+      exitWidth: 35,
+      exitOffsets: [0, 1.2, 2.4, 3.6, 4.8]
+    },
+    hard: {
+      rings: 7,
+      ringGap: 32,
+      exitWidth: 22,
+      exitOffsets: [0.3, 1.1, 2.0, 2.9, 3.8, 4.7, 5.6]
     }
-    body {
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      overflow: hidden;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+  };
+
+  let currentLevel = null;
+  let ball = { x: 0, y: 0 };
+  let gameActive = false;
+  let gameOver = false;
+  let accelerationX = 0;
+  let accelerationY = 0;
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const difficultyScreen = document.getElementById('difficultyScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const messageEl = document.getElementById('message');
+  const menuBtn = document.getElementById('menuBtn');
+  const backBtn = document.getElementById('backBtn');
+  const easyBtn = document.getElementById('easyBtn');
+  const mediumBtn = document.getElementById('mediumBtn');
+  const hardBtn = document.getElementById('hardBtn');
+
+  // === Кнопка "Назад" — в главное меню ===
+  backBtn.addEventListener('click', () => {
+    window.location.href = '../index.html';
+  });
+
+  // === Кнопка "Меню" — к выбору сложности ===
+  menuBtn.addEventListener('click', () => {
+    gameActive = false;
+    gameOver = false;
+    difficultyScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+  });
+
+  // === Выбор сложности ===
+  function startLevel(levelKey) {
+    currentLevel = levels[levelKey];
+    resetGame();
+    difficultyScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permission => {
+          if (permission === 'granted') initGame();
+          else messageEl.textContent = 'Доступ к сенсорам запрещён.';
+        })
+        .catch(() => messageEl.textContent = 'Не удалось получить доступ к сенсорам.');
+    } else {
+      initGame();
     }
-    #gameCanvas {
-      display: block;
-      background: #222;
-      border-radius: 50%;
-      box-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
-    }
-    #ui {
-      position: absolute;
-      top: 20px;
-      text-align: center;
-      width: 100%;
-      font-size: 18px;
-      padding: 0 20px;
-    }
-    .btn {
-      padding: 10px 20px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin: 6px;
-    }
-    #startBtn, #menuBtn, #backBtn {
-      background: #007AFF;
-      color: white;
-    }
-    #easyBtn { background: #4CAF50; }
-    #mediumBtn { background: #FF9800; }
-    #hardBtn { background: #F44336; }
-    .hidden {
-      display: none !important;
-    }
-  </style>
-</head>
-<body>
-  <!-- Экран выбора сложности -->
-  <div id="difficultyScreen">
-    <h2>Выбери сложность</h2>
-    <button id="easyBtn" class="btn">Лёгкий</button>
-    <button id="mediumBtn" class="btn">Средний</button>
-    <button id="hardBtn" class="btn">Сложный</button>
-    <br>
-    <button id="backBtn" class="btn">Назад</button>
-  </div>
+  }
 
-  <!-- Игровой экран -->
-  <div id="gameScreen" class="hidden">
-    <div id="ui">
-      <div id="message">Наклоняй телефон, чтобы катать шарик!</div>
-      <button id="menuBtn" class="btn">Меню</button>
-    </div>
-    <canvas id="gameCanvas"></canvas>
-  </div>
+  function initGame() {
+    gameActive = true;
+    gameOver = false;
+    ball = { x: 0, y: 0 };
+    messageEl.textContent = 'Наклоняй телефон!';
 
-  <script>
-    // === Настройки уровней ===
-    const levels = {
-      easy: {
-        rings: 3,
-        ringGap: 60,
-        exitWidth: 50,
-        exitOffsets: [0, Math.PI/2, Math.PI] // радианы
-      },
-      medium: {
-        rings: 5,
-        ringGap: 45,
-        exitWidth: 35,
-        exitOffsets: [0, 1.2, 2.4, 3.6, 4.8]
-      },
-      hard: {
-        rings: 7,
-        ringGap: 32,
-        exitWidth: 22,
-        exitOffsets: [0.3, 1.1, 2.0, 2.9, 3.8, 4.7, 5.6]
-      }
-    };
+    const maxRadius = currentLevel.rings * currentLevel.ringGap;
+    const size = Math.min(window.innerWidth, window.innerHeight) * 0.9;
+    canvas.width = size;
+    canvas.height = size;
 
-    let currentLevel = null;
-    let ball = { x: 0, y: 0 };
-    let gameActive = false;
-    let gameOver = false;
-    let accelerationX = 0;
-    let accelerationY = 0;
+    window.addEventListener('devicemotion', handleMotion);
+    requestAnimationFrame(gameLoop);
+  }
 
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const difficultyScreen = document.getElementById('difficultyScreen');
-    const gameScreen = document.getElementById('gameScreen');
-    const messageEl = document.getElementById('message');
-    const menuBtn = document.getElementById('menuBtn');
-    const backBtn = document.getElementById('backBtn');
-    const easyBtn = document.getElementById('easyBtn');
-    const mediumBtn = document.getElementById('mediumBtn');
-    const hardBtn = document.getElementById('hardBtn');
+  function resetGame() {
+    gameActive = false;
+    gameOver = false;
+    accelerationX = 0;
+    accelerationY = 0;
+    window.removeEventListener('devicemotion', handleMotion);
+  }
 
-    // === Кнопка "Назад" — в главное меню ===
-    backBtn.addEventListener('click', () => {
-      window.location.href = '../index.html';
-    });
+  easyBtn.addEventListener('click', () => startLevel('easy'));
+  mediumBtn.addEventListener('click', () => startLevel('medium'));
+  hardBtn.addEventListener('click', () => startLevel('hard'));
 
-    // === Кнопка "Меню" — к выбору сложности ===
-    menuBtn.addEventListener('click', () => {
-      gameActive = false;
-      gameOver = false;
-      difficultyScreen.classList.remove('hidden');
-      gameScreen.classList.add('hidden');
-    });
+  // === Отрисовка лабиринта ===
+  function drawMaze() {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const scale = Math.min(canvas.width, canvas.height) / (2 * currentLevel.rings * currentLevel.ringGap);
 
-    // === Выбор сложности ===
-    function startLevel(levelKey) {
-      currentLevel = levels[levelKey];
-      resetGame();
-      difficultyScreen.classList.add('hidden');
-      gameScreen.classList.remove('hidden');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Запрос разрешения на iOS (если нужно)
-      if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
-          .then(permission => {
-            if (permission === 'granted') initGame();
-            else messageEl.textContent = 'Доступ к сенсорам запрещён.';
-          })
-          .catch(() => messageEl.textContent = 'Не удалось получить доступ к сенсорам.');
-      } else {
-        initGame();
-      }
+    // Рисуем каждый круг
+    for (let i = 0; i < currentLevel.rings; i++) {
+      const radius = (i + 1) * currentLevel.ringGap * scale;
+      const exitAngle = currentLevel.exitOffsets[i];
+      const halfExitRad = (currentLevel.exitWidth / 2) * (Math.PI / 180);
+
+      // Стена кольца
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 8 * scale;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Выход — разрыв
+      ctx.strokeStyle = i === currentLevel.rings - 1 ? '#0f0' : '#0a0';
+      ctx.lineWidth = 10 * scale;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, exitAngle - halfExitRad, exitAngle + halfExitRad);
+      ctx.stroke();
     }
 
-    function initGame() {
-      gameActive = true;
-      gameOver = false;
-      ball = { x: 0, y: 0 };
-      messageEl.textContent = 'Наклоняй телефон!';
-
-      const maxRadius = currentLevel.rings * currentLevel.ringGap;
-      const size = Math.min(window.innerWidth, window.innerHeight) * 0.9;
-      canvas.width = size;
-      canvas.height = size;
-
-      window.addEventListener('devicemotion', handleMotion);
-      requestAnimationFrame(gameLoop);
+    // Шарик
+    if (gameActive && !gameOver) {
+      ctx.fillStyle = '#ff5555';
+      ctx.beginPath();
+      ctx.arc(centerX + ball.x * scale, centerY + ball.y * scale, 8, 0, Math.PI * 2);
+      ctx.fill();
     }
+  }
 
-    function resetGame() {
-      gameActive = false;
-      gameOver = false;
-      accelerationX = 0;
-      accelerationY = 0;
-      window.removeEventListener('devicemotion', handleMotion);
+  // === Проверка победы ===
+  function checkWin() {
+    const outerRadius = currentLevel.rings * currentLevel.ringGap;
+    const dist = Math.hypot(ball.x, ball.y);
+    if (dist > outerRadius + 20) {
+      win();
     }
+  }
 
-    easyBtn.addEventListener('click', () => startLevel('easy'));
-    mediumBtn.addEventListener('click', () => startLevel('medium'));
-    hardBtn.addEventListener('click', () => startLevel('hard'));
+  function win() {
+    gameActive = false;
+    gameOver = true;
+    messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
+    menuBtn.textContent = 'Меню';
+  }
 
-    // === Отрисовка лабиринта ===
-    function drawMaze() {
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const scale = Math.min(canvas.width, canvas.height) / (2 * currentLevel.rings * currentLevel.ringGap);
+  // === Проверка столкновения со стеной ===
+  function checkWallCollision() {
+    const dist = Math.hypot(ball.x, ball.y);
+    const angle = Math.atan2(ball.y, ball.x); // угол шарика
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Определяем, между какими кольцами шарик
+    for (let i = 0; i < currentLevel.rings; i++) {
+      const innerRadius = i * currentLevel.ringGap;
+      const outerRadius = (i + 1) * currentLevel.ringGap;
+      const exitAngle = currentLevel.exitOffsets[i];
+      const halfExitRad = (currentLevel.exitWidth / 2) * (Math.PI / 180);
 
-      // Рисуем каждый круг
-      for (let i = 0; i < currentLevel.rings; i++) {
-        const radius = (i + 1) * currentLevel.ringGap * scale;
-        const exitAngle = currentLevel.exitOffsets[i];
-        const halfExitRad = (currentLevel.exitWidth / 2) * (Math.PI / 180);
+      // Если шарик в зоне этого кольца
+      if (dist >= innerRadius && dist <= outerRadius) {
+        // Проверяем, находится ли угол шарика в пределах выхода
+        const diff = Math.abs(angle - exitAngle);
+        const normalizedDiff = Math.min(diff, Math.PI * 2 - diff);
 
-        // Стена кольца
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 8 * scale;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Выход — разрыв
-        ctx.strokeStyle = i === currentLevel.rings - 1 ? '#0f0' : '#0a0';
-        ctx.lineWidth = 10 * scale;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, exitAngle - halfExitRad, exitAngle + halfExitRad);
-        ctx.stroke();
-      }
-
-      // Шарик
-      if (gameActive && !gameOver) {
-        ctx.fillStyle = '#ff5555';
-        ctx.beginPath();
-        ctx.arc(centerX + ball.x * scale, centerY + ball.y * scale, 8, 0, Math.PI * 2);
-        ctx.fill();
+        if (normalizedDiff > halfExitRad) {
+          // Шарик пытается пройти не через выход — отталкиваем
+          const ratio = (outerRadius - 5) / dist;
+          ball.x *= ratio;
+          ball.y *= ratio;
+        }
+        break; // выходим, т.к. шарик в одном кольце
       }
     }
+  }
 
-    // === Проверка победы ===
-    function checkWin() {
-      const outerRadius = currentLevel.rings * currentLevel.ringGap;
-      const dist = Math.hypot(ball.x, ball.y);
-      if (dist > outerRadius + 20) {
-        win();
-      }
+  // === Физика шарика ===
+  function updateBall(deltaTime) {
+    const speed = 60;
+    ball.x += accelerationX * speed * deltaTime;
+    ball.y -= accelerationY * speed * deltaTime;
+
+    // Проверяем столкновение со стеной
+    checkWallCollision();
+
+    // Проверяем победу
+    checkWin();
+  }
+
+  // === Основной цикл ===
+  let lastTime = 0;
+  function gameLoop(timestamp) {
+    const deltaTime = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    if (gameActive && !gameOver) {
+      updateBall(deltaTime);
     }
+    drawMaze();
+    if (gameActive) requestAnimationFrame(gameLoop);
+  }
 
-    function win() {
-      gameActive = false;
-      gameOver = true;
-      messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
-      menuBtn.textContent = 'Меню';
-    }
-
-    // === Физика шарика ===
-    function updateBall(deltaTime) {
-      const speed = 60;
-      ball.x += accelerationX * speed * deltaTime;
-      ball.y -= accelerationY * speed * deltaTime;
-
-      // Ограничиваем, чтобы не застревал внутри
-      const maxDist = currentLevel.rings * currentLevel.ringGap + 50;
-      if (Math.hypot(ball.x, ball.y) > maxDist) {
-        // Позволяем выйти — проверка победы сработает
-      }
-    }
-
-    // === Основной цикл ===
-    let lastTime = 0;
-    function gameLoop(timestamp) {
-      const deltaTime = (timestamp - lastTime) / 1000;
-      lastTime = timestamp;
-
-      if (gameActive && !gameOver) {
-        updateBall(deltaTime);
-        checkWin();
-      }
-      drawMaze();
-      if (gameActive) requestAnimationFrame(gameLoop);
-    }
-
-    // === Сенсоры ===
-    function handleMotion(event) {
-      if (!gameActive) return;
-      accelerationX = event.accelerationIncludingGravity?.x || 0;
-      accelerationY = event.accelerationIncludingGravity?.y || 0;
-    }
-  </script>
-</body>
-</html>
+  // === Сенсоры ===
+  function handleMotion(event) {
+    if (!gameActive) return;
+    accelerationX = event.accelerationIncludingGravity?.x || 0;
+    accelerationY = event.accelerationIncludingGravity?.y || 0;
+  }
+</script>
