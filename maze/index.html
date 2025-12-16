@@ -71,7 +71,6 @@
   </style>
 </head>
 <body>
-  <!-- Экран выбора сложности -->
   <div id="difficultyScreen">
     <h2>Выбери сложность</h2>
     <button id="easyBtn" class="btn">Лёгкий</button>
@@ -81,7 +80,6 @@
     <button id="backBtn" class="btn">Назад</button>
   </div>
 
-  <!-- Игровой экран -->
   <div id="gameScreen" class="hidden">
     <div id="ui">
       <div id="message">Наклоняй телефон, чтобы катать шарик!</div>
@@ -91,20 +89,17 @@
   </div>
 
   <script>
-    // === Уровни сложности ===
     const configs = {
       easy: { rings: 3, gap: 50, exitAngle: [0, Math.PI/2, Math.PI], exitWidthDeg: 40 },
       medium: { rings: 5, gap: 40, exitAngle: [0.5, 1.8, 3.0, 4.2, 5.5], exitWidthDeg: 28 },
       hard: { rings: 7, gap: 32, exitAngle: [0.3, 1.1, 2.0, 2.9, 3.8, 4.7, 5.6], exitWidthDeg: 18 }
     };
 
-    // === Глобальные переменные ===
     let config = null;
     let ball = { x: 0, y: 0, radius: 6 };
     let gameActive = false;
     let gameOver = false;
 
-    // === DOM ===
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const difficultyScreen = document.getElementById('difficultyScreen');
@@ -113,7 +108,6 @@
     const menuBtn = document.getElementById('menuBtn');
     const backBtn = document.getElementById('backBtn');
 
-    // === Навигация ===
     backBtn.addEventListener('click', () => window.location.href = '../index.html');
     menuBtn.addEventListener('click', resetToMenu);
 
@@ -125,7 +119,6 @@
       gameScreen.classList.add('hidden');
     }
 
-    // === Подготовка конфигурации уровня ===
     function prepareConfig(levelKey) {
       const cfg = { ...configs[levelKey] };
       cfg.exitRad = (cfg.exitWidthDeg / 2) * (Math.PI / 180);
@@ -133,23 +126,26 @@
       return cfg;
     }
 
-    // === Проверка коллизий ===
+    // === УЛУЧШЕННАЯ ПРОВЕРКА КОЛЛИЗИЙ ===
     function canMoveTo(x, y) {
       const r = Math.hypot(x, y);
       const angle = Math.atan2(y, x);
+      const minAllowed = -ball.radius;
+      const maxAllowed = config.maxRadius + ball.radius * 2;
 
-      // Победа — выход за пределы лабиринта
+      // Победа
       if (r > config.maxRadius + ball.radius * 1.5) {
         return 'win';
       }
 
+      // Запрет выхода за разумные пределы (без победы)
+      if (r < minAllowed || r > maxAllowed) {
+        return false;
+      }
+
+      // Проверка всех колец с обеих сторон
       for (let i = 0; i < config.rings; i++) {
-        const inner = i * config.gap;
-        const outer = (i + 1) * config.gap;
-        const wallRadius = outer;
-
-        if (r > inner + ball.radius && r < outer - ball.radius) continue;
-
+        const wallRadius = (i + 1) * config.gap;
         if (Math.abs(r - wallRadius) <= ball.radius) {
           const exitCenter = config.exitAngle[i];
           let diff = Math.abs(angle - exitCenter);
@@ -159,77 +155,85 @@
           }
         }
       }
+
       return true;
     }
 
-    // === Обработка акселерометра — с защитой от сквозного прохода ===
+    // === УПРАВЛЕНИЕ СО СКОЛЬЖЕНИЕМ ===
     function handleMotion(e) {
       if (!gameActive || gameOver) return;
 
       const ax = e.accelerationIncludingGravity?.x || 0;
       const ay = e.accelerationIncludingGravity?.y || 0;
 
-      // ↓↓↓ КЛЮЧЕВЫЕ ПАРАМЕТРЫ: чувствительность и плавность ↓↓↓
-      const sensitivity = config.maxRadius * 0.12; // снижена — игнорирует микронаклоны
+      const sensitivity = config.maxRadius * 0.12;
       const targetX = ax * sensitivity;
       const targetY = -ay * sensitivity;
 
       const oldX = ball.x;
       const oldY = ball.y;
 
-      const smooth = 0.3; // плавное, но не вялое следование
+      const smooth = 0.3;
       const newX = oldX + (targetX - oldX) * smooth;
       const newY = oldY + (targetY - oldY) * smooth;
 
-      // --- Разбиваем движение на мелкие шаги, чтобы не проходить сквозь стены ---
       const dx = newX - oldX;
       const dy = newY - oldY;
       const distance = Math.hypot(dx, dy);
-      const stepSize = ball.radius * 0.8; // шаг < радиуса шарика
-
-      let steps = 1;
-      if (distance > stepSize) {
-        steps = Math.ceil(distance / stepSize);
-      }
+      const stepSize = ball.radius * 0.8;
+      let steps = distance > stepSize ? Math.ceil(distance / stepSize) : 1;
 
       let currentX = oldX;
       let currentY = oldY;
-      let finalResult = true;
 
-      for (let i = 1; i <= steps; i++) {
-        const ratio = i / steps;
-        const testX = oldX + dx * ratio;
-        const testY = oldY + dy * ratio;
+      for (let step = 1; step <= steps; step++) {
+        const ratio = step / steps;
+        const tryX = oldX + dx * ratio;
+        const tryY = oldY + dy * ratio;
 
-        const result = canMoveTo(testX, testY);
+        let result = canMoveTo(tryX, tryY);
+
         if (result === 'win') {
-          currentX = testX;
-          currentY = testY;
-          finalResult = 'win';
+          currentX = tryX;
+          currentY = tryY;
           break;
         } else if (result === true) {
-          currentX = testX;
-          currentY = testY;
+          currentX = tryX;
+          currentY = tryY;
         } else {
-          finalResult = false;
-          break;
+          // Скольжение: пробуем по осям
+          let moved = false;
+
+          // По X
+          if (canMoveTo(currentX + (tryX - currentX), currentY) === true) {
+            currentX += (tryX - currentX);
+            moved = true;
+          }
+
+          // По Y
+          if (canMoveTo(currentX, currentY + (tryY - currentY)) === true) {
+            currentY += (tryY - currentY);
+            moved = true;
+          }
+
+          if (!moved) break;
         }
       }
 
-      if (finalResult === 'win') {
+      const finalCheck = canMoveTo(currentX, currentY);
+      if (finalCheck === 'win') {
         ball.x = currentX;
         ball.y = currentY;
         gameActive = false;
         gameOver = true;
         messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
         menuBtn.textContent = 'Меню';
-      } else if (finalResult === true) {
+      } else if (finalCheck === true) {
         ball.x = currentX;
         ball.y = currentY;
       }
     }
 
-    // === Отрисовка ===
     function draw() {
       const size = Math.min(window.innerWidth, window.innerHeight) * 0.94;
       canvas.width = canvas.height = size;
@@ -260,7 +264,6 @@
       }
     }
 
-    // === Игровой цикл — только отрисовка ===
     function loop() {
       if (gameActive || gameOver) {
         draw();
@@ -268,7 +271,6 @@
       }
     }
 
-    // === Запуск уровня ===
     function start(levelKey) {
       config = prepareConfig(levelKey);
       const radiusMap = { easy: 8, medium: 6, hard: 5 };
@@ -284,7 +286,6 @@
       difficultyScreen.classList.add('hidden');
       gameScreen.classList.remove('hidden');
 
-      // iOS — запрос разрешения
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
           .then(permission => {
@@ -300,14 +301,12 @@
             messageEl.textContent = 'Не удалось получить доступ к сенсорам.';
           });
       } else {
-        // Android — сразу запускаем
         gameActive = true;
         window.addEventListener('devicemotion', handleMotion);
         requestAnimationFrame(loop);
       }
     }
 
-    // === Кнопки сложности ===
     document.getElementById('easyBtn').addEventListener('click', () => start('easy'));
     document.getElementById('mediumBtn').addEventListener('click', () => start('medium'));
     document.getElementById('hardBtn').addEventListener('click', () => start('hard'));
