@@ -100,11 +100,9 @@
 
     // === Глобальные переменные ===
     let config = null;
-    let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 6 };
+    let ball = { x: 0, y: 0, radius: 6 };
     let gameActive = false;
     let gameOver = false;
-    let sensorX = 0, sensorY = 0;
-    let lastTime = 0;
 
     // === DOM ===
     const canvas = document.getElementById('gameCanvas');
@@ -127,22 +125,21 @@
       gameScreen.classList.add('hidden');
     }
 
-    // === Обработка датчиков ===
-    function handleMotion(e) {
-      if (!gameActive) return;
-      sensorX = e.accelerationIncludingGravity?.x || 0;
-      sensorY = e.accelerationIncludingGravity?.y || 0;
+    // === Предварительно вычислим exitRad для производительности ===
+    function prepareConfig(levelKey) {
+      const cfg = { ...configs[levelKey] };
+      cfg.exitRad = (cfg.exitWidthDeg / 2) * (Math.PI / 180);
+      cfg.maxRadius = cfg.rings * cfg.gap;
+      return cfg;
     }
 
     // === Проверка коллизии со стенами ===
     function canMoveTo(x, y) {
       const r = Math.hypot(x, y);
       const angle = Math.atan2(y, x);
-      const maxRadius = config.rings * config.gap;
-      const exitRad = (config.exitWidthDeg / 2) * (Math.PI / 180);
 
       // Победа — выход за последнее кольцо
-      if (r > maxRadius + ball.radius * 1.5) {
+      if (r > config.maxRadius + ball.radius * 1.5) {
         return 'win';
       }
 
@@ -152,42 +149,45 @@
         const outer = (i + 1) * config.gap;
         const wallRadius = outer;
 
-        // Находимся ли мы внутри толщины стены?
+        // Внутри прохода между стенами — ок
         if (r > inner + ball.radius && r < outer - ball.radius) continue;
 
-        // Если слишком близко к стене
+        // Слишком близко к стене?
         if (Math.abs(r - wallRadius) <= ball.radius) {
           const exitCenter = config.exitAngle[i];
           let diff = Math.abs(angle - exitCenter);
           diff = Math.min(diff, 2 * Math.PI - diff);
 
-          // Если не в проходе — запрещено
-          if (diff > exitRad) {
-            return false;
+          if (diff > config.exitRad) {
+            return false; // Упёрся в стену
           }
         }
       }
       return true;
     }
 
-    // === Физика и обновление ===
-    function update(delta) {
-      const friction = 0.94;
-      const force = 0.8;
+    // === Обработка датчиков — ОСНОВНОЙ МОМЕНТ ===
+    function handleMotion(e) {
+      if (!gameActive || gameOver) return;
 
-      // Ускорение от датчиков
-      ball.vx += sensorX * force * delta;
-      ball.vy -= sensorY * force * delta;
+      const ax = e.accelerationIncludingGravity?.x || 0;
+      const ay = e.accelerationIncludingGravity?.y || 0;
 
-      // Трение
-      ball.vx *= friction;
-      ball.vy *= friction;
+      // Масштаб движения под размер лабиринта
+      const sensitivity = config.maxRadius * 0.22; // настраиваемый коэффициент
+      const targetX = ax * sensitivity;
+      const targetY = -ay * sensitivity;
 
-      // Новая позиция
-      const newX = ball.x + ball.vx;
-      const newY = ball.y + ball.vy;
+      // Текущая позиция
+      const oldX = ball.x;
+      const oldY = ball.y;
 
-      // Проверка перемещения
+      // Плавное следование (интерполяция — убирает рывки)
+      const smooth = 0.5; // 0.3–0.7 — баланс плавности и скорости
+      const newX = oldX + (targetX - oldX) * smooth;
+      const newY = oldY + (targetY - oldY) * smooth;
+
+      // Проверка коллизий
       const result = canMoveTo(newX, newY);
       if (result === 'win') {
         ball.x = newX;
@@ -199,11 +199,8 @@
       } else if (result === true) {
         ball.x = newX;
         ball.y = newY;
-      } else {
-        // Упёрся в стену — останавливаем
-        ball.vx = 0;
-        ball.vy = 0;
       }
+      // Если нельзя двигаться — остаёмся на месте (ничего не делаем)
     }
 
     // === Отрисовка ===
@@ -212,25 +209,22 @@
       canvas.width = canvas.height = size;
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      const scale = size / (2 * config.rings * config.gap);
+      const scale = size / (2 * config.maxRadius);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Стены — рисуем кольца как полные окружности, но с разрывами
+      // Стены — рисуем кольца с разрывами
       ctx.lineWidth = 12 * scale;
       ctx.strokeStyle = '#aaa';
 
       for (let i = 0; i < config.rings; i++) {
         const r = (i + 1) * config.gap * scale;
         const exitCenter = config.exitAngle[i];
-        const halfExit = (config.exitWidthDeg / 2) * (Math.PI / 180);
+        const halfExit = config.exitRad;
 
-        // Левый сегмент
         ctx.beginPath();
         ctx.arc(cx, cy, r, exitCenter + halfExit, exitCenter - halfExit + 2 * Math.PI);
         ctx.stroke();
-
-        // Проход — не рисуем, остаётся тёмным
       }
 
       // Шарик
@@ -242,13 +236,9 @@
       }
     }
 
-    // === Игровой цикл ===
-    function loop(timestamp) {
-      const delta = Math.min((timestamp - lastTime) / 16, 2);
-      lastTime = timestamp;
-
-      if (gameActive) {
-        update(delta);
+    // === Игровой цикл — ТОЛЬКО ОТРИСОВКА ===
+    function loop() {
+      if (gameActive || gameOver) {
         draw();
         requestAnimationFrame(loop);
       }
@@ -256,11 +246,11 @@
 
     // === Запуск уровня ===
     function start(levelKey) {
-      config = configs[levelKey];
-      ball = { x: 0, y: 0, vx: 0, vy: 0, radius: levelKey === 'easy' ? 8 : (levelKey === 'medium' ? 6 : 5) };
+      config = prepareConfig(levelKey);
+      const radiusMap = { easy: 8, medium: 6, hard: 5 };
+      ball = { x: 0, y: 0, radius: radiusMap[levelKey] };
       gameActive = false;
       gameOver = false;
-      sensorX = sensorY = 0;
       messageEl.textContent = 'Наклоняй телефон, чтобы катать шарик!';
       menuBtn.textContent = 'Меню';
 
@@ -277,7 +267,6 @@
             if (permission === 'granted') {
               gameActive = true;
               window.addEventListener('devicemotion', handleMotion);
-              lastTime = performance.now();
               requestAnimationFrame(loop);
             } else {
               messageEl.textContent = 'Разреши доступ к сенсорам в настройках.';
@@ -290,7 +279,6 @@
         // Android / десктоп — сразу запускаем
         gameActive = true;
         window.addEventListener('devicemotion', handleMotion);
-        lastTime = performance.now();
         requestAnimationFrame(loop);
       }
     }
