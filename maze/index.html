@@ -122,7 +122,8 @@
     let lastTime = 0;
     let friction = 0.96;
     let bounce = 0.5;
-    let gravityFactor = 0.25;
+    // ⬇ УМЕНЬШЕНА В 10 РАЗ (было 0.25, стало 0.025)
+    let gravityFactor = 0.025;
     let resolutionSteps = 8;
 
     const canvas = document.getElementById('gameCanvas');
@@ -143,7 +144,6 @@
       difficultyScreen.classList.remove('hidden');
       gameScreen.classList.add('hidden');
       cancelAnimationFrame(animFrameId);
-      // Сброс состояния
       ball.x = 0;
       ball.y = 0;
       ball.vx = 0;
@@ -178,23 +178,6 @@
       return minDist === Infinity ? null : minDist;
     }
 
-    function isInsideExit(x, y) {
-      const r = Math.hypot(x, y);
-      const angle = Math.atan2(y, x);
-      for (let i = 0; i < config.rings; i++) {
-        const wallRadius = (i + 1) * config.gap;
-        if (Math.abs(r - wallRadius) <= ball.radius + 1) {
-          const exitCenter = config.exitAngles[i];
-          let diff = Math.abs(angle - exitCenter);
-          diff = Math.min(diff, 2 * Math.PI - diff);
-          if (diff <= config.exitRad + 0.05) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-
     function handleMotion(e) {
       if (!gameActive || gameOver) return;
       const ax = e.accelerationIncludingGravity?.x || 0;
@@ -208,12 +191,10 @@
     function updateBall(deltaTime) {
       if (!gameActive || gameOver) return;
 
-      // Применяем трение
       ball.vx *= friction;
       ball.vy *= friction;
 
-      // Ограничиваем скорость
-      const maxSpeed = config.gap * 0.6;
+      const maxSpeed = config.gap * 0.4;
       const speed = Math.hypot(ball.vx, ball.vy);
       if (speed > maxSpeed) {
         ball.vx = (ball.vx / speed) * maxSpeed;
@@ -227,7 +208,6 @@
         const newX = ball.x + ball.vx * stepTime;
         const newY = ball.y + ball.vy * stepTime;
 
-        // Проверка на победу
         if (Math.hypot(newX, newY) > config.maxRadius + ball.radius * 1.2) {
           ball.x = newX;
           ball.y = newY;
@@ -235,7 +215,6 @@
           return;
         }
 
-        // Проверка коллизий со стенами
         const distToWall = getDistanceToWall(newX, newY);
         if (distToWall !== null && distToWall < ball.radius) {
           const normalX = (newX - ball.x);
@@ -256,7 +235,6 @@
             ball.vy = (ball.vy - 2 * dot * ny) * bounce;
           }
 
-          // Подталкиваем мяч из стены
           const overlap = ball.radius - distToWall;
           ball.x += nx * overlap;
           ball.y += ny * overlap;
@@ -283,7 +261,6 @@
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Фон лабиринта — дерево
       const gradientBg = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width / 2);
       gradientBg.addColorStop(0, '#4a413b');
       gradientBg.addColorStop(1, '#322c27');
@@ -292,13 +269,11 @@
       ctx.arc(cx, cy, canvas.width / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Тени под кольцами
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
 
-      // Отрисовка колец
       for (let i = 0; i < config.rings; i++) {
         const r = (i + 1) * config.gap * scale;
         const exitCenter = config.exitAngles[i];
@@ -313,13 +288,11 @@
 
       ctx.shadowColor = 'transparent';
 
-      // Отрисовка шарика
       if (!gameOver) {
         const ballX = cx + ball.x * scale;
         const ballY = cy + ball.y * scale;
         const ballRad = ball.radius * scale;
 
-        // 3D-эффект шарика
         const gradientBall = ctx.createRadialGradient(
           ballX - ballRad * 0.3,
           ballY - ballRad * 0.3,
@@ -337,7 +310,6 @@
         ctx.fillStyle = gradientBall;
         ctx.fill();
 
-        // Блик
         ctx.beginPath();
         ctx.arc(ballX - ballRad * 0.3, ballY - ballRad * 0.3, ballRad * 0.2, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
@@ -403,7 +375,6 @@
         }
       };
 
-      // Запрашиваем разрешение только по взаимодействию (нажатию)
       requestPermission();
     }
 
