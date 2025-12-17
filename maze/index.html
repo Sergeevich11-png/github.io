@@ -120,11 +120,11 @@
     let gameActive = false;
     let gameOver = false;
     let lastTime = 0;
-    let friction = 0.96;
-    let bounce = 0.5;
-    // ⬇ УМЕНЬШЕНА В 10 РАЗ (было 0.25, стало 0.025)
+    let friction = 0.97;
+    let bounce = 0.4;
+    // ⬇ ВСЕГО В 100 РАЗ МЕДЛЕННЕЕ ОРИГИНАЛА
     let gravityFactor = 0.0025;
-    let resolutionSteps = 8;
+    let resolutionSteps = 10;
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -194,7 +194,7 @@
       ball.vx *= friction;
       ball.vy *= friction;
 
-      const maxSpeed = config.gap * 0.4;
+      const maxSpeed = config.gap * 0.25;
       const speed = Math.hypot(ball.vx, ball.vy);
       if (speed > maxSpeed) {
         ball.vx = (ball.vx / speed) * maxSpeed;
