@@ -12,9 +12,9 @@
       touch-action: none;
     }
     body {
-      background: #111;
-      color: white;
-      font-family: sans-serif;
+      background: #2b2623;
+      color: #e0d7d1;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
       height: 100vh;
       display: flex;
@@ -23,9 +23,11 @@
     }
     #gameCanvas {
       display: block;
-      background: #1a1a1a;
+      background: #3a3430;
       border-radius: 50%;
-      box-shadow: 0 0 20px rgba(0, 200, 255, 0.2);
+      box-shadow:
+        0 0 30px rgba(0, 0, 0, 0.6),
+        inset 0 0 20px rgba(0, 0, 0, 0.4);
     }
     #difficultyScreen {
       text-align: center;
@@ -33,25 +35,31 @@
       padding: 20px;
     }
     #difficultyScreen h2 {
-      margin-bottom: 20px;
-      font-size: 24px;
+      margin-bottom: 24px;
+      font-size: 28px;
+      color: #d4a18a;
     }
     .btn {
-      padding: 12px 24px;
+      padding: 14px 28px;
       font-size: 18px;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
-      margin: 8px;
+      margin: 10px;
       color: white;
       font-weight: bold;
-      transition: 0.2s;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
-    #easyBtn { background: #4CAF50; }
-    #mediumBtn { background: #FF9800; }
-    #hardBtn { background: #F44336; }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+    #easyBtn { background: #8aa67d; }
+    #mediumBtn { background: #c28b5e; }
+    #hardBtn { background: #a65b5b; }
     #menuBtn, #backBtn {
-      background: #007AFF;
+      background: #7c6a5d;
     }
     .hidden {
       display: none !important;
@@ -63,10 +71,13 @@
       text-align: center;
       font-size: 16px;
       pointer-events: none;
+      color: #e0d7d1;
     }
     #message {
-      margin-bottom: 8px;
-      padding: 0 10px;
+      margin-bottom: 10px;
+      padding: 0 12px;
+      font-size: 17px;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -90,15 +101,27 @@
 
   <script>
     const configs = {
-      easy: { rings: 3, gap: 50, exitAngle: [0, Math.PI/2, Math.PI], exitWidthDeg: 40 },
-      medium: { rings: 5, gap: 40, exitAngle: [0.5, 1.8, 3.0, 4.2, 5.5], exitWidthDeg: 28 },
-      hard: { rings: 7, gap: 32, exitAngle: [0.3, 1.1, 2.0, 2.9, 3.8, 4.7, 5.6], exitWidthDeg: 18 }
+      easy:   { rings: 3, gap: 50, exitAngles: [0, Math.PI / 2, Math.PI], exitWidthDeg: 40 },
+      medium: { rings: 5, gap: 40, exitAngles: [0.5, 1.8, 3.0, 4.2, 5.5], exitWidthDeg: 28 },
+      hard:   { rings: 7, gap: 32, exitAngles: [0.3, 1.1, 2.0, 2.9, 3.8, 4.7, 5.6], exitWidthDeg: 18 }
     };
 
     let config = null;
-    let ball = { x: 0, y: 0, radius: 6 };
+    let ball = {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      radius: 6,
+      mass: 1
+    };
     let gameActive = false;
     let gameOver = false;
+    let lastTime = 0;
+    let friction = 0.96;
+    let bounce = 0.5;
+    let gravityFactor = 0.25;
+    let resolutionSteps = 8;
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -117,6 +140,7 @@
       window.removeEventListener('devicemotion', handleMotion);
       difficultyScreen.classList.remove('hidden');
       gameScreen.classList.add('hidden');
+      cancelAnimationFrame(animFrameId);
     }
 
     function prepareConfig(levelKey) {
@@ -126,112 +150,120 @@
       return cfg;
     }
 
-    // === УЛУЧШЕННАЯ ПРОВЕРКА КОЛЛИЗИЙ ===
-    function canMoveTo(x, y) {
+    function getDistanceToWall(x, y) {
       const r = Math.hypot(x, y);
       const angle = Math.atan2(y, x);
-      const minAllowed = -ball.radius;
-      const maxAllowed = config.maxRadius + ball.radius * 2;
+      let minDist = Infinity;
 
-      // Победа
-      if (r > config.maxRadius + ball.radius * 1.5) {
-        return 'win';
-      }
-
-      // Запрет выхода за разумные пределы (без победы)
-      if (r < minAllowed || r > maxAllowed) {
-        return false;
-      }
-
-      // Проверка всех колец с обеих сторон
       for (let i = 0; i < config.rings; i++) {
         const wallRadius = (i + 1) * config.gap;
-        if (Math.abs(r - wallRadius) <= ball.radius) {
-          const exitCenter = config.exitAngle[i];
-          let diff = Math.abs(angle - exitCenter);
-          diff = Math.min(diff, 2 * Math.PI - diff);
-          if (diff > config.exitRad) {
-            return false;
+        const radialDist = Math.abs(r - wallRadius);
+        if (radialDist <= ball.radius + 2) {
+          const exitCenter = config.exitAngles[i];
+          let angleDiff = Math.abs(angle - exitCenter);
+          angleDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
+          if (angleDiff > config.exitRad) {
+            minDist = Math.min(minDist, radialDist);
           }
         }
       }
-
-      return true;
+      return minDist === Infinity ? null : minDist;
     }
 
-    // === УПРАВЛЕНИЕ СО СКОЛЬЖЕНИЕМ ===
-    function handleMotion(e) {
-      if (!gameActive || gameOver) return;
-
-      const ax = e.accelerationIncludingGravity?.x || 0;
-      const ay = e.accelerationIncludingGravity?.y || 0;
-
-      const sensitivity = config.maxRadius * 0.12;
-      const targetX = ax * sensitivity;
-      const targetY = -ay * sensitivity;
-
-      const oldX = ball.x;
-      const oldY = ball.y;
-
-      const smooth = 0.3;
-      const newX = oldX + (targetX - oldX) * smooth;
-      const newY = oldY + (targetY - oldY) * smooth;
-
-      const dx = newX - oldX;
-      const dy = newY - oldY;
-      const distance = Math.hypot(dx, dy);
-      const stepSize = ball.radius * 0.8;
-      let steps = distance > stepSize ? Math.ceil(distance / stepSize) : 1;
-
-      let currentX = oldX;
-      let currentY = oldY;
-
-      for (let step = 1; step <= steps; step++) {
-        const ratio = step / steps;
-        const tryX = oldX + dx * ratio;
-        const tryY = oldY + dy * ratio;
-
-        let result = canMoveTo(tryX, tryY);
-
-        if (result === 'win') {
-          currentX = tryX;
-          currentY = tryY;
-          break;
-        } else if (result === true) {
-          currentX = tryX;
-          currentY = tryY;
-        } else {
-          // Скольжение: пробуем по осям
-          let moved = false;
-
-          // По X
-          if (canMoveTo(currentX + (tryX - currentX), currentY) === true) {
-            currentX += (tryX - currentX);
-            moved = true;
+    function isInsideExit(x, y) {
+      const r = Math.hypot(x, y);
+      const angle = Math.atan2(y, x);
+      for (let i = 0; i < config.rings; i++) {
+        const wallRadius = (i + 1) * config.gap;
+        if (Math.abs(r - wallRadius) <= ball.radius + 1) {
+          const exitCenter = config.exitAngles[i];
+          let diff = Math.abs(angle - exitCenter);
+          diff = Math.min(diff, 2 * Math.PI - diff);
+          if (diff <= config.exitRad + 0.05) {
+            return true;
           }
-
-          // По Y
-          if (canMoveTo(currentX, currentY + (tryY - currentY)) === true) {
-            currentY += (tryY - currentY);
-            moved = true;
-          }
-
-          if (!moved) break;
         }
       }
+      return false;
+    }
 
-      const finalCheck = canMoveTo(currentX, currentY);
-      if (finalCheck === 'win') {
-        ball.x = currentX;
-        ball.y = currentY;
-        gameActive = false;
-        gameOver = true;
-        messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
-        menuBtn.textContent = 'Меню';
-      } else if (finalCheck === true) {
-        ball.x = currentX;
-        ball.y = currentY;
+    function handleMotion(e) {
+      if (!gameActive || gameOver) return;
+      const ax = e.accelerationIncludingGravity?.x || 0;
+      const ay = e.accelerationIncludingGravity?.y || 0;
+      const gx = ax * gravityFactor;
+      const gy = -ay * gravityFactor;
+      ball.vx += gx;
+      ball.vy += gy;
+    }
+
+    function updateBall(deltaTime) {
+      if (!gameActive || gameOver) return;
+
+      // Применяем трение
+      ball.vx *= friction;
+      ball.vy *= friction;
+
+      // Ограничиваем скорость
+      const maxSpeed = config.gap * 0.6;
+      const speed = Math.hypot(ball.vx, ball.vy);
+      if (speed > maxSpeed) {
+        ball.vx = (ball.vx / speed) * maxSpeed;
+        ball.vy = (ball.vy / speed) * maxSpeed;
       }
+
+      const steps = Math.max(1, Math.floor(deltaTime * 60 / 1000 * resolutionSteps));
+      const stepTime = deltaTime / steps;
+
+      for (let i = 0; i < steps; i++) {
+        const newX = ball.x + ball.vx * stepTime;
+        const newY = ball.y + ball.vy * stepTime;
+
+        // Проверка на победу
+        if (Math.hypot(newX, newY) > config.maxRadius + ball.radius * 1.2) {
+          ball.x = newX;
+          ball.y = newY;
+          victory();
+          return;
+        }
+
+        // Проверка коллизий со стенами
+        const distToWall = getDistanceToWall(newX, newY);
+        if (distToWall !== null && distToWall < ball.radius) {
+          const normalX = (newX - ball.x);
+          const normalY = (newY - ball.y);
+          const normalLen = Math.hypot(normalX, normalY);
+          if (normalLen === 0) {
+            ball.vx *= -bounce;
+            ball.vy *= -bounce;
+            continue;
+          }
+
+          const nx = normalX / normalLen;
+          const ny = normalY / normalLen;
+
+          const dot = ball.vx * nx + ball.vy * ny;
+          if (dot < 0) {
+            ball.vx = (ball.vx - 2 * dot * nx) * bounce;
+            ball.vy = (ball.vy - 2 * dot * ny) * bounce;
+          }
+
+          // Подталкиваем мяч из стены
+          const overlap = ball.radius - distToWall;
+          ball.x += nx * overlap;
+          ball.y += ny * overlap;
+        } else {
+          ball.x = newX;
+          ball.y = newY;
+        }
+      }
+    }
+
+    function victory() {
+      gameActive = false;
+      gameOver = true;
+      messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
+      menuBtn.textContent = 'Меню';
     }
 
     function draw() {
@@ -239,72 +271,132 @@
       canvas.width = canvas.height = size;
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      const scale = size / (2 * config.maxRadius);
+      const scale = size / (2 * (config.maxRadius + config.gap));
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.lineWidth = 12 * scale;
-      ctx.strokeStyle = '#aaa';
+      // Фон лабиринта — дерево
+      const gradientBg = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width / 2);
+      gradientBg.addColorStop(0, '#4a413b');
+      gradientBg.addColorStop(1, '#322c27');
+      ctx.fillStyle = gradientBg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, canvas.width / 2, 0, Math.PI * 2);
+      ctx.fill();
 
+      // Тени под кольцами
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 2;
+
+      // Отрисовка колец
       for (let i = 0; i < config.rings; i++) {
         const r = (i + 1) * config.gap * scale;
-        const exitCenter = config.exitAngle[i];
+        const exitCenter = config.exitAngles[i];
         const halfExit = config.exitRad;
 
         ctx.beginPath();
-        ctx.arc(cx, cy, r, exitCenter + halfExit, exitCenter - halfExit + 2 * Math.PI);
+        ctx.arc(cx, cy, r, exitCenter + halfExit, exitCenter - halfExit + 2 * Math.PI, true);
+        ctx.strokeStyle = '#c5b5a2';
+        ctx.lineWidth = 14 * scale;
         ctx.stroke();
       }
 
+      ctx.shadowColor = 'transparent';
+
+      // Отрисовка шарика
       if (!gameOver) {
-        ctx.fillStyle = '#ff4444';
+        const ballX = cx + ball.x * scale;
+        const ballY = cy + ball.y * scale;
+        const ballRad = ball.radius * scale;
+
+        // 3D-эффект шарика
+        const gradientBall = ctx.createRadialGradient(
+          ballX - ballRad * 0.3,
+          ballY - ballRad * 0.3,
+          0,
+          ballX,
+          ballY,
+          ballRad
+        );
+        gradientBall.addColorStop(0, '#f0c090');
+        gradientBall.addColorStop(0.8, '#d48a5a');
+        gradientBall.addColorStop(1, '#b05a2a');
+
         ctx.beginPath();
-        ctx.arc(cx + ball.x * scale, cy + ball.y * scale, ball.radius * scale, 0, Math.PI * 2);
+        ctx.arc(ballX, ballY, ballRad, 0, Math.PI * 2);
+        ctx.fillStyle = gradientBall;
+        ctx.fill();
+
+        // Блик
+        ctx.beginPath();
+        ctx.arc(ballX - ballRad * 0.3, ballY - ballRad * 0.3, ballRad * 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.fill();
       }
     }
 
-    function loop() {
+    let animFrameId;
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = timestamp - lastTime;
+      lastTime = timestamp;
+
       if (gameActive || gameOver) {
+        if (gameActive) updateBall(deltaTime);
         draw();
-        requestAnimationFrame(loop);
+        animFrameId = requestAnimationFrame(gameLoop);
       }
     }
 
     function start(levelKey) {
       config = prepareConfig(levelKey);
       const radiusMap = { easy: 8, medium: 6, hard: 5 };
-      ball = { x: 0, y: 0, radius: radiusMap[levelKey] };
+      ball = {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        radius: radiusMap[levelKey],
+        mass: 1
+      };
       gameActive = false;
       gameOver = false;
+      lastTime = 0;
       messageEl.textContent = 'Наклоняй телефон, чтобы катать шарик!';
       menuBtn.textContent = 'Меню';
 
-      const size = Math.min(window.innerWidth, window.innerHeight) * 0.94;
-      canvas.width = canvas.height = size;
+      const canvasSize = Math.min(window.innerWidth, window.innerHeight) * 0.94;
+      canvas.width = canvas.height = canvasSize;
 
       difficultyScreen.classList.add('hidden');
       gameScreen.classList.remove('hidden');
 
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
-          .then(permission => {
-            if (permission === 'granted') {
-              gameActive = true;
-              window.addEventListener('devicemotion', handleMotion);
-              requestAnimationFrame(loop);
-            } else {
-              messageEl.textContent = 'Разреши доступ к сенсорам в настройках.';
-            }
-          })
-          .catch(() => {
-            messageEl.textContent = 'Не удалось получить доступ к сенсорам.';
-          });
-      } else {
-        gameActive = true;
-        window.addEventListener('devicemotion', handleMotion);
-        requestAnimationFrame(loop);
-      }
+      const requestPermission = () => {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          DeviceMotionEvent.requestPermission()
+            .then(permission => {
+              if (permission === 'granted') {
+                gameActive = true;
+                window.addEventListener('devicemotion', handleMotion);
+                animFrameId = requestAnimationFrame(gameLoop);
+              } else {
+                messageEl.textContent = 'Разреши доступ к сенсорам в настройках.';
+              }
+            })
+            .catch(() => {
+              messageEl.textContent = 'Не удалось получить доступ к сенсорам.';
+            });
+        } else {
+          gameActive = true;
+          window.addEventListener('devicemotion', handleMotion);
+          animFrameId = requestAnimationFrame(gameLoop);
+        }
+      };
+
+      // Запрашиваем разрешение только по взаимодействию (нажатию)
+      requestPermission();
     }
 
     document.getElementById('easyBtn').addEventListener('click', () => start('easy'));
