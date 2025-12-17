@@ -33,6 +33,7 @@
       text-align: center;
       width: 100%;
       padding: 20px;
+      z-index: 10;
     }
     #difficultyScreen h2 {
       margin-bottom: 24px;
@@ -72,6 +73,7 @@
       font-size: 16px;
       pointer-events: none;
       color: #e0d7d1;
+      z-index: 20;
     }
     #message {
       margin-bottom: 10px;
@@ -141,6 +143,12 @@
       difficultyScreen.classList.remove('hidden');
       gameScreen.classList.add('hidden');
       cancelAnimationFrame(animFrameId);
+      // Сброс состояния
+      ball.x = 0;
+      ball.y = 0;
+      ball.vx = 0;
+      ball.vy = 0;
+      lastTime = 0;
     }
 
     function prepareConfig(levelKey) {
