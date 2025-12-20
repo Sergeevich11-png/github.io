@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>СловоУгадайка</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    body {
+      background: #f5f5f5;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .screen {
+      width: 100%;
+      max-width: 500px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .btn {
+      background: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin: 8px 0;
+      font-size: 1.1rem;
+      cursor: pointer;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .btn.rules, .btn.difficulty, .btn.play, .btn.exit {
+      background: #4A90E2;
+    }
+
+    .btn.diff-easy { background: #7ed321; }
+    .btn.diff-medium { background: #f5a623; }
+    .btn.diff-hard { background: #d0021b; }
+    .btn.diff-free { background: #9013fe; }
+
+    .btn-back {
+      background: #aaa;
+    }
+
+    .game-header {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px 0;
+    }
+
+    .menu-btn {
+      font-size: 1.8rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .mini-menu {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 10;
+      display: none;
+    }
+
+    .mini-menu.active {
+      display: block;
+    }
+
+    .mini-menu .btn {
+      width: 120px;
+      padding: 10px;
+      margin: 5px;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      margin: 20px 0;
+      gap: 6px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.4rem;
+      text-transform: uppercase;
+      background: white;
+    }
+
+    .cell.correct {
+      background: #D0021B;
+      color: white;
+    }
+
+    .cell.present {
+      background: #4A90E2;
+      color: white;
+    }
+
+    .keyboard {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 20px;
+    }
+
+    .key {
+      width: 36px;
+      height: 48px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ddd;
+      border-radius: 6px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .key.special {
+      width: 70px;
+      background: #bbb;
+    }
+
+    .message {
+      margin: 15px 0;
+      font-size: 1.3rem;
+      text-align: center;
+      min-height: 2em;
+    }
+
+    .rules-text {
+      margin: 15px 0;
+      font-size: 1rem;
+      line-height: 1.5;
+      text-align: center;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <!-- Главное меню -->
+  <div id="menu" class="screen active">
+    <h1>СловоУгадайка</h1>
+    <button class="btn play" onclick="showScreen('game')">Играть</button>
+    <button class="btn difficulty" onclick="showScreen('difficulty')">Сложность</button>
+    <button class="btn rules" onclick="showScreen('rules')">Правила</button>
+    <button class="btn exit" onclick="window.location.href='https://sergeevich11-png.github.io/github.io/'">Выход</button>
+  </div>
+
+  <!-- Правила -->
+  <div id="rules" class="screen">
+    <h1>Правила</h1>
+    <div class="rules-text">Слово из N букв загадывается. Игрок должен отгадать его за 5 попыток.  
+Если буква есть в слове, но не на своём месте — она выделяется **синим**.  
+Если буква есть и стоит на своём месте — она выделяется **красным**.  
+Буква, отсутствующая в слове, остаётся без выделения.  
+Всего даётся 5 попыток. Не угадал — проиграл.</div>
+    <button class="btn btn-back" onclick="showScreen('menu')">Назад</button>
+  </div>
+
+  <!-- Сложность -->
+  <div id="difficulty" class="screen">
+    <h1>Сложность</h1>
+    <button class="btn diff-easy" onclick="setDifficulty(3)">Легко</button>
+    <button class="btn diff-medium" onclick="setDifficulty(5)">Средне</button>
+    <button class="btn diff-hard" onclick="setDifficulty(7)">Сложно</button>
+    <button class="btn diff-free" onclick="setDifficulty('free')">Свободно</button>
+    <button class="btn btn-back" onclick="showScreen('menu')">Назад</button>
+  </div>
+
+  <!-- Игровой экран -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <button class="menu-btn" onclick="toggleMiniMenu()">⋮</button>
+    </div>
+
+    <div class="mini-menu" id="miniMenu">
+      <button class="btn" onclick="hideMiniMenu()">Продолжить</button>
+      <button class="btn" onclick="resetGame()">Заново</button>
+      <button class="btn btn-back" onclick="showScreen('menu'); hideMiniMenu()">Выход</button>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="grid" id="grid"></div>
+
+    <div class="keyboard" id="keyboard"></div>
+
+    <button class="btn btn-back" id="endGameBtn" style="display:none;" onclick="showScreen('menu')">В меню</button>
+  </div>
+
+  <script>
+    // === БАЗА СЛОВ ===
+    const WORDS_3 = ['сон', 'дом', 'кот', 'нос', 'лес', 'рот', 'час', 'шар', 'сок', 'лук', 'дым', 'бег', 'вес', 'газ', 'дар', 'жар', 'кит', 'лоб', 'мех', 'пух'];
+    const WORDS_5 = ['осень', 'погода', 'лимон', 'арбуз', 'багаж', 'билет', 'вагон', 'ветер', 'вилка', 'вишня', 'вышка', 'герой', 'глина', 'город', 'груша', 'дверь', 'девиз', 'дождь', 'доска', 'драка', 'егерь', 'зерно', 'икона', 'книга', 'кошка', 'лампа', 'лента', 'ложка', 'пакет', 'пенал', 'пирог', 'ручка', 'сахар', 'сумка', 'трава', 'улица', 'фильм', 'чашка', 'школа', 'банан', 'апель', 'огонь', 'снег', 'молоко', 'стол', 'стена', 'окно', 'дверь', 'полка'];
+    const WORDS_7 = ['абрикос', 'автомат', 'акробат', 'алфавит', 'анализы', 'артисты', 'асфальт', 'баранка', 'бассейн', 'бегемот', 'бильярд', 'варенье', 'верёвка', 'галстук', 'девочка', 'ежевика', 'капуста', 'копейка', 'магазин', 'медведь', 'надежда', 'паспорт', 'подарок', 'помидор', 'предмет', 'природа', 'ресница', 'рисунок', 'рубашка', 'счастье', 'таблица', 'тарелка', 'телефон', 'темнота', 'тетрадь', 'тревога', 'уровень', 'человек', 'чистота', 'юноша'];
+
+    const WORDS_FREE = [...WORDS_3, ...WORDS_5, ...WORDS_7];
+
+    // === ГЛОБАЛЬНОЕ СОСТОЯНИЕ ===
+    let currentDifficulty = 5; // по умолчанию "средне"
+    let currentWord = '';
+    let lastWord = '';
+    let currentRow = 0;
+    let gameState = 'active'; // 'active', 'won', 'lost'
+
+    // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+    function getRandomWord(pool) {
+      let word;
+      do {
+        word = pool[Math.floor(Math.random() * pool.length)];
+      } while (word === lastWord && pool.length > 1);
+      lastWord = word;
+      return word;
+    }
+
+    function getWordPool() {
+      if (currentDifficulty === 'free') {
+        return WORDS_FREE;
+      } else {
+        switch (currentDifficulty) {
+          case 3: return WORDS_3;
+          case 5: return WORDS_5;
+          case 7: return WORDS_7;
+          default: return WORDS_5;
+        }
+      }
+    }
+
+    function initGame() {
+      const pool = getWordPool();
+      currentWord = getRandomWord(pool);
+      currentRow = 0;
+      gameState = 'active';
+
+      document.getElementById('endGameBtn').style.display = 'none';
+      document.getElementById('message').textContent = '';
+
+      // Очистка сетки
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      const rows = 5;
+      const cols = currentWord.length;
+
+      for (let r = 0; r < rows; r++) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        for (let c = 0; c < cols; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          row.appendChild(cell);
+        }
+        grid.appendChild(row);
+      }
+
+      renderKeyboard();
+    }
+
+    function renderKeyboard() {
+      const keyboardEl = document.getElementById('keyboard');
+      keyboardEl.innerHTML = '';
+
+      const letters = 'абвгдежзиклмнопрстуфхцчшщъыьэюя'.split('');
+
+      letters.forEach(letter => {
+        const key = document.createElement('div');
+        key.className = 'key';
+        key.textContent = letter;
+        key.onclick = () => inputLetter(letter);
+        keyboardEl.appendChild(key);
+      });
+
+      const backspace = document.createElement('div');
+      backspace.className = 'key special';
+      backspace.textContent = '⌫';
+      backspace.onclick = () => deleteLetter();
+      keyboardEl.appendChild(backspace);
+
+      const enter = document.createElement('div');
+      enter.className = 'key special';
+      enter.textContent = '↵';
+      enter.onclick = () => submitGuess();
+      keyboardEl.appendChild(enter);
+    }
+
+    function inputLetter(letter) {
+      if (gameState !== 'active') return;
+      const row = document.querySelectorAll('.row')[currentRow];
+      const cells = row.querySelectorAll('.cell');
+      for (let cell of cells) {
+        if (!cell.textContent) {
+          cell.textContent = letter;
+          return;
+        }
+      }
+    }
+
+    function deleteLetter() {
+      if (gameState !== 'active') return;
+      const row = document.querySelectorAll('.row')[currentRow];
+      const cells = Array.from(row.querySelectorAll('.cell'));
+      for (let i = cells.length - 1; i >= 0; i--) {
+        if (cells[i].textContent) {
+          cells[i].textContent = '';
+          return;
+        }
+      }
+    }
+
+    function submitGuess() {
+      if (gameState !== 'active') return;
+      const row = document.querySelectorAll('.row')[currentRow];
+      const cells = row.querySelectorAll('.cell');
+      let guess = '';
+      for (let cell of cells) {
+        if (!cell.textContent) return; // неполное слово
+        guess += cell.textContent;
+      }
+
+      // Анализ
+      const result = analyzeGuess(guess, currentWord);
+      for (let i = 0; i < cells.length; i++) {
+        if (result[i] === 'correct') {
+          cells[i].classList.add('correct');
+        } else if (result[i] === 'present') {
+          cells[i].classList.add('present');
+        }
+      }
+
+      if (guess === currentWord) {
+        gameState = 'won';
+        document.getElementById('message').textContent = 'Победа!';
+        document.getElementById('endGameBtn').style.display = 'block';
+        return;
+      }
+
+      currentRow++;
+      if (currentRow >= 5) {
+        gameState = 'lost';
+        document.getElementById('message').textContent = `Слово: ${currentWord}`;
+        document.getElementById('endGameBtn').style.display = 'block';
+      }
+    }
+
+    function analyzeGuess(guess, word) {
+      const result = Array(word.length).fill('absent');
+      const wordChars = word.split('');
+      const guessChars = guess.split('');
+
+      // Сначала — точные совпадения
+      for (let i = 0; i < word.length; i++) {
+        if (guessChars[i] === wordChars[i]) {
+          result[i] = 'correct';
+          wordChars[i] = null; // помечаем как использованную
+        }
+      }
+
+      // Затем — присутствующие, но не на месте
+      for (let i = 0; i < word.length; i++) {
+        if (result[i] !== 'correct') {
+          const index = wordChars.indexOf(guessChars[i]);
+          if (index !== -1) {
+            result[i] = 'present';
+            wordChars[index] = null;
+          }
+        }
+      }
+
+      return result;
+    }
+
+    // === УПРАВЛЕНИЕ ЭКРАНАМИ ===
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+
+      if (id === 'game') {
+        initGame();
+      }
+    }
+
+    function setDifficulty(diff) {
+      currentDifficulty = diff;
+      showScreen('menu');
+    }
+
+    function toggleMiniMenu() {
+      const menu = document.getElementById('miniMenu');
+      menu.classList.toggle('active');
+    }
+
+    function hideMiniMenu() {
+      document.getElementById('miniMenu').classList.remove('active');
+    }
+
+    function resetGame() {
+      initGame();
+      hideMiniMenu();
+    }
+
+    // Инициализация
+    window.addEventListener('DOMContentLoaded', () => {
+      // Убедимся, что клавиатура не вызывается
+      document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('readonly', 'true'));
+    });
+  </script>
+</body>
+  </html>
