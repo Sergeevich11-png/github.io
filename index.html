@@ -10,71 +10,196 @@
       padding: 0;
       box-sizing: border-box;
     }
+
+    /* Новогодний фон */
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f9f9f9;
-      color: #333;
+      background: linear-gradient(135deg, #0d3b1e 0%, #1a5c2d 100%) fixed;
+      color: #f8f8f8;
       padding: 40px 20px;
       text-align: center;
       line-height: 1.6;
+      position: relative;
+      overflow-x: hidden;
     }
+
+    /* Дальний (медленный) снег */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(circle, white 1px, transparent 1px),
+        radial-gradient(circle, white 0.8px, transparent 0.8px),
+        radial-gradient(circle, white 0.6px, transparent 0.6px);
+      background-size: 100px 150px, 80px 120px, 60px 100px;
+      background-position: 0 0, 30px 40px, 60px 20px;
+      opacity: 0.35;
+      pointer-events: none;
+      animation: snowfall 20s linear infinite;
+      z-index: -1;
+    }
+
+    /* Ближний (немного быстрее и крупнее) снег */
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(circle, white 1.4px, transparent 1.4px),
+        radial-gradient(circle, white 1px, transparent 1px);
+      background-size: 120px 180px, 90px 140px;
+      background-position: 0 0, 50px 30px;
+      opacity: 0.25;
+      pointer-events: none;
+      animation: snowfall 12s linear infinite; /* быстрее */
+      z-index: -1;
+    }
+
+    @keyframes snowfall {
+      0% {
+        background-position: 0 0, 50px 30px, 60px 20px;
+      }
+      100% {
+        background-position: 0 180px, 50px 170px, 60px 200px;
+      }
+    }
+
+    /* Декоративный заголовок "С Новым Годом!" */
+    .holiday-title {
+      font-family: 'Brush Script MT', 'Lucida Handwriting', cursive, sans-serif;
+      font-size: 2.8rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #ffd700, #ffaa00, #ffd700);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+      position: relative;
+      z-index: 5;
+    }
+
     h1 {
-      font-size: 2rem;
+      font-size: 2.2rem;
       margin-bottom: 30px;
-      color: #2c3e50;
+      color: #ffd700;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      font-weight: bold;
+      position: relative;
+      z-index: 5;
     }
+
     .game-link {
       display: block;
-      margin: 12px auto;
+      margin: 14px auto;
       padding: 14px 0;
       width: 240px;
       color: white;
       text-decoration: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 1.1rem;
-      transition: background 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      font-weight: 600;
+      position: relative;
+      z-index: 5;
     }
 
-    
+    .game-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
     .game-link.default {
-      background: #4CAF50;
+      background: linear-gradient(to bottom, #e74c3c, #c0392b);
     }
     .game-link.default:hover {
-      background: #45a049;
+      background: linear-gradient(to bottom, #c0392b, #a93226);
     }
 
-    
     .game-link.support {
-      background: #9c27b0;
+      background: linear-gradient(to bottom, #2ecc71, #27ae60);
     }
     .game-link.support:hover {
-      background: #7b1fa2;
+      background: linear-gradient(to bottom, #27ae60, #219653);
     }
 
-    
     .game-link.qr {
-      background: #2196F3;
+      background: linear-gradient(to bottom, #3498db, #2980b9);
     }
     .game-link.qr:hover {
-      background: #1976D2;
+      background: linear-gradient(to bottom, #2980b9, #1f618d);
     }
 
-    
     .game-link.share {
-      background: #ff9800;
+      background: linear-gradient(to bottom, #f1c40f, #d4ac0d);
+      color: #2c3e50;
     }
     .game-link.share:hover {
-      background: #f57c00;
+      background: linear-gradient(to bottom, #d4ac0d, #b7950b);
     }
 
     .footer {
       margin-top: 40px;
-      color: #888;
-      font-size: 0.9rem;
+      color: #ecf0f1;
+      font-size: 0.95rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 5;
+    }
+
+    .game-link::after {
+      content: "🎄";
+      margin-left: 8px;
+      font-size: 0.9em;
+    }
+    .game-link.support::after { content: "☕"; }
+    .game-link.qr::after { content: "📱"; }
+    .game-link.share::after { content: "🎁"; }
+
+    /* Угловые декорации — через смайлики */
+    .corner-decoration {
+      position: absolute;
+      font-size: 2.5rem;
+      line-height: 1;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .top-right-corner {
+      top: 10px;
+      right: 10px;
+      color: #e74c3c;
+    }
+
+    .top-left-bell {
+      top: 10px;
+      left: 10px;
+      color: #27ae60;
+    }
+
+    .top-right-bell {
+      color: #ffd700;
+      font-size: 3rem;
+      margin-left: 5px;
     }
   </style>
 </head>
 <body>
+
+  <div class="holiday-title">С Новым Годом!</div>
+
+  <div class="corner-decoration top-left-bell">🌲</div>
+  <div class="corner-decoration top-right-corner">🎀<span class="top-right-bell">🔔</span></div>
+
   <h1>Выберите игру</h1>
   
   <a href="maze/index.html" class="game-link default">Лабиринт</a>
@@ -82,15 +207,10 @@
   <a href="TicTacToe/index.html" class="game-link default">Крестики-нолики</a>
   <a href="ugaday-chislo/index.html" class="game-link default">Угадай число</a>
   <a href="From_1to_3/index.html" class="game-link default">Ход от 1 до 3</a>
-
-  
   <a href="cardrive/index.html" class="game-link default">Гонки</a>
-
-  
   <a href="WorldGuesser/index.html" class="game-link default">СловоУгадайка</a>
 
   <a href="support/index.html" class="game-link support">На кофе</a>
-  
   <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
 
   <button id="share-btn" class="game-link share">Поделиться</button>
@@ -114,7 +234,6 @@
           // Пользователь отменил — ничего не делаем
         }
       } else {
-        // Резерв: копирование в буфер
         try {
           await navigator.clipboard.writeText(url);
           alert('Ссылка скопирована! Отправь её кому хочешь.');
