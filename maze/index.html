@@ -98,8 +98,9 @@
   <script>
     const RADI = [40, 80, 120, 160, 200];
     const MAX_RADIUS = 200;
-    const PASSAGE_RADIUS = 9;
-    const WALL_THICKNESS = 14;
+    const PASSAGE_RADIUS = 12; // увеличено для удобства
+    const WALL_PHYSICAL_HALF = 4; // полутолщина стены для коллизий
+    const WALL_VISUAL_WIDTH = 4;  // визуальная толщина (тонкие линии)
     let passagePoints = [];
     let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 6, mass: 1 };
     let gameActive = false;
@@ -144,7 +145,6 @@
       });
     }
 
-    // === Аналитическое решение пересечения луча с окружностью ===
     function solveRayCircle(x0, y0, dx, dy, radius) {
       const a = dx * dx + dy * dy;
       if (a < 1e-12) return null;
@@ -160,19 +160,22 @@
       return null;
     }
 
-    // === Идеальная обработка движения с коллизией ===
     function moveWithCollision(x0, y0, x1, y1) {
       let finalX = x1;
       let finalY = y1;
 
       for (let i = 0; i < RADI.length; i++) {
         const r = RADI[i];
-        const r_in = r - WALL_THICKNESS / 2;
-        const r_out = r + WALL_THICKNESS / 2;
+        const r_in = r - WALL_PHYSICAL_HALF;
+        const r_out = r + WALL_PHYSICAL_HALF;
 
-        const r_final = Math.hypot(x1, y1);
-        const intersectsRing = (r_final + ball.radius > r_in) && (r_final - ball.radius < r_out);
-        if (!intersectsRing) continue;
+        // Проверим, пересекает ли шарик (как круг) кольцо
+        const r0 = Math.hypot(x0, y0);
+        const r1 = Math.hypot(x1, y1);
+        const minR = Math.min(r0, r1) - ball.radius;
+        const maxR = Math.max(r0, r1) + ball.radius;
+        const intersects = (maxR > r_in) && (minR < r_out);
+        if (!intersects) continue;
 
         // Проверка прохода
         const p = passagePoints[i];
@@ -181,13 +184,13 @@
           continue;
         }
 
-        // === Столкновение со стеной без прохода ===
+        // === Коллизия со стеной ===
         const dx = x1 - x0;
         const dy = y1 - y0;
         let t_hit = 1.0;
         let hit = false;
 
-        // Внешняя граница
+        // Внешняя граница: шарик касается внешней стороны стены
         const S_outer = r_out + ball.radius;
         const t_outer = solveRayCircle(x0, y0, dx, dy, S_outer);
         if (t_outer !== null && t_outer < t_hit && t_outer >= 0) {
@@ -195,7 +198,7 @@
           hit = true;
         }
 
-        // Внутренняя граница
+        // Внутренняя граница: шарик касается внутренней стороны стены
         const S_inner = r_in - ball.radius;
         if (S_inner > 0) {
           const t_inner = solveRayCircle(x0, y0, dx, dy, S_inner);
@@ -210,7 +213,7 @@
           finalY = y0 + dy * (t_hit - 1e-5);
           return { x: finalX, y: finalY };
         } else {
-          // Уже внутри стены — не двигаться
+          // Уже внутри стены — откат
           return { x: x0, y: y0 };
         }
       }
@@ -243,11 +246,10 @@
       const steps = Math.max(1, Math.floor(deltaTime * 60 / 1000 * resolutionSteps));
       const stepTime = deltaTime / steps;
 
-      for ( let i = 0; i < steps; i++ ) {
+      for (let i = 0; i < steps; i++) {
         const newX = ball.x + ball.vx * stepTime;
         const newY = ball.y + ball.vy * stepTime;
 
-        // Проверка победы
         if (Math.hypot(newX, newY) > MAX_RADIUS + ball.radius * 1.5) {
           ball.x = newX;
           ball.y = newY;
@@ -255,7 +257,6 @@
           return;
         }
 
-        // 🔥 ИДЕАЛЬНАЯ КОЛЛИЗИЯ
         const result = moveWithCollision(ball.x, ball.y, newX, newY);
         ball.x = result.x;
         ball.y = result.y;
@@ -287,12 +288,12 @@
       ctx.fill();
 
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
 
       ctx.strokeStyle = '#c5b5a2';
-      ctx.lineWidth = WALL_THICKNESS * scale;
+      ctx.lineWidth = WALL_VISUAL_WIDTH * scale; // ← ТОНКИЕ ЛИНИИ
       for (const r of RADI) {
         ctx.beginPath();
         ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
