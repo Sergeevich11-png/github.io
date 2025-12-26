@@ -118,7 +118,7 @@
     const friction = 0.97;
     const bounce = 0.4;
     const gravityFactor = 0.0025;
-    const resolutionSteps = 10;
+    const resolutionSteps = 35; // ← УВЕЛИЧЕНО до 35
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -159,23 +159,24 @@
       });
     }
 
-    // === КОЛЛИЗИИ: НАША ЛОГИКА ===
+    // === КОЛЛИЗИИ: УЛУЧШЕННАЯ ЛОГИКА С РАСШИРЕННОЙ ЗОНОЙ ===
     function getDistanceToWall(x, y) {
       const r = Math.hypot(x, y);
       const angle = Math.atan2(y, x);
       let minDist = Infinity;
 
+      // Расширяем зону проверки: +1.5 пикселя сверху и снизу → итого +3, но округлим до +4 для надёжности
+      const wallCheckMargin = ball.radius + 4; // ← ОСНОВНОЕ ИЗМЕНЕНИЕ
+
       for (let i = 0; i < RADI.length; i++) {
         const wallRadius = RADI[i];
         const radialDist = Math.abs(r - wallRadius);
-        // Проверяем, попали ли в "толщину" стены
-        if (radialDist <= ball.radius + 2) {
+        if (radialDist <= wallCheckMargin) {
           // Проверяем, в проходе ли
           const p = passagePoints[i];
           let angleDiff = Math.abs(angle - p.angle);
           angleDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
-          // Допуск: проход занимает угол, соответствующий дуге радиуса PASSAGE_RADIUS
-          const angleTolerance = PASSAGE_RADIUS / wallRadius; // приблизительно
+          const angleTolerance = PASSAGE_RADIUS / wallRadius;
           if (angleDiff > angleTolerance) {
             minDist = Math.min(minDist, radialDist);
           }
@@ -200,7 +201,8 @@
       ball.vx *= friction;
       ball.vy *= friction;
 
-      const maxSpeed = 20; // ограничение скорости (подобрано)
+      // ← СКОРОСТЬ УМЕНЬШЕНА до 18 (максимум, на что ты готов пойти)
+      const maxSpeed = 18;
       const speed = Math.hypot(ball.vx, ball.vy);
       if (speed > maxSpeed) {
         ball.vx = (ball.vx / speed) * maxSpeed;
@@ -264,7 +266,7 @@
       canvas.width = canvas.height = size;
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      const scale = size / (2 * (MAX_RADIUS + 40)); // масштаб под размер
+      const scale = size / (2 * (MAX_RADIUS + 40));
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -276,13 +278,11 @@
       ctx.arc(cx, cy, canvas.width / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Тени для кругов
       ctx.shadowColor = 'rgba(0,0,0,0.4)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
 
-      // Рисуем круги (стены)
       ctx.strokeStyle = '#c5b5a2';
       ctx.lineWidth = 2;
       for (const r of RADI) {
@@ -291,7 +291,6 @@
         ctx.stroke();
       }
 
-      // Рисуем проходы — КРАСНЫЕ (для настройки!)
       ctx.shadowColor = 'transparent';
       ctx.fillStyle = 'red';
       for (const p of passagePoints) {
@@ -302,7 +301,6 @@
         ctx.fill();
       }
 
-      // Рисуем шарик
       if (!gameOver) {
         const ballX = cx + ball.x * scale;
         const ballY = cy + ball.y * scale;
@@ -377,7 +375,6 @@
               messageEl.textContent = 'Не удалось получить доступ к сенсорам.';
             });
         } else {
-          // Для десктопа или старых браузеров — запускаем без разрешения
           gameActive = true;
           window.addEventListener('devicemotion', handleMotion);
           animFrameId = requestAnimationFrame(gameLoop);
