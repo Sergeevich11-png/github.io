@@ -202,7 +202,7 @@
       ball.vy *= friction;
 
       // ← СКОРОСТЬ УМЕНЬШЕНА до 18 (максимум, на что ты готов пойти)
-      const maxSpeed = 18;
+      const maxSpeed = 8;
       const speed = Math.hypot(ball.vx, ball.vy);
       if (speed > maxSpeed) {
         ball.vx = (ball.vx / speed) * maxSpeed;
