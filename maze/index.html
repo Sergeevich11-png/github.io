@@ -160,7 +160,6 @@
       return null;
     }
 
-    // 🔥 ОБРАБОТКА ОТСКОКА
     function handleCollision(x, y, vx, vy, isInner, wallRadius) {
       const len = Math.hypot(x, y);
       if (len < 1e-6) return { x, y, vx, vy };
@@ -173,7 +172,7 @@
       }
 
       const dot = vx * nx + vy * ny;
-      if (dot >= 0) return { x, y, vx, vy }; // удаляется
+      if (dot >= 0) return { x, y, vx, vy };
 
       const v_normal_x = dot * nx;
       const v_normal_y = dot * ny;
@@ -215,7 +214,6 @@
           continue;
         }
 
-        // Проверим, какая граница ближе
         const toInner = Math.abs(r1 - r_in);
         const toOuter = Math.abs(r1 - r_out);
         const isInner = toInner < toOuter;
@@ -312,8 +310,8 @@
         ctx.stroke();
       }
 
-      ctx.shadowColor = 'transparent';
-      ctx.fillStyle = 'red';
+      // 🔒 ПРОХОДЫ СТАЛИ НЕВИДИМЫМИ!
+      ctx.fillStyle = '#322c27'; // ← ЦВЕТ ФОНА КАНВАСА
       for (const p of passagePoints) {
         const px = cx + p.x * scale;
         const py = cy + p.y * scale;
