@@ -106,7 +106,6 @@
     let gameOver = false;
     let lastTime = 0;
     const friction = 0.97;
-    const bounce = 0.4;
     const gravityFactor = 0.0025;
     const resolutionSteps = 90;
     const maxSpeed = 18;
@@ -145,33 +144,33 @@
       });
     }
 
-    // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ КОЛЛИЗИЙ — РАБОТАЕТ ПО ДЕКАРТОВЫМ РАССТОЯНИЯМ
-    function getDistanceToWall(x, y) {
+    // ✅ ЖЁСТКАЯ ПРОВЕРКА: можно ли находиться в (x, y)?
+    function isPositionAllowed(x, y) {
       const r = Math.hypot(x, y);
-      let minDist = Infinity;
+
+      // Разрешаем выход за внешний круг (победа)
+      if (r > MAX_RADIUS + ball.radius * 1.5) {
+        return true;
+      }
 
       for (let i = 0; i < RADI.length; i++) {
         const wallRadius = RADI[i];
-        const inner = wallRadius - WALL_THICKNESS / 2; // внутренняя граница стены
-        const outer = wallRadius + WALL_THICKNESS / 2; // внешняя граница стены
+        const inner = wallRadius - WALL_THICKNESS / 2;
+        const outer = wallRadius + WALL_THICKNESS / 2;
 
-        // Проверяем, пересекается ли шарик со стеной (с учётом его радиуса)
-        if (r + ball.radius >= inner && r - ball.radius <= outer) {
-          // Шарик в зоне стены → проверяем, в проходе ли
+        // Если внутри стены
+        if (r >= inner && r <= outer) {
+          // Проверяем проход
           const p = passagePoints[i];
           const distToPassage = Math.hypot(x - p.x, y - p.y);
-          const passageThreshold = PASSAGE_RADIUS + ball.radius;
-
-          if (distToPassage > passageThreshold) {
-            // Не в проходе → это стена
-            const distToInner = r - inner;
-            const distToOuter = outer - r;
-            minDist = Math.min(minDist, distToInner, distToOuter);
+          if (distToPassage <= PASSAGE_RADIUS + ball.radius) {
+            return true; // в проходе — можно
           }
+          return false; // в стене — нельзя
         }
       }
 
-      return minDist === Infinity ? null : minDist;
+      return true; // в свободной зоне — можно
     }
 
     function handleMotion(e) {
@@ -210,32 +209,11 @@
           return;
         }
 
-        const distToWall = getDistanceToWall(newX, newY);
-        if (distToWall !== null && distToWall < ball.radius) {
-          const normalX = newX - ball.x;
-          const normalY = newY - ball.y;
-          const normalLen = Math.hypot(normalX, normalY);
-          if (normalLen === 0) {
-            ball.vx *= -bounce;
-            ball.vy *= -bounce;
-            continue;
-          }
-
-          const nx = normalX / normalLen;
-          const ny = normalY / normalLen;
-          const dot = ball.vx * nx + ball.vy * ny;
-          if (dot < 0) {
-            ball.vx = (ball.vx - 2 * dot * nx) * bounce;
-            ball.vy = (ball.vy - 2 * dot * ny) * bounce;
-          }
-
-          const overlap = ball.radius - distToWall;
-          ball.x += nx * overlap;
-          ball.y += ny * overlap;
-        } else {
+        if (isPositionAllowed(newX, newY)) {
           ball.x = newX;
           ball.y = newY;
         }
+        // Иначе — не двигаемся (жёсткая блокировка)
       }
     }
 
@@ -268,7 +246,6 @@
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
 
-      // Толстые стены
       ctx.strokeStyle = '#c5b5a2';
       ctx.lineWidth = WALL_THICKNESS * scale;
       for (const r of RADI) {
