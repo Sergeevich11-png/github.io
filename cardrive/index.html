@@ -16,7 +16,7 @@
     }
     #main-menu {
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 10.
+      top: 0; left: 0; width: 100%; height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -163,18 +163,22 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 
 // === СОСТОЯНИЯ ===
-let state = 'main-menu'; // 'main-menu', 'playing', 'paused', 'finished'
+let state = 'main-menu';
 let renderer, scene, camera;
 let playerCar, aiCar;
 let speed = 0;
 let isGas = false, isBrake = false;
 let targetSteering = 0, currentSteering = 0;
-let raceStarted = false;
-let playerLap = 0, aiLap = 0;
-let playerFinished = false, aiFinished = false;
-let trackRadius = 65;
-let trackWidth = 10;
-let aiSpeed = 0, aiTargetSpeed = 32;
+
+// Флаги для корректного финиша
+let playerPassedMidpoint = false;
+let aiPassedMidpoint = false;
+let playerFinished = false;
+let aiFinished = false;
+
+const trackRadius = 65;
+const trackWidth = 10;
+const aiTargetSpeed = 32;
 
 // === DOM ===
 const mainMenu = document.getElementById('main-menu');
@@ -260,8 +264,7 @@ function startGame() {
   renderer.setPixelRatio(window.devicePixelRatio);
   updateRendererSize();
 
-  // ТРЕССА
-  const roadGroup = new THREE.Group();
+  // Трасса
   const roadGeo = new THREE.RingGeometry(
     trackRadius - trackWidth / 2,
     trackRadius + trackWidth / 2,
@@ -270,10 +273,9 @@ function startGame() {
   const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.rotation.x = Math.PI / 2;
-  roadGroup.add(road);
-  scene.add(roadGroup);
+  scene.add(road);
 
-  // СТАРТ/ФИНИШ
+  // Старт/финиш
   const startLine = new THREE.Mesh(
     new THREE.PlaneGeometry(trackWidth, 1.5),
     new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 })
@@ -282,7 +284,7 @@ function startGame() {
   startLine.position.set(trackRadius, 0, 0);
   scene.add(startLine);
 
-  // МАШИНЫ
+  // Машины
   playerCar = createCar(0xff3333);
   playerCar.position.set(trackRadius - 3, 0.6, 0);
   playerCar.rotation.y = Math.PI / 2;
@@ -294,13 +296,13 @@ function startGame() {
   aiCar.position.x -= 5;
   scene.add(aiCar);
 
-  // ОСВЕЩЕНИЕ
+  // Освещение
   scene.add(new THREE.AmbientLight(0x606060));
   const sun = new THREE.DirectionalLight(0xffffff, 1);
   sun.position.set(20, 40, 20);
   scene.add(sun);
 
-  // ГИРОСКОП
+  // Гироскоп
   if (typeof DeviceOrientationEvent !== 'undefined') {
     window.addEventListener('deviceorientation', handleOrientation, { passive: true });
     if (DeviceOrientationEvent.requestPermission) {
@@ -308,12 +310,10 @@ function startGame() {
     }
   }
 
-  // СБРОС
+  // Сброс флагов
   speed = 0;
-  aiSpeed = 0;
-  raceStarted = false;
-  playerLap = 0;
-  aiLap = 0;
+  playerPassedMidpoint = false;
+  aiPassedMidpoint = false;
   playerFinished = false;
   aiFinished = false;
   miniMapCanvas.width = 120;
@@ -360,7 +360,6 @@ function createCar(color) {
   addWheel(-0.75, 0.9);
   addWheel(0.75, -0.9);
   addWheel(-0.75, -0.9);
-
   return group;
 }
 
@@ -368,7 +367,6 @@ function createCar(color) {
 function updateAI(delta) {
   if (aiFinished) return;
 
-  // Простой ИИ: движение по кругу
   const currentAngle = Math.atan2(aiCar.position.z, aiCar.position.x);
   let nextAngle = currentAngle + (aiTargetSpeed / trackRadius) * delta;
 
@@ -376,12 +374,16 @@ function updateAI(delta) {
   aiCar.position.z = Math.sin(nextAngle) * (trackRadius - 3);
   aiCar.rotation.y = nextAngle + Math.PI / 2;
 
-  // Проверка круга ИИ
-  if (!raceStarted && Math.abs(nextAngle) < 0.2 && aiCar.position.x > trackRadius - 5) {
-    raceStarted = true;
+  // Проверка прохода контрольной зоны (середина круга)
+  const normalizedAngle = ((nextAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (!aiPassedMidpoint && normalizedAngle > Math.PI - 0.3 && normalizedAngle < Math.PI + 0.3) {
+    aiPassedMidpoint = true;
   }
-  if (raceStarted && aiLap === 0 && Math.abs(nextAngle) < 0.2 && aiCar.position.x > trackRadius - 5) {
-    aiLap = 1;
+
+  // Проверка финиша
+  const inFinishZone = normalizedAngle < 0.2 || normalizedAngle > Math.PI * 2 - 0.2;
+  const nearStartLine = aiCar.position.x > trackRadius - 5;
+  if (aiPassedMidpoint && inFinishZone && nearStartLine && !aiFinished) {
     aiFinished = true;
     if (!playerFinished) showMessage("ИИ пришёл первым!");
   }
@@ -404,18 +406,15 @@ function drawMiniMap() {
   const cx = size / 2, cy = size / 2;
   const r = trackRadius * scale;
 
-  // Дорога
   miniMapCtx.strokeStyle = '#444';
   miniMapCtx.lineWidth = trackWidth * scale;
   miniMapCtx.beginPath();
   miniMapCtx.arc(cx, cy, r, 0, Math.PI * 2);
   miniMapCtx.stroke();
 
-  // Старт
   miniMapCtx.fillStyle = '#ff0000';
   miniMapCtx.fillRect(cx + r - 2, cy - 1, 4, 2);
 
-  // Машины
   const px = cx + playerCar.position.x * scale;
   const pz = cy + playerCar.position.z * scale;
   const ax = cx + aiCar.position.x * scale;
@@ -433,7 +432,6 @@ function showMessage(text) {
   messageEl.style.opacity = '1';
   state = 'finished';
   setTimeout(() => messageEl.style.opacity = '0', 3000);
-  // Через 3 сек — возврат в меню
   setTimeout(() => {
     mainMenu.classList.remove('hidden');
     canvas.style.display = 'none';
@@ -442,7 +440,7 @@ function showMessage(text) {
   }, 3000);
 }
 
-// === АНИМАЦИЯ ===
+// === ОСНОВНОЙ ЦИКЛ ===
 const clock = new THREE.Clock();
 
 function animate() {
@@ -450,7 +448,7 @@ function animate() {
 
   const delta = Math.min(clock.getDelta(), 0.05);
 
-  // Игрок
+  // === УПРАВЛЕНИЕ ИГРОКОМ ===
   currentSteering += (targetSteering - currentSteering) * 8 * delta;
   playerCar.rotation.y = currentSteering + Math.PI / 2;
 
@@ -463,27 +461,30 @@ function animate() {
   playerCar.position.x += Math.cos(playerCar.rotation.y) * moveDist;
   playerCar.position.z += Math.sin(playerCar.rotation.y) * moveDist;
 
-  // Проверка старта гонки
+  // === ЛОГИКА ФИНИША ИГРОКА ===
   const playerAngle = Math.atan2(playerCar.position.z, playerCar.position.x);
-  if (!raceStarted && Math.abs(speed) > 1 && Math.abs(playerAngle) < 0.2 && playerCar.position.x > trackRadius - 5) {
-    raceStarted = true;
+  const normAngle = ((playerAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+  // Прошёл ли середину круга?
+  if (!playerPassedMidpoint && normAngle > Math.PI - 0.3 && normAngle < Math.PI + 0.3) {
+    playerPassedMidpoint = true;
   }
 
-  // Проверка круга игрока
-  if (raceStarted && playerLap === 0 && Math.abs(playerAngle) < 0.2 && playerCar.position.x > trackRadius - 5) {
-    playerLap = 1;
+  // Финишная зона
+  const inFinishZone = normAngle < 0.2 || normAngle > Math.PI * 2 - 0.2;
+  const nearStartLine = playerCar.position.x > trackRadius - 5;
+
+  if (playerPassedMidpoint && inFinishZone && nearStartLine && !playerFinished) {
     playerFinished = true;
     if (!aiFinished) showMessage("Вы победили!");
   }
 
-  // ИИ
+  // === ИИ ===
   updateAI(delta);
 
-  // Камера и рендер
+  // === РЕНДЕР ===
   updateCamera();
   renderer.render(scene, camera);
-
-  // Мини-карта
   drawMiniMap();
 
   requestAnimationFrame(animate);
