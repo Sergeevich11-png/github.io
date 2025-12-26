@@ -99,7 +99,7 @@
     const RADI = [40, 80, 120, 160, 200];
     const MAX_RADIUS = 200;
     const PASSAGE_RADIUS = 9;
-    const WALL_THICKNESS = 14; // ← ТОЛЩИНА СТЕНЫ (визуальная и физическая)
+    const WALL_THICKNESS = 14;
     let passagePoints = [];
     let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 6, mass: 1 };
     let gameActive = false;
@@ -109,7 +109,7 @@
     const bounce = 0.4;
     const gravityFactor = 0.0025;
     const resolutionSteps = 90;
-    const maxSpeed = 18; // можно вернуть к 18 — теперь стены толстые!
+    const maxSpeed = 18;
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -141,33 +141,36 @@
     function generatePassages() {
       passagePoints = RADI.map(r => {
         const angle = Math.random() * Math.PI * 2;
-        return { x: r * Math.cos(angle), y: r * Math.sin(angle), angle };
+        return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
       });
     }
 
-    // === КОЛЛИЗИЯ С УЧЁТОМ ТОЛСТЫХ СТЕН ===
+    // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ КОЛЛИЗИЙ — РАБОТАЕТ ПО ДЕКАРТОВЫМ РАССТОЯНИЯМ
     function getDistanceToWall(x, y) {
       const r = Math.hypot(x, y);
-      const angle = Math.atan2(y, x);
       let minDist = Infinity;
-
-      // Зона проверки: радиус стены ± половина толщины + запас
-      const wallCheckMargin = WALL_THICKNESS / 2 + ball.radius + 2; // ≈ 7 + 6 + 2 = 15
 
       for (let i = 0; i < RADI.length; i++) {
         const wallRadius = RADI[i];
-        const radialDist = Math.abs(r - wallRadius);
-        if (radialDist <= wallCheckMargin) {
-          // Проверяем, в проходе ли
+        const inner = wallRadius - WALL_THICKNESS / 2; // внутренняя граница стены
+        const outer = wallRadius + WALL_THICKNESS / 2; // внешняя граница стены
+
+        // Проверяем, пересекается ли шарик со стеной (с учётом его радиуса)
+        if (r + ball.radius >= inner && r - ball.radius <= outer) {
+          // Шарик в зоне стены → проверяем, в проходе ли
           const p = passagePoints[i];
-          let angleDiff = Math.abs(angle - p.angle);
-          angleDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
-          const angleTolerance = PASSAGE_RADIUS / wallRadius;
-          if (angleDiff > angleTolerance) {
-            minDist = Math.min(minDist, radialDist);
+          const distToPassage = Math.hypot(x - p.x, y - p.y);
+          const passageThreshold = PASSAGE_RADIUS + ball.radius;
+
+          if (distToPassage > passageThreshold) {
+            // Не в проходе → это стена
+            const distToInner = r - inner;
+            const distToOuter = outer - r;
+            minDist = Math.min(minDist, distToInner, distToOuter);
           }
         }
       }
+
       return minDist === Infinity ? null : minDist;
     }
 
@@ -265,9 +268,9 @@
       ctx.shadowOffsetX = 2;
       ctx.shadowOffsetY = 2;
 
-      // ← РИСУЕМ ТОЛСТЫЕ СТЕНЫ
+      // Толстые стены
       ctx.strokeStyle = '#c5b5a2';
-      ctx.lineWidth = WALL_THICKNESS * scale; // ← КЛЮЧЕВОЕ ИЗМЕНЕНИЕ
+      ctx.lineWidth = WALL_THICKNESS * scale;
       for (const r of RADI) {
         ctx.beginPath();
         ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
