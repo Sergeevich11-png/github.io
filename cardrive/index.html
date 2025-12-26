@@ -257,12 +257,28 @@ function startGame() {
   renderer.setPixelRatio(window.devicePixelRatio);
   updateRendererSize();
 
-  // ДОРОГА
+  // ДОРОГА (асфальт)
   const roadGeo = new THREE.RingGeometry(R_in, R_out, 128);
-  const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+  const roadMat = new THREE.MeshStandardMaterial({
+    color: 0x2a2a2a,
+    roughness: 0.95,
+    metalness: 0.1
+  });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.rotation.x = Math.PI / 2;
   scene.add(road);
+
+  // БЕЛЫЕ ЛИНИИ РАЗМЕТКИ
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lineInnerGeo = new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128);
+  const lineInner = new THREE.Mesh(lineInnerGeo, lineMat);
+  lineInner.rotation.x = Math.PI / 2;
+  scene.add(lineInner);
+
+  const lineOuterGeo = new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128);
+  const lineOuter = new THREE.Mesh(lineOuterGeo, lineMat);
+  lineOuter.rotation.x = Math.PI / 2;
+  scene.add(lineOuter);
 
   // СТАРТ/ФИНИШ
   const startLine = new THREE.Mesh(
@@ -273,7 +289,7 @@ function startGame() {
   startLine.position.set(trackRadius, 0, 0);
   scene.add(startLine);
 
-  // ОГРАЖДЕНИЯ (визуальные)
+  // ОГРАЖДЕНИЯ
   const createBarrier = (radius) => {
     const points = [];
     for (let i = 0; i <= 128; i++) {
@@ -334,7 +350,8 @@ function updateRendererSize() {
 function handleOrientation(e) {
   if (state !== 'playing') return;
   if (e.gamma !== null) {
-    targetSteering = (e.gamma / 90) * 0.9;
+    // ЗЕРКАЛЬНОЕ УПРАВЛЕНИЕ + ПОВЫШЕННАЯ ЧУВСТВИТЕЛЬНОСТЬ
+    targetSteering = -(e.gamma / 45) * 1.0;
   }
 }
 
@@ -447,7 +464,7 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
 
   // УПРАВЛЕНИЕ ИГРОКОМ
-  currentSteering += (targetSteering - currentSteering) * 8 * delta;
+  currentSteering += (targetSteering - currentSteering) * 12 * delta; // выше чувствительность
   playerCar.rotation.y = currentSteering + Math.PI / 2;
 
   if (isGas) speed += 32 * delta;
@@ -484,7 +501,7 @@ function animate() {
   }
 
   if (pushed && Math.abs(speed) > 1) {
-    speed *= 0.93; // трение при контакте
+    speed *= 0.93;
   }
 
   // === ФИНИШ ИГРОКА ===
