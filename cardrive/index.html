@@ -1,310 +1,540 @@
-<script>
-  let state = 'main-menu'; // main-menu | playing | finished
-
-  const canvas = document.getElementById('game-canvas');
-  const ctx = canvas.getContext('2d');
-  const miniMapCanvas = document.getElementById('mini-map');
-  const miniMapCtx = miniMapCanvas.getContext('2d');
-
-  // Настройки трассы
-  const TRACK_RADIUS = 300;
-  const TRACK_WIDTH = 60;
-  const R_IN = TRACK_RADIUS - TRACK_WIDTH / 2;
-  const R_OUT = TRACK_RADIUS + TRACK_WIDTH / 2;
-
-  // Игрок
-  const player = {
-    x: TRACK_RADIUS,
-    y: 0,
-    angle: Math.PI / 2,
-    speed: 0,
-    steering: 0,
-    passedMid: false,
-    finished: false
-  };
-
-  // ИИ (упрощённый: едет по кругу)
-  const ai = {
-    angle: Math.PI / 2 - 0.3,
-    speed: 2.8,
-    passedMid: false,
-    finished: false
-  };
-
-  let isGas = false, isBrake = false;
-  let targetSteering = 0;
-
-  // Управление
-  function bindButton(el, down, up) {
-    el.addEventListener('touchstart', down);
-    el.addEventListener('mousedown', down);
-    const end = () => { up(); };
-    el.addEventListener('touchend', end);
-    el.addEventListener('mouseup', end);
-    el.addEventListener('mouseleave', end);
-  }
-
-  bindButton(document.getElementById('btn-gas'), () => isGas = true, () => isGas = false);
-  bindButton(document.getElementById('btn-brake'), () => isBrake = true, () => isBrake = false);
-
-  // Гироскоп
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    window.addEventListener('deviceorientation', (e) => {
-      if (state !== 'playing') return;
-      if (e.gamma !== null) {
-        targetSteering = -e.gamma / 45; // от -1 до +1
-      }
-    }, { passive: true });
-  }
-
-  // Обновление размеров
-  function resize() {
-    if (state === 'playing') {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      miniMapCanvas.width = 120;
-      miniMapCanvas.height = 120;
-    } else {
-      checkOrientation();
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Гонки — 1 Круг</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body {
+      overflow: hidden;
+      background: #0d0d0d;
+      touch-action: none;
+      color: white;
     }
-  }
-
-  window.addEventListener('resize', resize);
-
-  // Проверка ориентации
-  function checkOrientation() {
-    const isLandscape = window.innerWidth > window.innerHeight;
-    if (isLandscape && state !== 'playing') {
-      document.getElementById('orientation-blocker').classList.remove('active');
-      startGame();
-    } else {
-      setTimeout(checkOrientation, 300);
+    #main-menu {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      z-index: 10;
     }
+    #main-menu.hidden { display: none; }
+    #main-menu h1 {
+      font-size: 32px;
+      margin-bottom: 40px;
+      text-align: center;
+      color: #4cc9f0;
+    }
+    .btn {
+      width: 220px;
+      height: 60px;
+      margin: 12px 0;
+      font-size: 20px;
+      font-weight: bold;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover, .btn:active { background: #3a56d4; }
+    #game-canvas {
+      display: block;
+    }
+    #pause-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      width: 44px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.6);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #controls {
+      position: absolute;
+      bottom: 25px;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 0 20px;
+      z-index: 10;
+    }
+    .ctrl-btn {
+      width: 85px;
+      height: 85px;
+      background: rgba(0, 180, 255, 0.85);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 20px 35px;
+      border-radius: 16px;
+      font-size: 28px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+    #orientation-blocker {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #0d0d1a;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      color: #f8f9fa;
+    }
+    #orientation-blocker.active { display: flex; }
+    #orientation-blocker p {
+      font-size: 22px;
+      text-align: center;
+      max-width: 80%;
+      margin-bottom: 30px;
+      line-height: 1.4;
+    }
+    #orientation-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    #mini-map {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      width: 120px;
+      height: 120px;
+      z-index: 9;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="main-menu">
+  <h1>ГОНКИ: 1 КРУГ</h1>
+  <button id="btn-start" class="btn">1 круг</button>
+  <button id="btn-exit" class="btn">Выход</button>
+</div>
+
+<div id="orientation-blocker">
+  <div id="orientation-icon">↔️</div>
+  <p>Поверните устройство в альбомную ориентацию для начала гонки</p>
+</div>
+
+<canvas id="game-canvas"></canvas>
+<canvas id="mini-map"></canvas>
+<button id="pause-btn">≡</button>
+<div id="controls">
+  <button id="btn-brake" class="ctrl-btn">Тормоз</button>
+  <button id="btn-gas" class="ctrl-btn">Газ</button>
+</div>
+<div id="message">ФИНИШ!</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
+
+let state = 'main-menu';
+let renderer, scene, camera;
+let playerCar, aiCar;
+let speed = 0;
+let isGas = false, isBrake = false;
+let targetSteering = 0, currentSteering = 0;
+
+let playerPassedMidpoint = false;
+let aiPassedMidpoint = false;
+let playerFinished = false;
+let aiFinished = false;
+
+const trackRadius = 65;
+const trackWidth = 12;
+const R_in = trackRadius - trackWidth / 2;
+const R_out = trackRadius + trackWidth / 2;
+const aiTargetSpeed = 28;
+
+const mainMenu = document.getElementById('main-menu');
+const blocker = document.getElementById('orientation-blocker');
+const pauseBtn = document.getElementById('pause-btn');
+const gasBtn = document.getElementById('btn-gas');
+const brakeBtn = document.getElementById('btn-brake');
+const messageEl = document.getElementById('message');
+const canvas = document.getElementById('game-canvas');
+const miniMapCanvas = document.getElementById('mini-map');
+const miniMapCtx = miniMapCanvas.getContext('2d');
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  mainMenu.classList.add('hidden');
+  blocker.classList.add('active');
+  checkOrientation();
+});
+
+document.getElementById('btn-exit').addEventListener('click', () => {
+  window.location.href = 'https://sergeevich11-png.github.io/github.io/';
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (state === 'playing') {
+    state = 'paused';
+    mainMenu.classList.remove('hidden');
+    canvas.style.display = 'none';
+    pauseBtn.style.display = 'none';
+    document.getElementById('controls').style.display = 'none';
   }
+});
 
-  // Старт игры
-  function startGame() {
-    if (state === 'playing') return;
-    state = 'playing';
+const bindButton = (el, down, up) => {
+  el.addEventListener('touchstart', down);
+  el.addEventListener('mousedown', down);
+  const end = () => { up(); };
+  el.addEventListener('touchend', end);
+  el.addEventListener('mouseup', end);
+  el.addEventListener('mouseleave', end);
+};
+bindButton(gasBtn, () => isGas = true, () => isGas = false);
+bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
 
-    canvas.style.display = 'block';
-    document.getElementById('pause-btn').style.display = 'block';
-    document.getElementById('controls').style.display = 'flex';
+function checkOrientation() {
+  const isLandscape = window.innerWidth > window.innerHeight;
+  if (isLandscape && state !== 'playing') {
+    blocker.classList.remove('active');
+    startGame();
+  } else {
+    setTimeout(checkOrientation, 300);
+  }
+}
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  if (state === 'playing') {
+    updateRendererSize();
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
     miniMapCanvas.width = 120;
     miniMapCanvas.height = 120;
-
-    // Сброс состояний
-    player.x = TRACK_RADIUS;
-    player.y = 0;
-    player.angle = Math.PI / 2;
-    player.speed = 0;
-    player.steering = 0;
-    player.passedMid = false;
-    player.finished = false;
-
-    ai.angle = Math.PI / 2 - 0.3;
-    ai.passedMid = false;
-    ai.finished = false;
-
-    loop();
-  }
-
-  // Главный цикл
-  let lastTime = 0;
-  function loop(timestamp) {
-    if (state !== 'playing') return;
-
-    const delta = Math.min((timestamp - lastTime) / 16, 1); // ~60 FPS
-    lastTime = timestamp;
-
-    // Управление
-    player.steering += (targetSteering - player.steering) * 5 * delta * 0.016;
-    player.angle += player.steering * player.speed * 0.03 * delta;
-
-    if (isGas) player.speed += 80 * delta * 0.016;
-    if (isBrake) player.speed -= 90 * delta * 0.016;
-    player.speed *= 0.96; // трение
-    player.speed = Math.max(-150, Math.min(player.speed, 300));
-
-    // Движение
-    player.x += Math.cos(player.angle) * player.speed * delta * 0.016;
-    player.y += Math.sin(player.angle) * player.speed * delta * 0.016;
-
-    // Коллизия с краями трассы
-    const dist = Math.sqrt(player.x * player.x + player.y * player.y);
-    if (dist < R_IN) {
-      const dirX = -player.x / dist;
-      const dirY = -player.y / dist;
-      const push = R_IN - dist + 2;
-      player.x += dirX * push;
-      player.y += dirY * push;
-      player.speed *= 0.8;
-    } else if (dist > R_OUT) {
-      const dirX = player.x / dist;
-      const dirY = player.y / dist;
-      const push = dist - R_OUT + 2;
-      player.x -= dirX * push;
-      player.y -= dirY * push;
-      player.speed *= 0.8;
-    }
-
-    // Финиш игрока
-    const playerAng = Math.atan2(player.y, player.x);
-    let normAng = ((playerAng % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    if (!player.passedMid && normAng > Math.PI - 0.4 && normAng < Math.PI + 0.4) {
-      player.passedMid = true;
-    }
-    const inFinishZone = normAng < 0.2 || normAng > Math.PI * 2 - 0.2;
-    const nearStart = Math.abs(player.x - TRACK_RADIUS) < 10 && Math.abs(player.y) < 10;
-    if (player.passedMid && inFinishZone && nearStart && !player.finished) {
-      player.finished = true;
-      if (!ai.finished) showMessage("Вы победили!");
-    }
-
-    // ИИ
-    ai.angle += ai.speed * delta * 0.016;
-    const aiX = Math.cos(ai.angle) * (TRACK_RADIUS - 10);
-    const aiY = Math.sin(ai.angle) * (TRACK_RADIUS - 10);
-
-    let aiNorm = ((ai.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    if (!ai.passedMid && aiNorm > Math.PI - 0.4 && aiNorm < Math.PI + 0.4) {
-      ai.passedMid = true;
-    }
-    if (ai.passedMid && (aiNorm < 0.2 || aiNorm > Math.PI * 2 - 0.2) && !ai.finished) {
-      ai.finished = true;
-      if (!player.finished) showMessage("ИИ пришёл первым!");
-    }
-
-    // Отрисовка
-    render(player.x, player.y, player.angle, aiX, aiY, ai.angle);
-
-    requestAnimationFrame(loop);
-  }
-
-  function render(px, py, pAngle, ax, ay, aAngle) {
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const scale = Math.min(w, h) / 800; // адаптивный масштаб
-
-    // Фон
-    ctx.fillStyle = '#336633';
-    ctx.fillRect(0, 0, w, h);
-
-    // Дорога
-    ctx.strokeStyle = '#444444';
-    ctx.lineWidth = TRACK_WIDTH * scale;
-    ctx.beginPath();
-    ctx.arc(cx, cy, TRACK_RADIUS * scale, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Границы
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, (TRACK_RADIUS - TRACK_WIDTH / 2 + 2) * scale, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, (TRACK_RADIUS + TRACK_WIDTH / 2 - 2) * scale, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Старт/финиш
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(cx + TRACK_RADIUS * scale - 4, cy - 6, 8, 12);
-
-    // Машины — треугольники (нос вперёд!)
-    drawCar(px, py, pAngle, '#ff3333');
-    drawCar(ax, ay, aAngle, '#33ff33');
-
-    // Мини-карта
-    drawMiniMap(px, py, ax, ay);
-  }
-
-  function drawCar(x, y, angle, color) {
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const scale = Math.min(w, h) / 800;
-
-    const screenX = cx + x * scale;
-    const screenY = cy + y * scale;
-
-    ctx.save();
-    ctx.translate(screenX, screenY);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    // Треугольник: нос вперёд
-    ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(-5, 6);
-    ctx.lineTo(5, 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawMiniMap(px, py, ax, ay) {
-    const size = 120;
-    const cx = size / 2;
-    const cy = size / 2;
-    const scale = 0.15;
-
-    miniMapCtx.clearRect(0, 0, size, size);
-    miniMapCtx.strokeStyle = '#555';
-    miniMapCtx.lineWidth = 6;
-    miniMapCtx.beginPath();
-    miniMapCtx.arc(cx, cy, TRACK_RADIUS * scale, 0, Math.PI * 2);
-    miniMapCtx.stroke();
-
-    miniMapCtx.fillStyle = '#ff0000';
-    miniMapCtx.fillRect(cx + TRACK_RADIUS * scale - 1, cy - 2, 2, 4);
-
-    miniMapCtx.fillStyle = '#ff3333';
-    miniMapCtx.fillRect(cx + px * scale - 2, cy + py * scale - 2, 4, 4);
-    miniMapCtx.fillStyle = '#33ff33';
-    miniMapCtx.fillRect(cx + ax * scale - 2, cy + ay * scale - 2, 4, 4);
-  }
-
-  function showMessage(text) {
-    state = 'finished';
-    const msg = document.getElementById('message');
-    msg.textContent = text;
-    msg.style.opacity = '1';
-    setTimeout(() => msg.style.opacity = '0', 3000);
-    setTimeout(() => {
-      document.getElementById('main-menu').classList.remove('hidden');
-      canvas.style.display = 'none';
-      document.getElementById('pause-btn').style.display = 'none';
-      document.getElementById('controls').style.display = 'none';
-    }, 3000);
-  }
-
-  // Обработчики кнопок
-  document.getElementById('btn-start').addEventListener('click', () => {
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('orientation-blocker').classList.add('active');
+  } else {
     checkOrientation();
-  });
+  }
+});
 
-  document.getElementById('btn-exit').addEventListener('click', () => {
-    window.location.href = 'https://sergeevich11-png.github.io/github.io/';
-  });
+function startGame() {
+  if (state === 'playing') return;
+  state = 'playing';
 
-  document.getElementById('pause-btn').addEventListener('click', () => {
-    if (state === 'playing') {
-      state = 'paused';
-      document.getElementById('main-menu').classList.remove('hidden');
-      canvas.style.display = 'none';
-      document.getElementById('pause-btn').style.display = 'none';
-      document.getElementById('controls').style.display = 'none';
+  canvas.style.display = 'block';
+  pauseBtn.style.display = 'block';
+  document.getElementById('controls').style.display = 'flex';
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x336633); // Светло-зелёный фон для контраста
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  updateRendererSize();
+
+  // ДОРОГА (светлый асфальт)
+  const roadGeo = new THREE.RingGeometry(R_in, R_out, 128);
+  const roadMat = new THREE.MeshStandardMaterial({
+    color: 0x444444, // Более светлый асфальт
+    roughness: 0.9,
+    metalness: 0.05
+  });
+  const road = new THREE.Mesh(roadGeo, roadMat);
+  road.rotation.x = Math.PI / 2;
+  scene.add(road);
+
+  // РАЗМЕТКА
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), lineMat);
+  lineInner.rotation.x = Math.PI / 2;
+  scene.add(lineInner);
+  const lineOuter = new THREE.Mesh(new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128), lineMat);
+  lineOuter.rotation.x = Math.PI / 2;
+  scene.add(lineOuter);
+
+  // СТАРТ/ФИНИШ — красная линия
+  const startLine = new THREE.Mesh(
+    new THREE.PlaneGeometry(trackWidth, 1.5),
+    new THREE.MeshBasicMaterial({ color: 0xff0000 })
+  );
+  startLine.rotation.x = Math.PI / 2;
+  startLine.position.set(trackRadius, 0, 0);
+  scene.add(startLine);
+
+  // ОГРАЖДЕНИЯ — чёткие синие бордюры
+  const createBarrier = (radius) => {
+    const points = [];
+    for (let i = 0; i <= 128; i++) {
+      const a = (i / 128) * Math.PI * 2;
+      points.push(new THREE.Vector3(Math.cos(a) * radius, 0.3, Math.sin(a) * radius));
     }
-  });
+    const curve = new THREE.CatmullRomCurve3(points);
+    curve.closed = true;
+    const tube = new THREE.TubeGeometry(curve, 128, 0.4, 8, true);
+    const mat = new THREE.MeshPhongMaterial({ color: 0x0066ff });
+    const mesh = new THREE.Mesh(tube, mat);
+    scene.add(mesh);
+  };
+  createBarrier(R_in - 0.6);
+  createBarrier(R_out + 0.6);
 
-  // Инициализация
-  resize();
+  // МАШИНЫ — с ЧЁТКИМ ПЕРЕДОМ (жёлтый нос)
+  playerCar = createCar(0xff3333, 0xffff00); // красная + жёлтый нос
+  playerCar.position.set(trackRadius - 3, 0.6, 0);
+  playerCar.rotation.y = Math.PI / 2;
+  scene.add(playerCar);
+
+  aiCar = createCar(0x33ff33, 0x00ff00); // зелёная + ярко-зелёный нос
+  aiCar.position.set(trackRadius - 3, 0.6, 0);
+  aiCar.rotation.y = Math.PI / 2;
+  aiCar.position.x -= 5;
+  scene.add(aiCar);
+
+  // ОСВЕЩЕНИЕ — ярче
+  scene.add(new THREE.AmbientLight(0x888888));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  sun.position.set(20, 50, 20);
+  scene.add(sun);
+
+  // ГИРОСКОП
+  if (typeof DeviceOrientationEvent !== 'undefined') {
+    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+    if (DeviceOrientationEvent.requestPermission) {
+      DeviceOrientationEvent.requestPermission().catch(console.warn);
+    }
+  }
+
+  speed = 0;
+  playerPassedMidpoint = false;
+  aiPassedMidpoint = false;
+  playerFinished = false;
+  aiFinished = false;
+  miniMapCanvas.width = 120;
+  miniMapCanvas.height = 120;
+
+  animate();
+}
+
+function updateRendererSize() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function handleOrientation(e) {
+  if (state !== 'playing') return;
+  if (e.gamma !== null) {
+    targetSteering = -(e.gamma / 45) * 0.7; // понижена чувствительность
+  }
+}
+
+function createCar(color, noseColor) {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.55, 2.2),
+    new THREE.MeshPhongMaterial({ color })
+  );
+  group.add(body);
+
+  // НОС (перед) — маленький куб спереди
+  const nose = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.3, 0.3),
+    new THREE.MeshPhongMaterial({ color: noseColor })
+  );
+  nose.position.set(0, 0.2, -1.2);
+  group.add(nose);
+
+  const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 16);
+  wheelGeo.rotateZ(Math.PI / 2);
+  const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+  const addWheel = (x, z) => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(x, -0.32, z);
+    group.add(w);
+  };
+  addWheel(0.75, 0.9);
+  addWheel(-0.75, 0.9);
+  addWheel(0.75, -0.9);
+  addWheel(-0.75, -0.9);
+  return group;
+}
+
+function updateAI(delta) {
+  if (aiFinished) return;
+
+  let currentAngle = Math.atan2(aiCar.position.z, aiCar.position.x);
+  let nextAngle = currentAngle + (aiTargetSpeed / trackRadius) * delta;
+
+  aiCar.position.x = Math.cos(nextAngle) * (trackRadius - 3);
+  aiCar.position.z = Math.sin(nextAngle) * (trackRadius - 3);
+  aiCar.rotation.y = nextAngle + Math.PI / 2;
+
+  const normalizedAngle = ((nextAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  if (!aiPassedMidpoint && normalizedAngle > Math.PI - 0.3 && normalizedAngle < Math.PI + 0.3) {
+    aiPassedMidpoint = true;
+  }
+
+  const inFinishZone = normalizedAngle < 0.2 || normalizedAngle > Math.PI * 2 - 0.2;
+  const nearStartLine = Math.abs(aiCar.position.x - trackRadius) < 5 && Math.abs(aiCar.position.z) < 2;
+  if (aiPassedMidpoint && inFinishZone && nearStartLine && !aiFinished) {
+    aiFinished = true;
+    if (!playerFinished) showMessage("ИИ пришёл первым!");
+  }
+}
+
+function updateCamera() {
+  if (!playerCar) return;
+  const offset = new THREE.Vector3(0, 6, -12); // выше и дальше — лучше обзор
+  offset.applyQuaternion(playerCar.quaternion);
+  camera.position.copy(playerCar.position).add(offset);
+  camera.lookAt(playerCar.position.x, playerCar.position.y + 1, playerCar.position.z);
+}
+
+function drawMiniMap() {
+  const size = 120;
+  const scale = 0.8;
+  miniMapCtx.clearRect(0, 0, size, size);
+  const cx = size / 2, cy = size / 2;
+  const r = trackRadius * scale;
+
+  miniMapCtx.strokeStyle = '#555555';
+  miniMapCtx.lineWidth = trackWidth * scale;
+  miniMapCtx.beginPath();
+  miniMapCtx.arc(cx, cy, r, 0, Math.PI * 2);
+  miniMapCtx.stroke();
+
+  miniMapCtx.strokeStyle = '#0066ff';
+  miniMapCtx.lineWidth = 2;
+  miniMapCtx.beginPath();
+  miniMapCtx.arc(cx, cy, (R_in - 0.6) * scale, 0, Math.PI * 2);
+  miniMapCtx.stroke();
+  miniMapCtx.beginPath();
+  miniMapCtx.arc(cx, cy, (R_out + 0.6) * scale, 0, Math.PI * 2);
+  miniMapCtx.stroke();
+
+  miniMapCtx.fillStyle = '#ff0000';
+  miniMapCtx.fillRect(cx + r - 2, cy - 1, 4, 2);
+
+  const px = cx + playerCar.position.x * scale;
+  const pz = cy + playerCar.position.z * scale;
+  const ax = cx + aiCar.position.x * scale;
+  const az = cy + aiCar.position.z * scale;
+
+  miniMapCtx.fillStyle = '#ff3333';
+  miniMapCtx.fillRect(px - 2, pz - 2, 4, 4);
+  miniMapCtx.fillStyle = '#33ff33';
+  miniMapCtx.fillRect(ax - 2, az - 2, 4, 4);
+}
+
+function showMessage(text) {
+  messageEl.textContent = text;
+  messageEl.style.opacity = '1';
+  state = 'finished';
+  setTimeout(() => messageEl.style.opacity = '0', 3000);
+  setTimeout(() => {
+    mainMenu.classList.remove('hidden');
+    canvas.style.display = 'none';
+    pauseBtn.style.display = 'none';
+    document.getElementById('controls').style.display = 'none';
+  }, 3000);
+}
+
+const clock = new THREE.Clock();
+
+function animate() {
+  if (state !== 'playing') return;
+
+  const delta = Math.min(clock.getDelta(), 0.033); // ограничение до ~30 FPS для стабильности
+
+  // Плавное рулевое управление
+  currentSteering += (targetSteering - currentSteering) * 8 * delta;
+  playerCar.rotation.y = currentSteering + Math.PI / 2;
+
+  // Ускорение/тормоз
+  if (isGas) speed += 28 * delta;
+  if (isBrake) speed -= 32 * delta;
+  if (!isGas && !isBrake) speed *= 0.94;
+  speed = Math.max(-25, Math.min(speed, 45));
+
+  const moveDist = speed * delta;
+  playerCar.position.x += Math.cos(playerCar.rotation.y) * moveDist;
+  playerCar.position.z += Math.sin(playerCar.rotation.y) * moveDist;
+
+  // === МЯГКИЕ КОЛЛИЗИИ С КРАЯМИ ===
+  const dx = playerCar.position.x;
+  const dz = playerCar.position.z;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+  let pushed = false;
+
+  if (dist < R_in) {
+    const pushDirX = -dx / dist;
+    const pushDirZ = -dz / dist;
+    const overlap = R_in - dist + 0.3;
+    playerCar.position.x += pushDirX * overlap;
+    playerCar.position.z += pushDirZ * overlap;
+    speed *= 0.88;
+    pushed = true;
+  } else if (dist > R_out) {
+    const pushDirX = dx / dist;
+    const pushDirZ = dz / dist;
+    const overlap = dist - R_out + 0.3;
+    playerCar.position.x -= pushDirX * overlap;
+    playerCar.position.z -= pushDirZ * overlap;
+    speed *= 0.88;
+    pushed = true;
+  }
+
+  if (pushed) speed *= 0.96;
+
+  // === ФИНИШ ИГРОКА ===
+  const playerAngle = Math.atan2(playerCar.position.z, playerCar.position.x);
+  const normAngle = ((playerAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+  if (!playerPassedMidpoint && normAngle > Math.PI - 0.3 && normAngle < Math.PI + 0.3) {
+    playerPassedMidpoint = true;
+  }
+
+  const inFinishZone = normAngle < 0.2 || normAngle > Math.PI * 2 - 0.2;
+  const nearStartLine = Math.abs(playerCar.position.x - trackRadius) < 5 && Math.abs(playerCar.position.z) < 2;
+  if (playerPassedMidpoint && inFinishZone && nearStartLine && !playerFinished) {
+    playerFinished = true;
+    if (!aiFinished) showMessage("Вы победили!");
+  }
+
+  // === ИИ ===
+  updateAI(delta);
+
+  // === РЕНДЕР ===
+  updateCamera();
+  renderer.render(scene, camera);
+  drawMiniMap();
+
+  requestAnimationFrame(animate);
+}
 </script>
+</body>
+</html>
