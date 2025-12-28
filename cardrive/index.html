@@ -131,24 +131,16 @@ const bindTouch = (el, key) => {
 bindTouch(document.getElementById('btn-up'), 'forward');
 bindTouch(document.getElementById('btn-down'), 'backward');
 
-// Гироскоп
+// === ГИРОСКОП ===
 let initialGamma = null;
-let rawWheelInput = 0;
-let wheelInput = 0;
+let gamma = 0; // текущее значение gamma
 
 const handleOrientation = (e) => {
   if (e.gamma === null) return;
-  if (initialGamma === null) initialGamma = e.gamma;
-  const deltaGamma = e.gamma - initialGamma;
-  const clamped = Math.max(-25, Math.min(25, deltaGamma));
-  const deadZone = 3;
-  let input = 0;
-  if (Math.abs(clamped) > deadZone) {
-    input = (Math.abs(clamped) - deadZone) / (25 - deadZone);
-    input *= Math.sign(clamped);
+  gamma = e.gamma;
+  if (initialGamma === null) {
+    initialGamma = e.gamma;
   }
-  rawWheelInput = input;
-  wheelInput = wheelInput * 0.7 + rawWheelInput * 0.3;
 };
 
 if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
@@ -161,57 +153,63 @@ if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requ
   window.addEventListener('deviceorientation', handleOrientation, { passive: true });
 }
 
-// Физика
-const maxSteerAngle = Math.PI / 5;
+// === ФИЗИКА ===
+const maxSteerAngle = Math.PI / 5; // ~36°
 let currentSpeed = 0;
 const maxSpeed = 8;
-const acceleration = 12;
-const deceleration = 15;
-
 const clock = new THREE.Clock();
 
 function update() {
-  const delta = Math.min(clock.getDelta(), 0.1);
+  const delta = Math.min(clock.getDelta(), 0.05);
 
-  // 🔥 НЕЛИНЕЙНАЯ ЧУВСТВИТЕЛЬНОСТЬ
-  const steerFactor = Math.sign(wheelInput) * Math.pow(Math.abs(wheelInput), 2.8);
-  const steerAngle = steerFactor * maxSteerAngle;
+  // === ПОВОРОТ: мёртвая зона + нелинейность ===
+  let steerAngle = 0;
+  if (initialGamma !== null) {
+    const deltaGamma = gamma - initialGamma;
+    const deadZone = 0.5; // градусы
+    let effectiveDelta = 0;
+    if (Math.abs(deltaGamma) > deadZone) {
+      effectiveDelta = Math.sign(deltaGamma) * (Math.abs(deltaGamma) - deadZone);
+    }
+    const normalized = Math.min(1, Math.max(-1, effectiveDelta / (25 - deadZone)));
+    let steerInput = normalized * Math.abs(normalized);     // x²·sign
+    steerInput = steerInput * Math.abs(steerInput);         // x⁴·sign → очень мягкий старт
+    steerAngle = steerInput * maxSteerAngle;
+  }
 
   wheelFL.rotation.z = Math.PI / 2 + steerAngle;
   wheelFR.rotation.z = Math.PI / 2 + steerAngle;
 
+  // === СКОРОСТЬ: динамическое ограничение + плавный разгон ===
   let targetSpeed = 0;
-  if (state.forward) targetSpeed = maxSpeed;
-  if (state.backward) targetSpeed = -maxSpeed / 2;
-
-  if (Math.abs(targetSpeed) > 0.1) {
-    currentSpeed += (targetSpeed > 0 ? acceleration : -acceleration) * delta;
-    currentSpeed = Math.max(-maxSpeed / 2, Math.min(maxSpeed, currentSpeed));
-  } else {
-    const friction = deceleration * delta;
-    if (currentSpeed > friction) currentSpeed -= friction;
-    else if (currentSpeed < -friction) currentSpeed += friction;
-    else currentSpeed = 0;
+  if (state.forward || state.backward) {
+    const steerAbs = Math.abs(steerAngle / maxSteerAngle);
+    const maxSpeedWhileTurning = maxSpeed * (1 - 0.6 * steerAbs); // понижение в повороте
+    targetSpeed = state.forward ? maxSpeedWhileTurning : -maxSpeed / 2;
   }
 
-  if (Math.abs(currentSpeed) > 0.1 && Math.abs(steerAngle) > 0.01) {
-    const turnRate = (currentSpeed / maxSpeed) * 1.8;
+  // Плавный переход к целевой скорости
+  const speedApproach = 6.0;
+  currentSpeed += (targetSpeed - currentSpeed) * (1 - Math.exp(-speedApproach * delta));
+
+  // === ПОВОРОТ КУЗОВА ===
+  if (Math.abs(currentSpeed) > 0.05 && Math.abs(steerAngle) > 0.01) {
+    const turnRate = (Math.abs(currentSpeed) / maxSpeed) * 1.5;
     car.rotation.y -= steerAngle * turnRate * delta;
   }
 
+  // === ПОЗИЦИЯ ===
   car.position.y = 0.6;
   const direction = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation);
   car.position.x += direction.x * currentSpeed * delta;
   car.position.z += direction.z * currentSpeed * delta;
 
-  // Камера
+  // === КАМЕРА — всегда сзади ===
   const forward = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation).normalize();
   const camDistance = 16;
   const camHeight = 8;
-  const camOffset = forward.clone().multiplyScalar(-camDistance);
-  camera.position.copy(car.position).add(camOffset);
+  camera.position.copy(car.position).add(forward.clone().multiplyScalar(-camDistance));
   camera.position.y += camHeight;
-
   const lookAtPoint = car.position.clone().add(forward.clone().multiplyScalar(5));
   lookAtPoint.y += 1.5;
   camera.lookAt(lookAtPoint);
