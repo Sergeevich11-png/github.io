@@ -173,7 +173,10 @@ const clock = new THREE.Clock();
 function update() {
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  const steerAngle = wheelInput * maxSteerAngle;
+  // 🔥 НЕЛИНЕЙНАЯ ЧУВСТВИТЕЛЬНОСТЬ
+  const steerFactor = Math.sign(wheelInput) * Math.pow(Math.abs(wheelInput), 2.8);
+  const steerAngle = steerFactor * maxSteerAngle;
+
   wheelFL.rotation.z = Math.PI / 2 + steerAngle;
   wheelFR.rotation.z = Math.PI / 2 + steerAngle;
 
@@ -201,7 +204,7 @@ function update() {
   car.position.x += direction.x * currentSpeed * delta;
   car.position.z += direction.z * currentSpeed * delta;
 
-  // 🔥 КАМЕРА СТРОГО СЛЕДИТ СЗАДИ
+  // Камера
   const forward = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation).normalize();
   const camDistance = 16;
   const camHeight = 8;
@@ -226,7 +229,6 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Инициализация позиции машины
 car.position.set(0, 0.6, 0);
 scene.add(car);
 
