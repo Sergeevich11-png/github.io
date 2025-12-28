@@ -1,19 +1,17 @@
-Я:
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <!-- Мета-теги для мобильного приложения -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Гонки — 1 Круг (Enhanced)</title>
+  <title>Гонки — 1 Круг</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body {
       overflow: hidden;
       background: #0d0d0d;
-      touch-action: none; /* Важно для сенсорного управления */
+      touch-action: none;
       color: white;
     }
     #main-menu {
@@ -24,30 +22,29 @@
       justify-content: center;
       align-items: center;
       background: linear-gradient(135deg, #1a1a2e, #16213e);
-      z-index: 100; /* Сделаем его выше */
+      z-index: 10;
     }
     #main-menu.hidden { display: none; }
     #main-menu h1 {
-      font-size: 36px;
-      margin-bottom: 50px;
+      font-size: 32px;
+      margin-bottom: 40px;
       text-align: center;
       color: #4cc9f0;
-      text-shadow: 0 0 10px #1f75fe;
     }
     .btn {
-      width: 250px;
-      height: 65px;
-      margin: 15px 0;
-      font-size: 22px;
+      width: 220px;
+      height: 60px;
+      margin: 12px 0;
+      font-size: 20px;
       font-weight: bold;
       background: #4361ee;
       color: white;
-      border: 3px solid #1a2a5a;
-      border-radius: 15px;
+      border: none;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      transition: background 0.2s;
     }
-    .btn:hover, .btn:active { background: #3a56d4; transform: scale(1.03); }
+    .btn:hover, .btn:active { background: #3a56d4; }
     #game-canvas {
       display: block;
     }
@@ -55,110 +52,106 @@
       position: absolute;
       top: 15px;
       left: 15px;
-      width: 50px;
-      height: 50px;
-      background: rgba(0, 0, 0, 0.7);
-      border: 1px solid #3a56d4;
-      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.6);
+      border: none;
+      border-radius: 8px;
       color: white;
-      font-size: 28px;
+      font-size: 24px;
       cursor: pointer;
-      z-index: 50;
+      z-index: 10;
     }
     #controls {
       position: absolute;
-      bottom: 30px;
+      bottom: 25px;
       width: 100%;
       display: flex;
       justify-content: space-around;
       padding: 0 20px;
-      z-index: 50;
+      z-index: 10;
     }
     .ctrl-btn {
-      width: 90px;
-      height: 90px;
-      background: rgba(0, 180, 255, 0.9);
-      border: 3px solid rgba(255, 255, 255, 0.5);
+      width: 85px;
+      height: 85px;
+      background: rgba(0, 180, 255, 0.85);
+      border: none;
       border-radius: 50%;
       color: white;
       font-weight: bold;
       font-size: 18px;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      box-shadow: 0 4px 15px rgba(0, 180, 255, 0.4);
     }
-    .ctrl-btn:active { background: #00aaff; }
     #message {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.95);
+      background: rgba(0, 0, 0, 0.9);
       color: #ffeb3b;
-      padding: 30px 50px;
-      border-radius: 20px;
-      font-size: 32px;
-      font-weight: 900;
+      padding: 20px 35px;
+      border-radius: 16px;
+      font-size: 28px;
+      font-weight: bold;
       opacity: 0;
       pointer-events: none;
-      z-index: 100;
+      z-index: 20;
       text-align: center;
       transition: opacity 0.3s;
-      border: 5px solid #ffeb3b;
+      border: 2px solid #ffeb3b;
     }
     #mini-map {
       position: absolute;
       top: 15px;
-      right: 15px; /* Переместим вправо для лучшего обзора */
-      width: 130px;
-      height: 130px;
-      z-index: 50;
+      right: 15px; /* Перенесено вправо для удобства */
+      width: 120px;
+      height: 120px;
+      z-index: 9;
       pointer-events: none;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
 
 <div id="main-menu">
-  <h1>THREE.JS ГОНКИ</h1>
-  <button id="btn-start" class="btn">Начать 1 Круг</button>
-  <button id="btn-exit" class="btn">Выход (GitHub)</button>
+  <h1>ГОНКИ: 1 КРУГ</h1>
+  <button id="btn-start" class="btn">Начать гонку</button>
+  <button id="btn-exit" class="btn">К списку игр</button>
 </div>
 
 <canvas id="game-canvas"></canvas>
 <canvas id="mini-map"></canvas>
-<button id="pause-btn"></button>
+<button id="pause-btn">⏸</button>
 <div id="controls">
-  <button id="btn-brake" class="ctrl-btn">ТОРМОЗ</button>
-  <button id="btn-gas" class="ctrl-btn">ГАЗ</button>
+  <button id="btn-brake" class="ctrl-btn">Тормоз</button>
+  <button id="btn-gas" class="ctrl-btn">Газ</button>
 </div>
-<div id="message">СООБЩЕНИЕ</div>
+<div id="message">ФИНИШ!</div>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 
-// --- Глобальное состояние ---
-let state = 'main-menu'; // main-menu, playing, paused, finished
-let renderer, scene, camera;
+const GAMES_INDEX_URL = 'https://sergeevich11-png.github.io/github.io/';
 
-// Позиция и движение машины
-let x = 0, z = 0, angle = 0; // angle в радианах (0 = по оси X положительной)
+let state = 'main-menu';
+let renderer, scene, camera, carMesh;
+
+let x = 0, z = 0, angle = 0;
 let speed = 0;
-let wheelInput = 0; // Угол поворота от гироскопа (-1 до 1)
+let wheelAngle = 0;
 
 let isGas = false, isBrake = false;
-let passedMid = false; // Флаг, что пройдена половина круга
+let passedMid = false;
 let finished = false;
 
-// Параметры трассы
-const trackRadius = 65; // Радиус центральной линии
+const trackRadius = 65;
 const trackWidth = 12;
-const R_in = trackRadius - trackWidth / 2; // Внутренний радиус
-const R_out = trackRadius + trackWidth / 2; // Внешний радиус
+const R_in = trackRadius - trackWidth / 2;
+const R_out = trackRadius + trackWidth / 2;
 
-// --- Элементы DOM ---
 const mainMenu = document.getElementById('main-menu');
 const pauseBtn = document.getElementById('pause-btn');
 const gasBtn = document.getElementById('btn-gas');
@@ -168,14 +161,14 @@ const canvas = document.getElementById('game-canvas');
 const miniMapCanvas = document.getElementById('mini-map');
 const miniMapCtx = miniMapCanvas.getContext('2d');
 
-// --- Инициализация и Кнопки ---
+// === КНОПКИ ===
 document.getElementById('btn-start').addEventListener('click', () => {
   mainMenu.classList.add('hidden');
   startGame();
 });
 
 document.getElementById('btn-exit').addEventListener('click', () => {
-  window.location.href = 'https://sergeevich11-png.github.io/github.io/';
+  window.location.href = GAMES_INDEX_URL;
 });
 
 pauseBtn.addEventListener('click', () => {
@@ -185,45 +178,137 @@ pauseBtn.addEventListener('click', () => {
     canvas.style.display = 'none';
     pauseBtn.style.display = 'none';
     document.getElementById('controls').style.display = 'none';
-    messageEl.style.opacity = '0'; // Скрываем сообщение о финише, если оно было
   }
 });
 
-// Универсальная привязка касания/клика
-const bindButton = (el, downAction, upAction) => {
-  el.addEventListener('touchstart', (e) => { e.preventDefault(); downAction(); }, { passive: false });
-  el.addEventListener('mousedown', downAction);
-  
-  const end = () => { upAction(); };
+const bindButton = (el, down, up) => {
+  const downHandler = (e) => { e.preventDefault(); down(); };
+  el.addEventListener('touchstart', downHandler, { passive: false });
+  el.addEventListener('mousedown', downHandler);
+  const end = () => up();
   el.addEventListener('touchend', end);
   el.addEventListener('mouseup', end);
   el.addEventListener('mouseleave', end);
 };
-
 bindButton(gasBtn, () => isGas = true, () => isGas = false);
 bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
 
-// Запрос разрешения на гироскоп
-if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
-    DeviceOrientationEvent.requestPermission().then(permissionState => {
-        if (permissionState === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation, { passive: true });
-        }
-    }).catch(console.error);
-} else {
-    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+// === ЗАПУСК ===
+function tryLockLandscape() {
+  if (screen.orientation?.lock) {
+    screen.orientation.lock('landscape').catch(() => {});
+  }
 }
 
-function handleOrientation(e) {
-    if (state === 'playing' && e.gamma !== null) {
-        // Чем быстрее едем, тем меньше влияние гамма на руление
-        const sensitivityFactor = 0.2 + speed / 8; 
-        const clampedGamma = Math.max(-90, Math.min(90, e.gamma));
-        wheelInput = (clampedGamma / 90) * 0.6 * sensitivityFactor; 
+function startGame() {
+  if (state === 'playing') return;
+  state = 'playing';
+  tryLockLandscape();
+
+  canvas.style.display = 'block';
+  pauseBtn.style.display = 'block';
+  document.getElementById('controls').style.display = 'flex';
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x336633);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  updateRendererSize();
+
+  // Трасса
+  const road = new THREE.Mesh(
+    new THREE.RingGeometry(R_in, R_out, 128),
+    new THREE.MeshStandardMaterial({ color: 0x444444 })
+  );
+  road.rotation.x = Math.PI / 2;
+  scene.add(road);
+
+  // Разметка
+  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), lineMat);
+  lineInner.rotation.x = Math.PI / 2;
+  scene.add(lineInner);
+  const lineOuter = new THREE.Mesh(new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128), lineMat);
+  lineOuter.rotation.x = Math.PI / 2;
+  scene.add(lineOuter);
+
+  // Старт/финиш
+  const startLine = new THREE.Mesh(
+    new THREE.PlaneGeometry(trackWidth, 1.5),
+    new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
+  );
+  startLine.rotation.x = Math.PI / 2;
+  startLine.position.set(trackRadius, 0.1, 0);
+  scene.add(startLine);
+
+  // Бордюры
+  const createBarrier = (radius, color = 0x0066ff) => {
+    const points = [];
+    for (let i = 0; i <= 128; i++) {
+      const a = (i / 128) * Math.PI * 2;
+      points.push(new THREE.Vector3(Math.cos(a) * radius, 0.3, Math.sin(a) * radius));
     }
-}
+    const curve = new THREE.CatmullRomCurve3(points);
+    curve.closed = true;
+    const tube = new THREE.TubeGeometry(curve, 128, 0.4, 8, true);
+    const mesh = new THREE.Mesh(tube, new THREE.MeshPhongMaterial({ color }));
+    scene.add(mesh);
+  };
+  createBarrier(R_in - 0.6, 0x0066ff);
+  createBarrier(R_out + 0.6, 0xff0000);
 
-// --- РЕНДЕРИНГ И НАСТРОЙКИ ---
+  // Машина
+  carMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.55, 2.2),
+    new THREE.MeshPhongMaterial({ color: 0xff3333 })
+  );
+  const nose = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.3, 0.3),
+    new THREE.MeshPhongMaterial({ color: 0xffff00 })
+  );
+  nose.position.set(0, 0.2, -1.2);
+  carMesh.add(nose);
+  scene.add(carMesh);
+
+  // Освещение
+  scene.add(new THREE.AmbientLight(0x888888));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  sun.position.set(20, 50, 20);
+  scene.add(sun);
+
+  // Гироскоп
+  const handleOrientation = (e) => {
+    if (state === 'playing' && e.gamma !== null) {
+      wheelAngle = (e.gamma / 90) * 0.55;
+    }
+  };
+  if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+    DeviceOrientationEvent.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+      }
+    }).catch(console.warn);
+  } else {
+    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+  }
+
+  // Сброс положения
+  x = trackRadius - 3;
+  z = 0;
+  angle = Math.PI / 2;
+  speed = 0;
+  wheelAngle = 0;
+  passedMid = false;
+  finished = false;
+
+  miniMapCanvas.width = 120;
+  miniMapCanvas.height = 120;
+
+  animate();
+}
 
 function updateRendererSize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -232,308 +317,90 @@ function updateRendererSize() {
 }
 window.addEventListener('resize', () => { if (state === 'playing') updateRendererSize(); });
 
-
-// --- ГЕОМЕТРИЯ ТРАССЫ ---
-
-let carMesh;
-let frontWheelL, frontWheelR;
-const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x111111 });
-
-function createCar() {
-    // Кузов
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0xff3333
-
-});
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 2.2), bodyMat);
-    
-    // Передняя часть (капот)
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.5), new THREE.MeshPhongMaterial({ color: 0xffff00 }));
-    nose.position.set(0, 0.1, -1.0);
-    body.add(nose);
-
-    // Колеса
-    const wheelGeom = new THREE.CylinderGeometry(0.4, 0.4, 0.5, 12);
-    
-    // Передние колеса
-    frontWheelL = new THREE.Mesh(wheelGeom, wheelMaterial);
-    frontWheelL.rotation.z = Math.PI / 2;
-    frontWheelL.position.set(-0.8, -0.3, -0.8);
-    body.add(frontWheelL);
-
-    frontWheelR = new THREE.Mesh(wheelGeom, wheelMaterial);
-    frontWheelR.rotation.z = Math.PI / 2;
-    frontWheelR.position.set(0.8, -0.3, -0.8);
-    body.add(frontWheelR);
-
-    // Задние колеса (для симметрии, не поворачиваются)
-    const rearWheelL = new THREE.Mesh(wheelGeom, wheelMaterial);
-    rearWheelL.rotation.z = Math.PI / 2;
-    rearWheelL.position.set(-0.8, -0.3, 0.8);
-    body.add(rearWheelL);
-
-    const rearWheelR = new THREE.Mesh(wheelGeom, wheelMaterial);
-    rearWheelR.rotation.z = Math.PI / 2;
-    rearWheelR.position.set(0.8, -0.3, 0.8);
-    body.add(rearWheelR);
-
-    return body;
-}
-
-
-function setupScene() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x336633); // Зеленая обочина
-
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    updateRendererSize();
-    
-    // --- СВЕТ ---
-    scene.add(new THREE.AmbientLight(0x444444));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-    sun.position.set(50, 100, 50);
-    scene.add(sun);
-
-    // --- ТРАССА ---
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-    const road = new THREE.Mesh(
-        new THREE.RingGeometry(R_in, R_out, 128),
-        roadMat
-    );
-    road.rotation.x = Math.PI / 2; // Поворачиваем плоскость на 90 градусов
-    scene.add(road);
-
-    // Разметка (внутренняя и внешняя)
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), lineMat);
-    lineInner.rotation.x = Math.PI / 2;
-    scene.add(lineInner);
-    const lineOuter = new THREE.Mesh(new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128), lineMat);
-    lineOuter.rotation.x = Math.PI / 2;
-    scene.add(lineOuter);
-
-    // Бордюры (используем TubeGeometry для более гладких краев)
-    const createBarrier = (radius, color) => {
-        const points = [];
-        for (let i = 0; i <= 128; i++) {
-            const a = (i / 128) * Math.PI * 2;
-            // Чуть поднимаем бордюр
-            points.push(new THREE.Vector3(Math.cos(a) * radius, 0.5, Math.sin(a) * radius));
-        }
-        const curve = new THREE.CatmullRomCurve3(points);
-        curve.closed = true;
-        const tube = new THREE.TubeGeometry(curve, 128, 0.5, 10, true);
-        const mesh = new THREE.Mesh(tube, new THREE.MeshPhongMaterial({ color: color }));
-        scene.add(mesh);
-    };
-    createBarrier(R_in - 0.6, 0x0066ff); // Внутренний синий
-    createBarrier(R_out + 0.6, 0xff0000); // Внешний красный
-
-    // Старт/Финиш линия
-    const startLine = new THREE.Mesh(
-        new THREE.PlaneGeometry(trackWidth, 1.5),
-        new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-    );
-    startLine.rotation.x = Math.PI / 2;
-    startLine.position.set(trackRadius, 0.55, 0);
-    scene.add(startLine);
-
-    // --- МАШИНА ---
-    carMesh = createCar();
-    scene.add(carMesh);
-}
-
-
-function startGame() {
-  if (state === 'playing') return;
-  state = 'playing';
-  
-  canvas.style.display = 'block';
-  pauseBtn.style.display = 'block';
-  document.getElementById('controls').style.display = 'flex';
-  messageEl.style.opacity = '0';
-
-  // Сброс параметров
-  x = trackRadius - 3;
-  z = 0;
-  angle = Math.PI / 2; // Смотрим "вдоль" трассы
-  speed = 0;
-  wheelInput = 0;
-  passedMid = false;
-  finished = false;
-
-if (!scene) {
-      setupScene();
-  }
-  
-  // Инициализация мини-карты
-  setupMiniMap();
-
-  animate();
-}
-
-// --- КОЛЛИЗИЯ ---
+// === КОЛЛИЗИЯ ===
 function constrain(posX, posZ) {
   const d = Math.sqrt(posX * posX + posZ * posZ);
-  let collisionMultiplier = 1.0;
-
   if (d < R_in) {
-    // Удар о внутреннюю стенку
-    collisionMultiplier = (R_in + 0.5) / d; 
-    speed *= 0.80; // Снижаем скорость сильнее
+    const f = (R_in + 0.3) / d;
+    posX *= f; posZ *= f;
+    speed *= 0.85;
   } else if (d > R_out) {
-    // Удар о внешнюю стенку
-    collisionMultiplier = (R_out - 0.5) / d;
-    speed *= 0.80;
+    const f = (R_out - 0.3) / d;
+    posX *= f; posZ *= f;
+    speed *= 0.85;
   }
-  
-  if (collisionMultiplier !== 1.0) {
-      posX *= collisionMultiplier; 
-      posZ *= collisionMultiplier;
-  }
-  
   return { x: posX, z: posZ };
 }
 
-// --- МИНИ-КАРТА ---
-function setupMiniMap() {
-    miniMapCanvas.width = 130;
-    miniMapCanvas.height = 130;
-    const ctx = miniMapCtx;
-    const cx = 65, cy = 65;
-    const scaleFactor = 120 / (R_out + 5); // Масштабируем, чтобы трек поместился
-
-    ctx.clearRect(0, 0, 130, 130);
-
-    // 1. Рисуем трассу (только один раз)
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = trackWidth * scaleFactor;
-    ctx.beginPath();
-    ctx.arc(cx, cy, trackRadius * scaleFactor, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // 2. Рисуем линию старта/финиша
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    const startAngle = Math.PI / 2;
-    const endAngle = Math.PI / 2 + 0.05; // Небольшой сегмент
-    ctx.arc(cx, cy, trackRadius * scaleFactor + (trackWidth/2) * scaleFactor, startAngle, endAngle);
-    ctx.stroke();
-    
-    // Устанавливаем начальный стиль для машины
-    ctx.fillStyle = '#ff3333';
-}
-
-function updateMiniMap() {
-    const ctx = miniMapCtx;
-    const cx = 65, cy = 65;
-    const scaleFactor = 120 / (R_out + 5); 
-
-    // Стираем только точку машины (перерисовываем поверх старого фона)
-    ctx.fillStyle = '#0d0d0d'; // Цвет фона Canvas
-    ctx.fillRect(0, 0, 130, 130);
-    
-    // Перерисовываем статичные элементы
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = trackWidth * scaleFactor;
-    ctx.beginPath();
-    ctx.arc(cx, cy, trackRadius * scaleFactor, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    const startAngle = Math.PI / 2;
-    const endAngle = Math.PI / 2 + 0.05;
-    ctx.arc(cx, cy, trackRadius * scaleFactor + (trackWidth/2) * scaleFactor, startAngle, endAngle);
-    ctx.stroke();
-
-
-    // Рисуем машину (квадрат 4x4)
-    ctx.fillStyle = '#ff3333';
-    ctx.save();
-    ctx.translate(cx + x * scaleFactor, cy + z * scaleFactor);
-    ctx.rotate(angle + Math.PI / 2);
-    ctx.fillRect(-2, -2, 4, 4); // Рисуем квадрат в центре, потом поворачиваем
-    ctx.restore();
-}
-
-
-// --- ЦИКЛ РЕНДЕРИНГА ---
+// === ЦИКЛ ===
 function animate() {
   if (state !== 'playing') return;
 
-  const dt = 0.016; // Приблизительное время кадра (1/60 сек)
+  const dt = 0.016;
 
-  // 1. Управление Вводом
-  if (isGas) speed += 0.7 * dt * 60;
-  if (isBrake) speed -= 0.8 * dt * 60;
-  if (!isGas && !isBrake) speed *= Math.pow(0.93, dt * 60); // Экспоненциальное затухание
-  
-  // Ограничение скорости
-  speed = Math.max(-2.0, Math.min(speed, 4.5));
+  // Ускорение
+  if (isGas) speed += 0.7;
+  if (isBrake) speed -= 0.8;
+  if (!isGas && !isBrake) speed *= 0.93;
+  speed = Math.max(-1.5, Math.min(speed, 3.0));
 
-  // 2. Поворот (Зависит от скорости)
-  if (Math.abs(speed) > 0.1) {
-    // Увеличиваем поворот, если едем быстро, или если wheelInput высок
-    const turnRate = 0.8 + Math.abs(speed) * 0.5; 
-    angle += wheelInput * turnRate * dt * 10; 
+  // Поворот
+  if (Math.abs(speed) > 0.01) {
+    angle += wheelAngle * dt * 2.0;
   }
 
-  // 3. Движение
-  x += Math.cos(angle) * speed * dt * 15;
-  z += Math.sin(angle) * speed * dt * 15;
+  // Движение
+  x += Math.cos(angle) * speed * dt;
+  z += Math.sin(angle) * speed * dt;
 
-  // 4. Коллизия и Сброс Скорости при ударе
+  // Коллизия
   const clamped = constrain(x, z);
   x = clamped.x;
   z = clamped.z;
-  
-  // 5. Визуальные обновления
-  
-  // Кузов
-  carMesh.position.set(x, 0.55, z);
+
+  // Визуал
+  carMesh.position.set(x, 0.6, z);
   carMesh.rotation.y = angle + Math.PI / 2;
-  
-  // Колеса (Визуальный поворот)
-  const wheelTurnAngle = wheelInput * 0.8; // Максимальный поворот колес
-  frontWheelL.rotation.z = Math.PI / 2 + wheelTurnAngle;
-  frontWheelR.rotation.z = Math.PI / 2 + wheelTurnAngle;
 
-// Камера (более плавная, с легким отставанием)
-  const targetCameraX = x + Math.cos(angle) * 5 - Math.sin(angle) * 1;
-  const targetCameraZ = z + Math.sin(angle) * 5 + Math.cos(angle) * 1;
-  
-  camera.position.x += (targetCameraX - camera.position.x) * 0.08;
-  camera.position.z += (targetCameraZ - camera.position.z) * 0.08;
-  camera.position.y = 4 + Math.abs(speed * 0.1); // Чуть приседает на скорости
-  
-  camera.lookAt(x, 0.7, z); // Смотрим немного вперед по направлению движения
+  // Камера
+  camera.position.set(x, 6, z - 12);
+  camera.lookAt(x, 1, z);
 
-  // 6. Финишная логика
+  // Финишная логика
   const curAngle = Math.atan2(z, x);
-  // Нормализуем в [0, 2*PI]. 0 градусов это старт/финиш (положительная ось X)
-  const normA = ((curAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  
-  // Проверка прохождения 180 градусов (середина трека)
-  if (!passedMid && normA > Math.PI + 0.3) { 
-      passedMid = true;
-  }
-  
-  // Проверка на линии финиша (угол близкий к 0)
-  const onFinishLine = normA < 0.3  normA > (Math.PI * 2) - 0.3;
-  const nearStartPoint = Math.sqrt(Math.pow(x - trackRadius, 2) + Math.pow(z, 2)) < 3; // Вблизи радиуса и Z=0
+  let normA = curAngle;
+  if (normA < 0) normA += Math.PI * 2;
 
-  if (passedMid && onFinishLine && nearStartPoint && !finished) {
+  if (!passedMid && normA > Math.PI - 0.5 && normA < Math.PI + 0.5) {
+    passedMid = true;
+  }
+
+  const inFinishZone = (normA < 0.3 || normA > Math.PI * 2 - 0.3);
+  const nearStartPoint = Math.abs(x - trackRadius) < 5 && Math.abs(z) < 2;
+
+  if (passedMid && inFinishZone && nearStartPoint && !finished) {
     finished = true;
     showMessage("КРУГ ЗАВЕРШЕН!");
   }
-  
-  // 7. Обновление UI
-  updateMiniMap();
+
+  // Мини-карта
+  miniMapCtx.clearRect(0, 0, 120, 120);
+  const cx = 60, cy = 60, s = 0.8;
+  // Трасса
+  miniMapCtx.strokeStyle = '#555';
+  miniMapCtx.lineWidth = trackWidth * s;
+  miniMapCtx.beginPath();
+  miniMapCtx.arc(cx, cy, trackRadius * s, 0, Math.PI * 2);
+  miniMapCtx.stroke();
+  // Старт/финиш
+  miniMapCtx.strokeStyle = '#ff0000';
+  miniMapCtx.lineWidth = 3;
+  miniMapCtx.beginPath();
+  miniMapCtx.arc(cx, cy, trackRadius * s, -0.1, 0.1);
+  miniMapCtx.stroke();
+  // Машина
+  miniMapCtx.fillStyle = '#ff3333';
+  miniMapCtx.fillRect(cx + x * s - 2, cy + z * s - 2, 4, 4);
 
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
@@ -543,8 +410,6 @@ function showMessage(text) {
   messageEl.textContent = text;
   messageEl.style.opacity = '1';
   state = 'finished';
-  
-  // Пауза и возврат в меню через 3 секунды
   setTimeout(() => {
     messageEl.style.opacity = '0';
     mainMenu.classList.remove('hidden');
