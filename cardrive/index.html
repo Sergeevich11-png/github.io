@@ -162,28 +162,23 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.m
 let state = 'main-menu';
 let renderer, scene, camera;
 let playerCarMesh;
-let aiCar;
 
 let car = {
   rear: new THREE.Vector3(),
   front: new THREE.Vector3(),
   angle: 0,
   speed: 0,
-  steeringAngle: 0 // угол поворота передних колёс
+  steeringAngle: 0
 };
 
 let isGas = false, isBrake = false;
-
 let playerPassedMidpoint = false;
-let aiPassedMidpoint = false;
 let playerFinished = false;
-let aiFinished = false;
 
 const trackRadius = 65;
 const trackWidth = 12;
 const R_in = trackRadius - trackWidth / 2;
 const R_out = trackRadius + trackWidth / 2;
-const aiTargetSpeed = 26;
 
 const mainMenu = document.getElementById('main-menu');
 const blocker = document.getElementById('orientation-blocker');
@@ -327,14 +322,9 @@ function startGame() {
   createBarrier(R_in - 0.6);
   createBarrier(R_out + 0.6);
 
-  // Машины
+  // Машина игрока
   playerCarMesh = createCar(0xff3333, 0xffff00);
   scene.add(playerCarMesh);
-
-  aiCar = createCar(0x33ff33, 0x00ff00);
-  aiCar.position.set(trackRadius - 3, 0.6, -5);
-  aiCar.rotation.y = Math.PI / 2;
-  scene.add(aiCar);
 
   // Освещение
   scene.add(new THREE.AmbientLight(0x888888));
@@ -350,7 +340,7 @@ function startGame() {
     }
   }
 
-  // Сброс состояния
+  // Сброс
   car.rear.set(trackRadius - 3, 0, -1.1);
   car.front.set(trackRadius - 3, 0, 1.1);
   car.angle = Math.PI / 2;
@@ -358,9 +348,7 @@ function startGame() {
   car.steeringAngle = 0;
   isGas = false; isBrake = false;
   playerPassedMidpoint = false;
-  aiPassedMidpoint = false;
   playerFinished = false;
-  aiFinished = false;
 
   miniMapCanvas.width = 120;
   miniMapCanvas.height = 120;
@@ -375,7 +363,7 @@ function updateRendererSize() {
 function handleOrientation(e) {
   if (state !== 'playing') return;
   if (e.gamma !== null) {
-    car.steeringAngle = -(e.gamma / 90) * 0.55; // ±32° максимум
+    car.steeringAngle = -(e.gamma / 90) * 0.55;
   }
 }
 
@@ -407,25 +395,6 @@ function createCar(color, noseColor) {
   return group;
 }
 
-function updateAI(delta) {
-  if (aiFinished) return;
-  let currentAngle = Math.atan2(aiCar.position.z, aiCar.position.x);
-  let nextAngle = currentAngle + (aiTargetSpeed / trackRadius) * delta;
-  aiCar.position.x = Math.cos(nextAngle) * (trackRadius - 3);
-  aiCar.position.z = Math.sin(nextAngle) * (trackRadius - 3);
-  aiCar.rotation.y = nextAngle + Math.PI / 2;
-  const norm = ((nextAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  if (!aiPassedMidpoint && norm > Math.PI - 0.3 && norm < Math.PI + 0.3) {
-    aiPassedMidpoint = true;
-  }
-  const inFinish = norm < 0.2 || norm > Math.PI * 2 - 0.2;
-  const nearStart = Math.abs(aiCar.position.x - trackRadius) < 5 && Math.abs(aiCar.position.z) < 2;
-  if (aiPassedMidpoint && inFinish && nearStart && !aiFinished) {
-    aiFinished = true;
-    if (!playerFinished) showMessage("ИИ пришёл первым!");
-  }
-}
-
 function updateCamera() {
   const bodyX = (car.rear.x + car.front.x) * 0.5;
   const bodyZ = (car.rear.z + car.front.z) * 0.5;
@@ -450,12 +419,8 @@ function drawMiniMap() {
   miniMapCtx.fillRect(cx + r - 2, cy - 1, 4, 2);
   const px = cx + ((car.rear.x + car.front.x) * 0.5) * scale;
   const pz = cy + ((car.rear.z + car.front.z) * 0.5) * scale;
-  const ax = cx + aiCar.position.x * scale;
-  const az = cy + aiCar.position.z * scale;
   miniMapCtx.fillStyle = '#ff3333';
   miniMapCtx.fillRect(px - 2, pz - 2, 4, 4);
-  miniMapCtx.fillStyle = '#33ff33';
-  miniMapCtx.fillRect(ax - 2, az - 2, 4, 4);
 }
 
 function showMessage(text) {
@@ -484,20 +449,28 @@ function animate() {
   if (!isGas && !isBrake) car.speed *= 0.93;
   car.speed = Math.max(-20, Math.min(car.speed, 40));
 
+  // 🔥 КЛЮЧЕВОЙ ФИКС: поворот только при движении
+  let effectiveSteering = 0;
+  if (Math.abs(car.speed) > 0.5) {
+    effectiveSteering = car.steeringAngle;
+  }
+
   // Движение задней оси
   const rearDirX = Math.cos(car.angle);
   const rearDirZ = Math.sin(car.angle);
   car.rear.x += rearDirX * car.speed * delta;
   car.rear.z += rearDirZ * car.speed * delta;
 
-  // Передняя ось с поворотом
-  const frontDirX = Math.cos(car.angle + car.steeringAngle);
-  const frontDirZ = Math.sin(car.angle + car.steeringAngle);
+  // Передняя ось — только если едем
+  const frontDirX = Math.cos(car.angle + effectiveSteering);
+  const frontDirZ = Math.sin(car.angle + effectiveSteering);
   car.front.x = car.rear.x + frontDirX * 2.2;
   car.front.z = car.rear.z + frontDirZ * 2.2;
 
-  // Обновление угла корпуса
-  car.angle = Math.atan2(car.front.z - car.rear.z, car.front.x - car.rear.x);
+  // Обновление угла ТОЛЬКО если машина движется
+  if (Math.abs(car.speed) > 0.5) {
+    car.angle = Math.atan2(car.front.z - car.rear.z, car.front.x - car.rear.x);
+  }
 
   // Коллизии
   let pushed = false;
@@ -511,7 +484,7 @@ function animate() {
   playerCarMesh.position.set(bodyX, 0.6, bodyZ);
   playerCarMesh.rotation.y = car.angle + Math.PI / 2;
 
-  // Финиш игрока
+  // Финиш
   const playerAngle = Math.atan2(bodyZ, bodyX);
   const normAngle = ((playerAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   if (!playerPassedMidpoint && normAngle > Math.PI - 0.3 && normAngle < Math.PI + 0.3) {
@@ -521,10 +494,9 @@ function animate() {
   const nearStart = Math.abs(bodyX - trackRadius) < 5 && Math.abs(bodyZ) < 2;
   if (playerPassedMidpoint && inFinishZone && nearStart && !playerFinished) {
     playerFinished = true;
-    if (!aiFinished) showMessage("Вы победили!");
+    showMessage("Вы победили!");
   }
 
-  updateAI(delta);
   updateCamera();
   renderer.render(scene, camera);
   drawMiniMap();
