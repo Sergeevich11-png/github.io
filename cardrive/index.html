@@ -88,7 +88,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.92);
       color: #ffeb3b;
       padding: 20px 35px;
       border-radius: 16px;
@@ -104,7 +104,7 @@
     #mini-map {
       position: absolute;
       top: 15px;
-      right: 15px; /* Перенесено вправо для удобства */
+      right: 15px;
       width: 120px;
       height: 120px;
       z-index: 9;
@@ -141,7 +141,13 @@ let renderer, scene, camera, carMesh;
 
 let x = 0, z = 0, angle = 0;
 let speed = 0;
-let wheelAngle = 0;
+
+// Гироскоп
+let initialGamma = null; // нейтральная позиция при старте
+let wheelInput = 0;      // нормализованное отклонение [-1, 1]
+
+// Визуальные колёса
+let frontWheelL, frontWheelR;
 
 let isGas = false, isBrake = false;
 let passedMid = false;
@@ -193,7 +199,58 @@ const bindButton = (el, down, up) => {
 bindButton(gasBtn, () => isGas = true, () => isGas = false);
 bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
 
-// === ЗАПУСК ===
+// === СОЗДАНИЕ МАШИНЫ ===
+function createCar() {
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.55, 2.2),
+    new THREE.MeshPhongMaterial({ color: 0xff3333 })
+  );
+  const nose = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.3, 0.3),
+    new THREE.MeshPhongMaterial({ color: 0xffff00 })
+  );
+  nose.position.set(0, 0.2, -1.2);
+  body.add(nose);
+
+  const wheelGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.4, 12);
+  wheelGeom.rotateZ(Math.PI / 2);
+
+  const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+
+  frontWheelL = new THREE.Mesh(wheelGeom, wheelMat);
+  frontWheelL.position.set(-0.7, -0.3, -0.9);
+  body.add(frontWheelL);
+
+  frontWheelR = new THREE.Mesh(wheelGeom, wheelMat);
+  frontWheelR.position.set(0.7, -0.3, -0.9);
+  body.add(frontWheelR);
+
+  // Задние колёса (для симметрии, не поворачиваются)
+  const rearL = new THREE.Mesh(wheelGeom, wheelMat);
+  rearL.position.set(-0.7, -0.3, 0.9);
+  body.add(rearL);
+
+  const rearR = new THREE.Mesh(wheelGeom, wheelMat);
+  rearR.position.set(0.7, -0.3, 0.9);
+  body.add(rearR);
+
+  return body;
+}
+
+// === ГИРОСКОП ===
+const handleOrientation = (e) => {
+  if (state !== 'playing' || e.gamma === null) return;
+
+  if (initialGamma === null) {
+    initialGamma = e.gamma;
+  }
+
+  const deltaGamma = e.gamma - initialGamma;
+  const clamped = Math.max(-45, Math.min(45, deltaGamma));
+  wheelInput = clamped / 45; // [-1, 1]
+};
+
+// === ЗАПУСК ИГРЫ ===
 function tryLockLandscape() {
   if (screen.orientation?.lock) {
     screen.orientation.lock('landscape').catch(() => {});
@@ -205,12 +262,16 @@ function startGame() {
   state = 'playing';
   tryLockLandscape();
 
+  // Сброс состояния гироскопа
+  initialGamma = null;
+  wheelInput = 0;
+
   canvas.style.display = 'block';
   pauseBtn.style.display = 'block';
   document.getElementById('controls').style.display = 'flex';
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x336633);
+  scene.background = new THREE.Color(0x225522);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -245,7 +306,7 @@ function startGame() {
   scene.add(startLine);
 
   // Бордюры
-  const createBarrier = (radius, color = 0x0066ff) => {
+  const createBarrier = (radius, color) => {
     const points = [];
     for (let i = 0; i <= 128; i++) {
       const a = (i / 128) * Math.PI * 2;
@@ -261,16 +322,7 @@ function startGame() {
   createBarrier(R_out + 0.6, 0xff0000);
 
   // Машина
-  carMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.3, 0.55, 2.2),
-    new THREE.MeshPhongMaterial({ color: 0xff3333 })
-  );
-  const nose = new THREE.Mesh(
-    new THREE.BoxGeometry(0.4, 0.3, 0.3),
-    new THREE.MeshPhongMaterial({ color: 0xffff00 })
-  );
-  nose.position.set(0, 0.2, -1.2);
-  carMesh.add(nose);
+  carMesh = createCar();
   scene.add(carMesh);
 
   // Освещение
@@ -279,12 +331,7 @@ function startGame() {
   sun.position.set(20, 50, 20);
   scene.add(sun);
 
-  // Гироскоп
-  const handleOrientation = (e) => {
-    if (state === 'playing' && e.gamma !== null) {
-      wheelAngle = (e.gamma / 90) * 0.55;
-    }
-  };
+  // Подписка на гироскоп
   if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
     DeviceOrientationEvent.requestPermission().then(permission => {
       if (permission === 'granted') {
@@ -295,12 +342,11 @@ function startGame() {
     window.addEventListener('deviceorientation', handleOrientation, { passive: true });
   }
 
-  // Сброс положения
+  // Сброс
   x = trackRadius - 3;
   z = 0;
   angle = Math.PI / 2;
   speed = 0;
-  wheelAngle = 0;
   passedMid = false;
   finished = false;
 
@@ -323,35 +369,33 @@ function constrain(posX, posZ) {
   if (d < R_in) {
     const f = (R_in + 0.3) / d;
     posX *= f; posZ *= f;
-    speed *= 0.85;
+    speed *= 0.8;
   } else if (d > R_out) {
     const f = (R_out - 0.3) / d;
     posX *= f; posZ *= f;
-    speed *= 0.85;
+    speed *= 0.8;
   }
   return { x: posX, z: posZ };
 }
 
-// === ЦИКЛ ===
+// === ИГРОВОЙ ЦИКЛ ===
 function animate() {
   if (state !== 'playing') return;
 
   const dt = 0.016;
 
-  // Ускорение
-  if (isGas) speed += 0.7;
-  if (isBrake) speed -= 0.8;
-  if (!isGas && !isBrake) speed *= 0.93;
-  speed = Math.max(-1.5, Math.min(speed, 3.0));
+  // Ускорение/тормоз
+  if (isGas) speed += 1.0 * dt * 60;
+  if (isBrake) speed -= 1.3 * dt * 60;
+  if (!isGas && !isBrake) speed *= Math.pow(0.91, dt * 60);
+  speed = Math.max(-2.0, Math.min(speed, 5.5));
 
-  // Поворот
-  if (Math.abs(speed) > 0.01) {
-    angle += wheelAngle * dt * 2.0;
-  }
+  // ПОВОРОТ: НЕ ЗАВИСИТ ОТ СКОРОСТИ!
+  angle += wheelInput * 0.03; // чувствительность — настрой по вкусу
 
-  // Движение
-  x += Math.cos(angle) * speed * dt;
-  z += Math.sin(angle) * speed * dt;
+  // Движение (ускорено)
+  x += Math.cos(angle) * speed * dt * 20;
+  z += Math.sin(angle) * speed * dt * 20;
 
   // Коллизия
   const clamped = constrain(x, z);
@@ -362,11 +406,18 @@ function animate() {
   carMesh.position.set(x, 0.6, z);
   carMesh.rotation.y = angle + Math.PI / 2;
 
+  // Визуальный поворот передних колёс
+  if (frontWheelL && frontWheelR) {
+    const visualTurn = wheelInput * 0.7;
+    frontWheelL.rotation.z = Math.PI / 2 + visualTurn;
+    frontWheelR.rotation.z = Math.PI / 2 + visualTurn;
+  }
+
   // Камера
   camera.position.set(x, 6, z - 12);
   camera.lookAt(x, 1, z);
 
-  // Финишная логика
+  // Финиш
   const curAngle = Math.atan2(z, x);
   let normA = curAngle;
   if (normA < 0) normA += Math.PI * 2;
@@ -375,7 +426,7 @@ function animate() {
     passedMid = true;
   }
 
-  const inFinishZone = (normA < 0.3 || normA > Math.PI * 2 - 0.3);
+  const inFinishZone = normA < 0.3 || normA > Math.PI * 2 - 0.3;
   const nearStartPoint = Math.abs(x - trackRadius) < 5 && Math.abs(z) < 2;
 
   if (passedMid && inFinishZone && nearStartPoint && !finished) {
@@ -386,7 +437,6 @@ function animate() {
   // Мини-карта
   miniMapCtx.clearRect(0, 0, 120, 120);
   const cx = 60, cy = 60, s = 0.8;
-  // Трасса
   miniMapCtx.strokeStyle = '#555';
   miniMapCtx.lineWidth = trackWidth * s;
   miniMapCtx.beginPath();
