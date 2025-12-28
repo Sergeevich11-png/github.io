@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Тест машинки (гироскоп)</title>
+  <title>Тест машинки (реалистичный)</title>
   <style>
     body { 
       margin: 0; 
@@ -47,14 +47,15 @@
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       color: white;
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 12px 18px;
+      border-radius: 10px;
       font-family: monospace;
-      font-size: 24px;
+      font-size: 26px;
       font-weight: bold;
       z-index: 10;
+      letter-spacing: 1px;
     }
   </style>
 </head>
@@ -65,7 +66,7 @@
   <button id="btn-down" class="ctrl-btn">▼</button>
 </div>
 
-<div id="speedometer">00 км/ч</div>
+<div id="speedometer">000 км/ч</div>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
@@ -99,9 +100,8 @@ const body = new THREE.Mesh(
 );
 car.add(body);
 
-// === ПРАВИЛЬНЫЕ КОЛЁСА: стоят вертикально ===
+// Правильные колёса: стоят вертикально
 const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16);
-// Cylinder по умолчанию "лежит", поэтому поворачиваем его на 90° вокруг X
 wheelGeo.rotateX(Math.PI / 2);
 const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
 
@@ -119,16 +119,15 @@ const wheelRR = createWheel(1.1, 1.5);
 car.add(wheelFL, wheelFR, wheelRL, wheelRR);
 scene.add(car);
 
+// Ориентиры
 const poleMat = new THREE.MeshStandardMaterial();
 const poleGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
-
 const addPole = (x, z, color) => {
   const pole = new THREE.Mesh(poleGeo, poleMat.clone());
   pole.material.color.set(color);
   pole.position.set(x, 1.5, z);
   scene.add(pole);
 };
-
 for (let x = -50; x <= 50; x += 10) addPole(x, -50, 0x00ff00);
 for (let x = -50; x <= 50; x += 10) addPole(x, 50, 0x8B4513);
 for (let z = -50; z <= 50; z += 10) addPole(-50, z, 0x9400d3);
@@ -150,18 +149,14 @@ const bindTouch = (el, key) => {
 bindTouch(document.getElementById('btn-up'), 'forward');
 bindTouch(document.getElementById('btn-down'), 'backward');
 
-// === ГИРОСКОП ===
+// Гироскоп
 let initialGamma = null;
 let gamma = 0;
-
 const handleOrientation = (e) => {
   if (e.gamma === null) return;
   gamma = e.gamma;
-  if (initialGamma === null) {
-    initialGamma = e.gamma;
-  }
+  if (initialGamma === null) initialGamma = e.gamma;
 };
-
 if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
   DeviceOrientationEvent.requestPermission().then(permission => {
     if (permission === 'granted') {
@@ -172,81 +167,78 @@ if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requ
   window.addEventListener('deviceorientation', handleOrientation, { passive: true });
 }
 
-// === ФИЗИКА ===
-const maxSteerAngle = Math.PI / 4; // 45°
+// === ФИЗИКА: РЕАЛИСТИЧНЫЙ РАЗГОН ===
+const maxSpeedForward = 23.0; // → 230 км/ч
+const maxSpeedBackward = 3.0; // → 30 км/ч
 let currentSpeed = 0;
-const maxSpeed = 9;
+const approachRate = 0.25; // Подобрано под 0-100 за 5 сек, 0-230 за ~35 сек
 const clock = new THREE.Clock();
 
 function update() {
-  const delta = Math.min(clock.getDelta(), 0.05);
+  const delta = Math.min(clock.getDelta(), 0.1);
 
-  // === ПОВОРОТ: мёртвая зона 0.35° + пропорциональность ===
+  // Поворот (мёртвая зона 0.35°)
   let steerAngle = 0;
   if (initialGamma !== null) {
     const deltaGamma = gamma - initialGamma;
     const deadZone = 0.35;
-    let effectiveDelta = 0;
     if (Math.abs(deltaGamma) > deadZone) {
-      effectiveDelta = Math.sign(deltaGamma) * (Math.abs(deltaGamma) - deadZone);
+      const effective = Math.sign(deltaGamma) * (Math.abs(deltaGamma) - deadZone);
+      const normalized = Math.min(1, Math.max(-1, effective / (25 - deadZone)));
+      const steerInput = normalized * Math.abs(normalized);
+      steerAngle = steerInput * (Math.PI / 4);
     }
-    const normalized = Math.min(1, Math.max(-1, effectiveDelta / (25 - deadZone)));
-    const steerInput = normalized * Math.abs(normalized); // x²·sign(x)
-    steerAngle = steerInput * maxSteerAngle;
   }
 
-  // === ВИЗУАЛЬНЫЙ ПОВОРОТ КОЛЁС (вокруг Y) ===
+  // Визуал колёс
   wheelFL.rotation.y = steerAngle;
   wheelFR.rotation.y = steerAngle;
-  // Задние колёса не поворачиваются
   wheelRL.rotation.y = 0;
   wheelRR.rotation.y = 0;
 
-  // === СКОРОСТЬ: 3.5 сек до максимума, 6 сек до остановки ===
+  // === РЕАЛИСТИЧНЫЙ РАЗГОН ===
+  let targetSpeed = 0;
   if (state.forward) {
-    currentSpeed += 0.75 * delta * 60; // ~3.5 сек до maxSpeed=9
+    targetSpeed = maxSpeedForward;
   } else if (state.backward) {
-    currentSpeed -= 0.5 * delta * 60;
-  } else {
-    // Плавное торможение: 6 сек от 9 до 0
-    currentSpeed *= Math.pow(0.935, delta * 60);
-  }
-  currentSpeed = Math.max(-maxSpeed / 2, Math.min(maxSpeed, currentSpeed));
-
-  // === Ограничение в повороте ===
-  const steerAbs = Math.abs(steerAngle / maxSteerAngle);
-  const effectiveMaxSpeed = maxSpeed * (1 - 0.5 * steerAbs);
-  if (currentSpeed > effectiveMaxSpeed) {
-    currentSpeed = effectiveMaxSpeed;
+    targetSpeed = -maxSpeedBackward;
   }
 
-  // === ПОВОРОТ КУЗОВА ===
-  if (Math.abs(currentSpeed) > 0.05 && Math.abs(steerAngle) > 0.01) {
-    const turnRate = (Math.abs(currentSpeed) / maxSpeed) * 1.6;
+  // Экспоненциальный подход к целевой скорости
+  currentSpeed += (targetSpeed - currentSpeed) * (1 - Math.exp(-approachRate * delta));
+
+  // Ограничение в повороте (на всякий случай)
+  const steerAbs = Math.abs(steerAngle / (Math.PI / 4));
+  const effectiveMax = maxSpeedForward * (1 - 0.4 * steerAbs);
+  if (currentSpeed > effectiveMax) {
+    currentSpeed = effectiveMax;
+  }
+
+  // Поворот корпуса
+  if (Math.abs(currentSpeed) > 0.1 && Math.abs(steerAngle) > 0.01) {
+    const turnRate = (Math.abs(currentSpeed) / maxSpeedForward) * 1.4;
     car.rotation.y -= steerAngle * turnRate * delta;
   }
 
-  // === ПОЗИЦИЯ ===
+  // Позиция
   car.position.y = 0.6;
-  const direction = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation);
-  car.position.x += direction.x * currentSpeed * delta;
-  car.position.z += direction.z * currentSpeed * delta;
+  const dir = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation);
+  car.position.x += dir.x * currentSpeed * delta;
+  car.position.z += dir.z * currentSpeed * delta;
 
-  // === КАМЕРА ===
+  // Камера
   const forward = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation).normalize();
   camera.position.copy(car.position).add(forward.clone().multiplyScalar(-16));
   camera.position.y += 8;
-  const lookAtPoint = car.position.clone().add(forward.clone().multiplyScalar(5));
-  lookAtPoint.y += 1.5;
-  camera.lookAt(lookAtPoint);
+  camera.lookAt(car.position.x, car.position.y + 1.5, car.position.z + forward.z * 5);
 
-  // === СПИДОМЕТР ===
-  const speedKmh = Math.abs(currentSpeed * 10); // условные км/ч
+  // Спидометр
+  const absSpeed = Math.abs(currentSpeed * 10);
   let display = '';
-  if (currentSpeed < -0.1) {
-    display = `R ${speedKmh.toFixed(0).padStart(2, '0')} км/ч`;
+  if (currentSpeed < -0.05) {
+    display = `R ${absSpeed.toFixed(0).padStart(3, '0')} км/ч`;
   } else {
-    display = `${speedKmh.toFixed(0).padStart(2, '0')} км/ч`;
+    display = `${absSpeed.toFixed(0).padStart(3, '0')} км/ч`;
   }
   speedometerEl.textContent = display;
 }
