@@ -142,11 +142,12 @@ let renderer, scene, camera, carMesh;
 let x = 0, z = 0, angle = 0;
 let speed = 0;
 
-// Гироскоп
-let initialGamma = null; // нейтральная позиция при старте
-let wheelInput = 0;      // нормализованное отклонение [-1, 1]
+// Гироскоп с улучшенной стабильностью
+let initialGamma = null;
+let rawWheelInput = 0;
+let wheelInput = 0; // сглаженное значение с мёртвой зоной
 
-// Визуальные колёса
+// Колёса
 let frontWheelL, frontWheelR;
 
 let isGas = false, isBrake = false;
@@ -214,7 +215,6 @@ function createCar() {
 
   const wheelGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.4, 12);
   wheelGeom.rotateZ(Math.PI / 2);
-
   const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
 
   frontWheelL = new THREE.Mesh(wheelGeom, wheelMat);
@@ -225,7 +225,7 @@ function createCar() {
   frontWheelR.position.set(0.7, -0.3, -0.9);
   body.add(frontWheelR);
 
-  // Задние колёса (для симметрии, не поворачиваются)
+  // Задние колёса (для вида, не поворачиваются)
   const rearL = new THREE.Mesh(wheelGeom, wheelMat);
   rearL.position.set(-0.7, -0.3, 0.9);
   body.add(rearL);
@@ -237,7 +237,7 @@ function createCar() {
   return body;
 }
 
-// === ГИРОСКОП ===
+// === ГИРОСКОП: СТАБИЛЬНЫЙ И ПЛАВНЫЙ ===
 const handleOrientation = (e) => {
   if (state !== 'playing' || e.gamma === null) return;
 
@@ -246,11 +246,20 @@ const handleOrientation = (e) => {
   }
 
   const deltaGamma = e.gamma - initialGamma;
-  const clamped = Math.max(-45, Math.min(45, deltaGamma));
-  wheelInput = clamped / 45; // [-1, 1]
+  const clamped = Math.max(-25, Math.min(25, deltaGamma)); // ±25° максимум
+
+  const deadZone = 3; // мёртвая зона в градусах
+  let input = 0;
+  if (Math.abs(clamped) > deadZone) {
+    input = (Math.abs(clamped) - deadZone) / (25 - deadZone);
+    input *= Math.sign(clamped);
+  }
+
+  rawWheelInput = input;
+  wheelInput = wheelInput * 0.7 + rawWheelInput * 0.3; // сглаживание
 };
 
-// === ЗАПУСК ИГРЫ ===
+// === ЗАПУСК ===
 function tryLockLandscape() {
   if (screen.orientation?.lock) {
     screen.orientation.lock('landscape').catch(() => {});
@@ -262,9 +271,9 @@ function startGame() {
   state = 'playing';
   tryLockLandscape();
 
-  // Сброс состояния гироскопа
   initialGamma = null;
   wheelInput = 0;
+  rawWheelInput = 0;
 
   canvas.style.display = 'block';
   pauseBtn.style.display = 'block';
@@ -288,11 +297,10 @@ function startGame() {
   scene.add(road);
 
   // Разметка
-  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), lineMat);
+  const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   lineInner.rotation.x = Math.PI / 2;
   scene.add(lineInner);
-  const lineOuter = new THREE.Mesh(new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128), lineMat);
+  const lineOuter = new THREE.Mesh(new THREE.RingGeometry(R_out - 0.6, R_out - 0.5, 128), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   lineOuter.rotation.x = Math.PI / 2;
   scene.add(lineOuter);
 
@@ -315,8 +323,7 @@ function startGame() {
     const curve = new THREE.CatmullRomCurve3(points);
     curve.closed = true;
     const tube = new THREE.TubeGeometry(curve, 128, 0.4, 8, true);
-    const mesh = new THREE.Mesh(tube, new THREE.MeshPhongMaterial({ color }));
-    scene.add(mesh);
+    scene.add(new THREE.Mesh(tube, new THREE.MeshPhongMaterial({ color })));
   };
   createBarrier(R_in - 0.6, 0x0066ff);
   createBarrier(R_out + 0.6, 0xff0000);
@@ -384,16 +391,16 @@ function animate() {
 
   const dt = 0.016;
 
-  // Ускорение/тормоз
+  // Ускорение
   if (isGas) speed += 1.0 * dt * 60;
   if (isBrake) speed -= 1.3 * dt * 60;
   if (!isGas && !isBrake) speed *= Math.pow(0.91, dt * 60);
   speed = Math.max(-2.0, Math.min(speed, 5.5));
 
-  // ПОВОРОТ: НЕ ЗАВИСИТ ОТ СКОРОСТИ!
-  angle += wheelInput * 0.03; // чувствительность — настрой по вкусу
+  // ПОВОРОТ: НЕЗАВИСИМ ОТ СКОРОСТИ, НО СТАБИЛЕН
+  angle += wheelInput * 0.022; // чуть ниже чувствительности
 
-  // Движение (ускорено)
+  // Движение
   x += Math.cos(angle) * speed * dt * 20;
   z += Math.sin(angle) * speed * dt * 20;
 
@@ -413,8 +420,8 @@ function animate() {
     frontWheelR.rotation.z = Math.PI / 2 + visualTurn;
   }
 
-  // Камера
-  camera.position.set(x, 6, z - 12);
+  // КАМЕРА: дальше и выше
+  camera.position.set(x, 7, z - 16);
   camera.lookAt(x, 1, z);
 
   // Финиш
@@ -442,13 +449,11 @@ function animate() {
   miniMapCtx.beginPath();
   miniMapCtx.arc(cx, cy, trackRadius * s, 0, Math.PI * 2);
   miniMapCtx.stroke();
-  // Старт/финиш
   miniMapCtx.strokeStyle = '#ff0000';
   miniMapCtx.lineWidth = 3;
   miniMapCtx.beginPath();
   miniMapCtx.arc(cx, cy, trackRadius * s, -0.1, 0.1);
   miniMapCtx.stroke();
-  // Машина
   miniMapCtx.fillStyle = '#ff3333';
   miniMapCtx.fillRect(cx + x * s - 2, cy + z * s - 2, 4, 4);
 
