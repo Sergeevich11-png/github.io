@@ -15,7 +15,6 @@
     }
     canvas { display: block; }
 
-    /* Кнопки — только ВПЕРЁД и НАЗАД */
     #controls {
       position: absolute;
       bottom: 20px;
@@ -59,8 +58,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 8.6, 16);
-camera.lookAt(0, 0.6, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -80,7 +77,6 @@ sun.position.set(10, 20, 10);
 scene.add(sun);
 
 const car = new THREE.Group();
-
 const body = new THREE.Mesh(
   new THREE.BoxGeometry(2, 0.8, 4),
   new THREE.MeshPhongMaterial({ color: 0xff3333 })
@@ -120,7 +116,6 @@ for (let x = -50; x <= 50; x += 10) addPole(x, 50, 0x8B4513);
 for (let z = -50; z <= 50; z += 10) addPole(-50, z, 0x9400d3);
 for (let z = -50; z <= 50; z += 10) addPole(50, z, 0xff69b4);
 
-// Управление: только газ/тормоз
 const state = { forward: false, backward: false };
 
 const bindTouch = (el, key) => {
@@ -136,20 +131,16 @@ const bindTouch = (el, key) => {
 bindTouch(document.getElementById('btn-up'), 'forward');
 bindTouch(document.getElementById('btn-down'), 'backward');
 
-// === ГИРОСКОП: ТОЛЬКО ПОВОРОТ (ось gamma) ===
+// Гироскоп
 let initialGamma = null;
 let rawWheelInput = 0;
 let wheelInput = 0;
 
 const handleOrientation = (e) => {
   if (e.gamma === null) return;
-
-  if (initialGamma === null) {
-    initialGamma = e.gamma;
-  }
-
+  if (initialGamma === null) initialGamma = e.gamma;
   const deltaGamma = e.gamma - initialGamma;
-  const clamped = Math.max(-25, Math.min(25, deltaGamma)); // ±25°
+  const clamped = Math.max(-25, Math.min(25, deltaGamma));
   const deadZone = 3;
   let input = 0;
   if (Math.abs(clamped) > deadZone) {
@@ -160,7 +151,6 @@ const handleOrientation = (e) => {
   wheelInput = wheelInput * 0.7 + rawWheelInput * 0.3;
 };
 
-// Запрос разрешения на iOS
 if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
   DeviceOrientationEvent.requestPermission().then(permission => {
     if (permission === 'granted') {
@@ -173,8 +163,6 @@ if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requ
 
 // Физика
 const maxSteerAngle = Math.PI / 5;
-let steerAngle = 0;
-const steerSpeed = 3;
 let currentSpeed = 0;
 const maxSpeed = 8;
 const acceleration = 12;
@@ -185,14 +173,10 @@ const clock = new THREE.Clock();
 function update() {
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  // Считываем поворот из гироскопа
-  steerAngle = wheelInput * maxSteerAngle;
-
-  // Визуал колёс
+  const steerAngle = wheelInput * maxSteerAngle;
   wheelFL.rotation.z = Math.PI / 2 + steerAngle;
   wheelFR.rotation.z = Math.PI / 2 + steerAngle;
 
-  // Скорость — от кнопок
   let targetSpeed = 0;
   if (state.forward) targetSpeed = maxSpeed;
   if (state.backward) targetSpeed = -maxSpeed / 2;
@@ -207,23 +191,27 @@ function update() {
     else currentSpeed = 0;
   }
 
-  // Поворот корпуса — с правильным знаком
   if (Math.abs(currentSpeed) > 0.1 && Math.abs(steerAngle) > 0.01) {
     const turnRate = (currentSpeed / maxSpeed) * 1.8;
     car.rotation.y -= steerAngle * turnRate * delta;
   }
 
-  // Позиция
   car.position.y = 0.6;
   const direction = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation);
   car.position.x += direction.x * currentSpeed * delta;
   car.position.z += direction.z * currentSpeed * delta;
 
-  // Камера
-  camera.position.x = car.position.x;
-  camera.position.y = car.position.y + 8;
-  camera.position.z = car.position.z + 16;
-  camera.lookAt(car.position.x, car.position.y + 1.5, car.position.z - 4);
+  // 🔥 КАМЕРА СТРОГО СЛЕДИТ СЗАДИ
+  const forward = new THREE.Vector3(0, 0, -1).applyEuler(car.rotation).normalize();
+  const camDistance = 16;
+  const camHeight = 8;
+  const camOffset = forward.clone().multiplyScalar(-camDistance);
+  camera.position.copy(car.position).add(camOffset);
+  camera.position.y += camHeight;
+
+  const lookAtPoint = car.position.clone().add(forward.clone().multiplyScalar(5));
+  lookAtPoint.y += 1.5;
+  camera.lookAt(lookAtPoint);
 }
 
 function animate() {
@@ -237,6 +225,10 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Инициализация позиции машины
+car.position.set(0, 0.6, 0);
+scene.add(car);
 
 animate();
 </script>
