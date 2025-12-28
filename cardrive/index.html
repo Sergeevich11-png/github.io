@@ -100,29 +100,6 @@
       text-align: center;
       transition: opacity 0.3s;
     }
-    #orientation-blocker {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #0d0d1a;
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-      color: #f8f9fa;
-    }
-    #orientation-blocker.active { display: flex; }
-    #orientation-blocker p {
-      font-size: 22px;
-      text-align: center;
-      max-width: 80%;
-      margin-bottom: 30px;
-      line-height: 1.4;
-    }
-    #orientation-icon {
-      font-size: 60px;
-      margin-bottom: 20px;
-    }
     #mini-map {
       position: absolute;
       top: 15px;
@@ -140,11 +117,6 @@
   <h1>ГОНКИ: 1 КРУГ</h1>
   <button id="btn-start" class="btn">1 круг</button>
   <button id="btn-exit" class="btn">Выход</button>
-</div>
-
-<div id="orientation-blocker">
-  <div id="orientation-icon">↔️</div>
-  <p>Поверните устройство в альбомную ориентацию для начала гонки</p>
 </div>
 
 <canvas id="game-canvas"></canvas>
@@ -181,7 +153,6 @@ const R_in = trackRadius - trackWidth / 2;
 const R_out = trackRadius + trackWidth / 2;
 
 const mainMenu = document.getElementById('main-menu');
-const blocker = document.getElementById('orientation-blocker');
 const pauseBtn = document.getElementById('pause-btn');
 const gasBtn = document.getElementById('btn-gas');
 const brakeBtn = document.getElementById('btn-brake');
@@ -192,8 +163,7 @@ const miniMapCtx = miniMapCanvas.getContext('2d');
 
 document.getElementById('btn-start').addEventListener('click', () => {
   mainMenu.classList.add('hidden');
-  blocker.classList.add('active');
-  checkOrientation();
+  startGame();
 });
 
 document.getElementById('btn-exit').addEventListener('click', () => {
@@ -221,51 +191,20 @@ const bindButton = (el, down, up) => {
 bindButton(gasBtn, () => isGas = true, () => isGas = false);
 bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
 
-function checkOrientation() {
-  const isLandscape = window.innerWidth > window.innerHeight;
-  if (isLandscape && state !== 'playing') {
-    blocker.classList.remove('active');
-    startGame();
-  } else {
-    setTimeout(checkOrientation, 300);
+// Попытка принудительно установить альбомную ориентацию (если поддерживается)
+function tryLockLandscape() {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch(() => {
+      // Игнорируем ошибку — просто играем как есть
+    });
   }
-}
-
-window.addEventListener('resize', () => {
-  if (state === 'playing') {
-    updateRendererSize();
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    miniMapCanvas.width = 120;
-    miniMapCanvas.height = 120;
-  } else {
-    checkOrientation();
-  }
-});
-
-function constrainToTrack(pos) {
-  const dx = pos.x, dz = pos.z;
-  const dist = Math.sqrt(dx * dx + dz * dz);
-  let pushed = false;
-  if (dist < R_in) {
-    const push = (R_in - dist + 0.25);
-    const nx = -dx / dist, nz = -dz / dist;
-    pos.x += nx * push;
-    pos.z += nz * push;
-    pushed = true;
-  } else if (dist > R_out) {
-    const push = (dist - R_out + 0.25);
-    const nx = dx / dist, nz = dz / dist;
-    pos.x -= nx * push;
-    pos.z -= nz * push;
-    pushed = true;
-  }
-  return pushed;
 }
 
 function startGame() {
   if (state === 'playing') return;
   state = 'playing';
+
+  tryLockLandscape();
 
   canvas.style.display = 'block';
   pauseBtn.style.display = 'block';
@@ -358,7 +297,13 @@ function startGame() {
 
 function updateRendererSize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 }
+
+window.addEventListener('resize', () => {
+  if (state === 'playing') updateRendererSize();
+});
 
 function handleOrientation(e) {
   if (state !== 'playing') return;
@@ -393,6 +338,26 @@ function createCar(color, noseColor) {
   addWheel(0.75, -0.9);
   addWheel(-0.75, -0.9);
   return group;
+}
+
+function constrainToTrack(pos) {
+  const dx = pos.x, dz = pos.z;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+  let pushed = false;
+  if (dist < R_in) {
+    const push = (R_in - dist + 0.25);
+    const nx = -dx / dist, nz = -dz / dist;
+    pos.x += nx * push;
+    pos.z += nz * push;
+    pushed = true;
+  } else if (dist > R_out) {
+    const push = (dist - R_out + 0.25);
+    const nx = dx / dist, nz = dz / dist;
+    pos.x -= nx * push;
+    pos.z -= nz * push;
+    pushed = true;
+  }
+  return pushed;
 }
 
 function updateCamera() {
@@ -449,11 +414,8 @@ function animate() {
   if (!isGas && !isBrake) car.speed *= 0.93;
   car.speed = Math.max(-20, Math.min(car.speed, 40));
 
-  // 🔥 КЛЮЧЕВОЙ ФИКС: поворот только при движении
-  let effectiveSteering = 0;
-  if (Math.abs(car.speed) > 0.5) {
-    effectiveSteering = car.steeringAngle;
-  }
+  // Поворот ТОЛЬКО при движении
+  let effectiveSteering = Math.abs(car.speed) > 0.5 ? car.steeringAngle : 0;
 
   // Движение задней оси
   const rearDirX = Math.cos(car.angle);
@@ -461,13 +423,13 @@ function animate() {
   car.rear.x += rearDirX * car.speed * delta;
   car.rear.z += rearDirZ * car.speed * delta;
 
-  // Передняя ось — только если едем
+  // Обновление передней оси
   const frontDirX = Math.cos(car.angle + effectiveSteering);
   const frontDirZ = Math.sin(car.angle + effectiveSteering);
   car.front.x = car.rear.x + frontDirX * 2.2;
   car.front.z = car.rear.z + frontDirZ * 2.2;
 
-  // Обновление угла ТОЛЬКО если машина движется
+  // Обновление угла машины
   if (Math.abs(car.speed) > 0.5) {
     car.angle = Math.atan2(car.front.z - car.rear.z, car.front.x - car.rear.x);
   }
