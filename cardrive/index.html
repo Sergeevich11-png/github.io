@@ -155,31 +155,50 @@ const GAMES_INDEX_URL = 'https://sergeevich11-png.github.io/github.io/';
 let state = 'main-menu';
 let renderer, scene, camera, carModel;
 
-// === ФИЗИКА ИЗ ТЕСТА ===
-const maxSpeedForward = 23.0;    // 230 км/ч
-const maxSpeedBackward = 3.9;    // 39 км/ч
+// === ФИЗИКА ИЗ "ТЕСТ МАШИНКИ (ФИНАЛ)" ===
+const maxSpeedForward = 23.0;   // 230 км/ч
+const maxSpeedBackward = 3.9;   // 39 км/ч
 let currentSpeed = 0;
 const approachRate = 0.25;
 const clock = new THREE.Clock();
 
-// Управление
 let isGas = false, isBrake = false;
 
-// Гироскоп
+// Гироскоп (из "Тест машинки")
 let initialGamma = null;
 let gamma = 0;
+const handleOrientation = (e) => {
+  if (e.gamma === null) return;
+  gamma = e.gamma;
+  if (initialGamma === null) initialGamma = e.gamma;
+};
 
-// Трасса
+// === КАРТА И КОЛЛИЗИИ ИЗ "ГОНКИ — 1 КРУГ" ===
 const trackRadius = 65;
 const trackWidth = 12;
 const R_in = trackRadius - trackWidth / 2;
 const R_out = trackRadius + trackWidth / 2;
 
-// Финиш
+function constrain(posX, posZ) {
+  const d = Math.sqrt(posX * posX + posZ * posZ);
+  let speedMul = 1;
+  if (d < R_in) {
+    const f = (R_in + 0.3) / d;
+    posX *= f; posZ *= f;
+    speedMul = 0.8;
+  } else if (d > R_out) {
+    const f = (R_out - 0.3) / d;
+    posX *= f; posZ *= f;
+    speedMul = 0.8;
+  }
+  return { x: posX, z: posZ, speedMul };
+}
+
+// === ФИНИШ ИЗ "ГОНКИ — 1 КРУГ" ===
 let passedMid = false;
 let finished = false;
 
-// DOM
+// === ЭЛЕМЕНТЫ UI ===
 const mainMenu = document.getElementById('main-menu');
 const pauseBtn = document.getElementById('pause-btn');
 const gasBtn = document.getElementById('btn-gas');
@@ -207,8 +226,8 @@ pauseBtn.addEventListener('click', () => {
     canvas.style.display = 'none';
     pauseBtn.style.display = 'none';
     document.getElementById('controls').style.display = 'none';
-    document.getElementById('speedometer').style.display = 'none';
-    document.getElementById('mini-map').style.display = 'none';
+    speedometerEl.style.display = 'none';
+    miniMapCanvas.style.display = 'none';
   }
 });
 
@@ -223,13 +242,6 @@ const bindButton = (el, down, up) => {
 };
 bindButton(gasBtn, () => isGas = true, () => isGas = false);
 bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
-
-// === ГИРОСКОП (из теста) ===
-const handleOrientation = (e) => {
-  if (e.gamma === null) return;
-  gamma = e.gamma;
-  if (initialGamma === null) initialGamma = e.gamma;
-};
 
 // === ЗАПУСК ИГРЫ ===
 function tryLockLandscape() {
@@ -251,8 +263,8 @@ function startGame() {
   canvas.style.display = 'block';
   pauseBtn.style.display = 'block';
   document.getElementById('controls').style.display = 'flex';
-  document.getElementById('speedometer').style.display = 'block';
-  document.getElementById('mini-map').style.display = 'block';
+  speedometerEl.style.display = 'block';
+  miniMapCanvas.style.display = 'block';
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x225522);
@@ -263,12 +275,11 @@ function startGame() {
   renderer.setPixelRatio(window.devicePixelRatio);
   updateRendererSize();
 
-  // Трасса
+  // Трасса (из "1 Круг")
   const road = new THREE.Mesh(new THREE.RingGeometry(R_in, R_out, 128), new THREE.MeshStandardMaterial({ color: 0x444444 }));
   road.rotation.x = Math.PI / 2;
   scene.add(road);
 
-  // Разметка
   const lineInner = new THREE.Mesh(new THREE.RingGeometry(R_in + 0.5, R_in + 0.6, 128), new THREE.MeshBasicMaterial({ color: 0xffffff }));
   lineInner.rotation.x = Math.PI / 2;
   scene.add(lineInner);
@@ -276,7 +287,6 @@ function startGame() {
   lineOuter.rotation.x = Math.PI / 2;
   scene.add(lineOuter);
 
-  // Старт/финиш
   const startLine = new THREE.Mesh(
     new THREE.PlaneGeometry(trackWidth, 1.5),
     new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
@@ -285,7 +295,6 @@ function startGame() {
   startLine.position.set(trackRadius, 0.1, 0);
   scene.add(startLine);
 
-  // Бордюры
   const createBarrier = (radius, color) => {
     const points = [];
     for (let i = 0; i <= 128; i++) {
@@ -306,7 +315,7 @@ function startGame() {
   sun.position.set(20, 50, 20);
   scene.add(sun);
 
-  // Загрузка модели
+  // Загрузка 3D-модели
   const loader = new GLTFLoader();
   loader.load('model.glb', (gltf) => {
     carModel = gltf.scene;
@@ -316,12 +325,11 @@ function startGame() {
     resetCar();
   }, undefined, (error) => {
     console.error('Не удалось загрузить model.glb:', error);
-    // fallback: создать тестовую машину
     createFallbackCar();
     resetCar();
   });
 
-  // Подписка на гироскоп
+  // Гироскоп
   if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
     DeviceOrientationEvent.requestPermission().then(permission => {
       if (permission === 'granted') {
@@ -340,10 +348,7 @@ function startGame() {
 
 function createFallbackCar() {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(2, 0.8, 4),
-    new THREE.MeshPhongMaterial({ color: 0xff3333 })
-  );
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 4), new THREE.MeshPhongMaterial({ color: 0xff3333 }));
   group.add(body);
   const wheelGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16);
   wheelGeo.rotateX(Math.PI / 2);
@@ -375,27 +380,11 @@ function updateRendererSize() {
 }
 window.addEventListener('resize', () => { if (state === 'playing') updateRendererSize(); });
 
-// === КОЛЛИЗИЯ (из 1 круга) ===
-function constrain(posX, posZ) {
-  const d = Math.sqrt(posX * posX + posZ * posZ);
-  let speedMul = 1;
-  if (d < R_in) {
-    const f = (R_in + 0.3) / d;
-    posX *= f; posZ *= f;
-    speedMul = 0.8;
-  } else if (d > R_out) {
-    const f = (R_out - 0.3) / d;
-    posX *= f; posZ *= f;
-    speedMul = 0.8;
-  }
-  return { x: posX, z: posZ, speedMul };
-}
-
-// === ОСНОВНОЙ ЦИКЛ (физика из теста + ограничения из 1 круга) ===
+// === ОСНОВНОЙ ЦИКЛ — ФИЗИКА ИЗ ТЕСТА + КАРТА ИЗ 1 КРУГА ===
 function update() {
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  // === ПОВОРОТ (из теста) ===
+  // --- ПОВОРОТ (из ТЕСТА) ---
   let steerAngle = 0;
   if (initialGamma !== null) {
     const deltaGamma = gamma - initialGamma;
@@ -408,7 +397,7 @@ function update() {
     }
   }
 
-  // === УПРАВЛЕНИЕ СКОРОСТЬЮ (из теста) ===
+  // --- УПРАВЛЕНИЕ СКОРОСТЬЮ (из ТЕСТА) ---
   if (isGas) {
     currentSpeed += (maxSpeedForward - currentSpeed) * (1 - Math.exp(-approachRate * delta));
   } else if (isBrake) {
@@ -422,14 +411,14 @@ function update() {
     currentSpeed *= Math.pow(0.94, delta * 60);
   }
 
-  // Ограничение скорости в повороте (из теста)
+  // --- ОГРАНИЧЕНИЕ СКОРОСТИ В ПОВОРОТЕ (из ТЕСТА) ---
   const steerAbs = Math.abs(steerAngle / (Math.PI / 4));
   const effectiveMax = maxSpeedForward * (1 - 0.4 * steerAbs);
   if (currentSpeed > effectiveMax) {
     currentSpeed = effectiveMax;
   }
 
-  // === ПОВОРОТ КУЗОВА (из теста) ===
+  // --- ПОВОРОТ КУЗОВА (из ТЕСТА) ---
   if (Math.abs(currentSpeed) > 0.1 && Math.abs(steerAngle) > 0.01) {
     const turnRate = (Math.abs(currentSpeed) / maxSpeedForward) * 1.4;
     if (carModel) {
@@ -437,20 +426,19 @@ function update() {
     }
   }
 
-  // === ПОЗИЦИЯ (из теста) ===
+  // --- ПОЗИЦИЯ И КОЛЛИЗИЯ (движение из ТЕСТА, ограничение — из 1 КРУГА) ---
   if (carModel) {
     const dir = new THREE.Vector3(0, 0, -1).applyEuler(carModel.rotation);
     carModel.position.x += dir.x * currentSpeed * delta;
     carModel.position.z += dir.z * currentSpeed * delta;
 
-    // Коллизия (из 1 круга)
     const clamped = constrain(carModel.position.x, carModel.position.z);
     carModel.position.x = clamped.x;
     carModel.position.z = clamped.z;
     currentSpeed *= clamped.speedMul;
   }
 
-  // === КАМЕРА (из теста) ===
+  // --- КАМЕРА (из ТЕСТА) ---
   if (carModel) {
     const forward = new THREE.Vector3(0, 0, -1).applyEuler(carModel.rotation).normalize();
     camera.position.copy(carModel.position).add(forward.clone().multiplyScalar(-16));
@@ -458,23 +446,19 @@ function update() {
     camera.lookAt(carModel.position.x, carModel.position.y + 1.5, carModel.position.z + forward.z * 5);
   }
 
-  // === СПИДОМЕТР (из теста) ===
+  // --- СПИДОМЕТР (из ТЕСТА) ---
   const absSpeed = Math.abs(currentSpeed * 10);
-  let display = '';
-  if (currentSpeed < -0.05) {
-    display = `R ${absSpeed.toFixed(0).padStart(3, '0')} км/ч`;
-  } else {
-    display = `${absSpeed.toFixed(0).padStart(3, '0')} км/ч`;
-  }
+  let display = currentSpeed < -0.05
+    ? `R ${absSpeed.toFixed(0).padStart(3, '0')} км/ч`
+    : `${absSpeed.toFixed(0).padStart(3, '0')} км/ч`;
   speedometerEl.textContent = display;
 
-  // === ФИНИШ (адаптировано из 1 круга) ===
+  // --- ФИНИШ (из 1 КРУГА) ---
   if (carModel && !finished) {
     const x = carModel.position.x;
     const z = carModel.position.z;
     const curAngle = Math.atan2(z, x);
-    let normA = curAngle;
-    if (normA < 0) normA += Math.PI * 2;
+    let normA = curAngle < 0 ? curAngle + Math.PI * 2 : curAngle;
 
     if (!passedMid && normA > Math.PI - 0.5 && normA < Math.PI + 0.5) {
       passedMid = true;
@@ -489,7 +473,7 @@ function update() {
     }
   }
 
-  // === МИНИ-КАРТА ===
+  // --- МИНИ-КАРТА (из 1 КРУГА) ---
   miniMapCtx.clearRect(0, 0, 120, 120);
   const cx = 60, cy = 60, s = 0.8;
   miniMapCtx.strokeStyle = '#555';
@@ -509,10 +493,11 @@ function update() {
 }
 
 function animate() {
-  if (state !== 'playing') return;
-  update();
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
+  if (state === 'playing') {
+    update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
 }
 
 function showMessage(text) {
@@ -525,8 +510,8 @@ function showMessage(text) {
     canvas.style.display = 'none';
     pauseBtn.style.display = 'none';
     document.getElementById('controls').style.display = 'none';
-    document.getElementById('speedometer').style.display = 'none';
-    document.getElementById('mini-map').style.display = 'none';
+    speedometerEl.style.display = 'none';
+    miniMapCanvas.style.display = 'none';
   }, 3000);
 }
 </script>
