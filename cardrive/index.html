@@ -167,7 +167,7 @@ const speedometerEl = document.getElementById('speedometer');
 
 // === ФИЗИКА ===
 const maxSpeedForward = 23.0;   // 230 км/ч
-const maxSpeedBackward = 3.9;   // 39 км/ч
+const maxSpeedBackward = 7.9;   // 79 км/ч
 let currentSpeed = 0;
 const approachRate = 0.25;
 const clock = new THREE.Clock();
@@ -353,7 +353,7 @@ function startGame() {
   currentSpeed = 0;
   passedMid = false;
   finished = false;
-  car.position.set(trackRadius - 3, 0.62, 0);
+  car.position.set(trackRadius - 1.5, 0.62, 0);
   car.rotation.y = Math.PI / 2;
 
   miniMapCanvas.width = 120;
