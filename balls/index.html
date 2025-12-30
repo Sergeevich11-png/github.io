@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Шарики-рикошет</title>
   <style>
     * {
@@ -58,9 +58,42 @@
     button:hover {
       background: #357abd;
     }
-    .level-selector {
+    .menu-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      z-index: 100;
+    }
+    .timer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 18px;
+      background: rgba(255,255,255,0.7);
+      padding: 5px 10px;
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    .queue-display {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      gap: 10px;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .ball-in-cannon {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -78,7 +111,7 @@
     <!-- Выбор уровня -->
     <div id="levelSelect" class="screen">
       <h2>Уровень</h2>
-      <div class="level-selector">
+      <div style="display: flex; gap: 10px;">
         <button id="btnPrev">←</button>
         <button id="btnCurrent">1</button>
         <button id="btnNext">→</button>
@@ -89,8 +122,10 @@
 
     <!-- Игровой экран (UI поверх canvas) -->
     <div id="inGameUI" class="screen">
-      <div id="timer">00:00</div>
-      <div id="queueDisplay" style="position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px;"></div>
+      <div class="timer" id="timer">00:00</div>
+      <button class="menu-btn" id="btnBackToMenuInGame">Назад</button>
+      <div class="queue-display" id="queueDisplay"></div>
+      <div class="ball-in-cannon" id="cannonBall"></div>
     </div>
 
     <!-- Победа -->
@@ -347,8 +382,8 @@
       startTime: null,
       elapsedTime: 0,
       cannonAngle: 0,
-      touchStart: null,
-      aimLine: { points: [] },
+      isAiming: false,
+      aimPoint: { x: 0, y: 0 },
       fallingBalls: [],
       lastFrame: 0
     };
@@ -399,8 +434,37 @@
     }
 
     function drawAimLine() {
-      const points = gameState.aimLine.points;
-      if (points.length < 2) return;
+      if (!gameState.isAiming) return;
+
+      const points = [];
+      let x = CANNON_X;
+      let y = CANNON_Y;
+      const dx = gameState.aimPoint.x - CANNON_X;
+      const dy = gameState.aimPoint.y - CANNON_Y;
+      const angle = Math.atan2(dx, -dy);
+      let vx = Math.sin(angle) * 10;
+      let vy = -Math.cos(angle) * 10;
+      let length = 0;
+      const maxLength = 500;
+
+      while (length < maxLength) {
+        x += vx;
+        y += vy;
+        length += Math.sqrt(vx * vx + vy * vy);
+
+        // Отскок от стен
+        if (x <= BALL_RADIUS) {
+          x = BALL_RADIUS;
+          vx = -vx;
+        } else if (x >= canvas.width - BALL_RADIUS) {
+          x = canvas.width - BALL_RADIUS;
+          vx = -vx;
+        }
+
+        points.push({ x, y });
+
+        if (y <= 50) break; // дошли до верха
+      }
 
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
@@ -412,23 +476,6 @@
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.setLineDash([]);
-    }
-
-    function drawQueue() {
-      const container = document.getElementById('queueDisplay');
-      container.innerHTML = '';
-      const currentColor = gameState.queue.currentColor();
-      // Текущий в пушке — не рисуем в очереди, только следующие
-      const next = gameState.queue.nextColors();
-      for (let color of next) {
-        const div = document.createElement('div');
-        div.style.width = '20px';
-        div.style.height = '20px';
-        div.style.borderRadius = '50%';
-        div.style.backgroundColor = color;
-        div.style.border = '2px solid white';
-        container.appendChild(div);
-      }
     }
 
     function drawDeathLine() {
@@ -456,64 +503,20 @@
         gameState.structure.balls.forEach(b => b.draw(ctx));
         drawFallingBalls();
         drawCannon();
-        // Текущий шарик в пушке
-        ctx.beginPath();
-        ctx.arc(
-          CANNON_X + Math.sin(gameState.cannonAngle) * 40,
-          CANNON_Y - Math.cos(gameState.cannonAngle) * 40,
-          BALL_RADIUS,
-          0,
-          Math.PI * 2
-        );
-        ctx.fillStyle = gameState.queue.currentColor();
-        ctx.fill();
+        // Текущий шарик в пушке — рисуется в HTML
       }
     }
 
     // ======================
     // Обновление
     // ======================
-    function calculateAimLine(touchX, touchY) {
-      const dx = touchX - CANNON_X;
-      const dy = touchY - CANNON_Y;
-      const angle = Math.atan2(dx, -dy); // вверх = 0
-      gameState.cannonAngle = angle;
-
-      const points = [];
-      let x = CANNON_X;
-      let y = CANNON_Y;
-      let vx = Math.sin(angle) * 10;
-      let vy = -Math.cos(angle) * 10;
-      let length = 0;
-      const maxLength = 500;
-
-      while (length < maxLength) {
-        x += vx;
-        y += vy;
-        length += Math.sqrt(vx * vx + vy * vy);
-
-        // Отскок от стен
-        if (x <= BALL_RADIUS) {
-          x = BALL_RADIUS;
-          vx = -vx;
-        } else if (x >= canvas.width - BALL_RADIUS) {
-          x = canvas.width - BALL_RADIUS;
-          vx = -vx;
-        }
-
-        points.push({ x, y });
-
-        if (y <= 50) break; // дошли до верха
-      }
-
-      gameState.aimLine.points = points;
-    }
-
     function shoot() {
-      if (gameState.mode !== 'playing') return;
+      if (gameState.mode !== 'playing' || !gameState.isAiming) return;
 
       const color = gameState.queue.pop();
-      const angle = gameState.cannonAngle;
+      const dx = gameState.aimPoint.x - CANNON_X;
+      const dy = gameState.aimPoint.y - CANNON_Y;
+      const angle = Math.atan2(dx, -dy);
       const speed = 8;
       let x = CANNON_X;
       let y = CANNON_Y;
@@ -588,7 +591,8 @@
             return;
           }
 
-          drawQueue();
+          // Обновляем очередь в UI
+          updateQueueDisplay();
           return;
         }
 
@@ -658,9 +662,29 @@
       gameState.elapsedTime = 0;
       gameState.fallingBalls = [];
       gameState.cannonAngle = 0;
+      gameState.isAiming = false;
       document.getElementById('timer').textContent = '00:00';
-      drawQueue();
+      updateQueueDisplay();
       showScreen('inGameUI');
+    }
+
+    function updateQueueDisplay() {
+      const container = document.getElementById('queueDisplay');
+      container.innerHTML = '';
+      const next = gameState.queue.nextColors();
+      for (let color of next) {
+        const div = document.createElement('div');
+        div.style.width = '20px';
+        div.style.height = '20px';
+        div.style.borderRadius = '50%';
+        div.style.backgroundColor = color;
+        div.style.border = '2px solid white';
+        container.appendChild(div);
+      }
+
+      // Обновляем цвет шарика в пушке
+      const cannonBall = document.getElementById('cannonBall');
+      cannonBall.style.backgroundColor = gameState.queue.currentColor();
     }
 
     // ======================
@@ -672,30 +696,28 @@
       const rect = canvas.getBoundingClientRect();
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
-      gameState.touchStart = { x, y };
-      if (gameState.mode === 'playing') {
-        calculateAimLine(x, y);
-      }
+      gameState.isAiming = true;
+      gameState.aimPoint = { x, y };
+      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     });
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
-      if (!gameState.touchStart) return;
+      if (!gameState.isAiming) return;
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
-      if (gameState.mode === 'playing') {
-        calculateAimLine(x, y);
-      }
+      gameState.aimPoint = { x, y };
+      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     });
 
     canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
-      if (gameState.mode === 'playing' && gameState.touchStart) {
+      if (gameState.isAiming) {
         shoot();
       }
-      gameState.touchStart = null;
+      gameState.isAiming = false;
     });
 
     // Мышь (для тестирования на ПК)
@@ -703,27 +725,25 @@
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      gameState.touchStart = { x, y };
-      if (gameState.mode === 'playing') {
-        calculateAimLine(x, y);
-      }
+      gameState.isAiming = true;
+      gameState.aimPoint = { x, y };
+      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     });
 
     canvas.addEventListener('mousemove', (e) => {
-      if (!gameState.touchStart) return;
+      if (!gameState.isAiming) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      if (gameState.mode === 'playing') {
-        calculateAimLine(x, y);
-      }
+      gameState.aimPoint = { x, y };
+      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     });
 
     canvas.addEventListener('mouseup', () => {
-      if (gameState.mode === 'playing' && gameState.touchStart) {
+      if (gameState.isAiming) {
         shoot();
       }
-      gameState.touchStart = null;
+      gameState.isAiming = false;
     });
 
     // Кнопки меню
@@ -770,6 +790,11 @@
     document.getElementById('btnStartLevel').addEventListener('click', startGame);
     document.getElementById('btnBackToMenu').addEventListener('click', () => showScreen('mainMenu'));
 
+    // Кнопка «Назад в меню» в игре
+    document.getElementById('btnBackToMenuInGame').addEventListener('click', () => {
+      showScreen('mainMenu');
+    });
+
     // Победа/поражение
     document.getElementById('btnNextLevel').addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
@@ -789,4 +814,4 @@
     requestAnimationFrame(gameLoop);
   </script>
 </body>
-  </html>
+</html>
