@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Шарики-рикошет</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: none;
+    }
+    body {
+      background: #d6e2eb; /* мягкий серо-голубой */
+      font-family: sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #222;
+    }
+    #gameCanvas {
+      display: block;
+      background: #d6e2eb;
+    }
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      height: 100%;
+      pointer-events: auto;
+    }
+    .screen.active {
+      display: flex;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 18px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    button:hover {
+      background: #357abd;
+    }
+    .level-selector {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="480" height="800"></canvas>
+  <div id="ui">
+    <!-- Главное меню -->
+    <div id="mainMenu" class="screen active">
+      <h2>Шарики-рикошет</h2>
+      <button id="btnDifficulty">Сложность: Средне</button>
+      <button id="btnPlay">Играть</button>
+      <button id="btnExit">Выход</button>
+    </div>
+
+    <!-- Выбор уровня -->
+    <div id="levelSelect" class="screen">
+      <h2>Уровень</h2>
+      <div class="level-selector">
+        <button id="btnPrev">←</button>
+        <button id="btnCurrent">1</button>
+        <button id="btnNext">→</button>
+      </div>
+      <button id="btnStartLevel">Начать</button>
+      <button id="btnBackToMenu">Назад</button>
+    </div>
+
+    <!-- Игровой экран (UI поверх canvas) -->
+    <div id="inGameUI" class="screen">
+      <div id="timer">00:00</div>
+      <div id="queueDisplay" style="position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px;"></div>
+    </div>
+
+    <!-- Победа -->
+    <div id="victoryScreen" class="screen">
+      <h2>Победа!</h2>
+      <div id="starsDisplay">⭐⭐⭐</div>
+      <div id="timeDisplay">Время: 00:00</div>
+      <button id="btnNextLevel">Следующий уровень</button>
+      <button id="btnReplay">Повторить</button>
+      <button id="btnToMenuVictory">В меню</button>
+    </div>
+
+    <!-- Поражение -->
+    <div id="gameOverScreen" class="screen">
+      <h2>Поражение!</h2>
+      <button id="btnRetry">Повторить</button>
+      <button id="btnToMenuGameOver">В меню</button>
+    </div>
+  </div>
+
+  <script>
+    // ======================
+    // Конфигурация
+    // ======================
+    const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+    const BALL_RADIUS = 15;
+    const CANNON_X = 240;
+    const CANNON_Y = 750;
+    const DEATH_LINE_Y = CANNON_Y - 100; // 650
+    const MAX_LEVELS = 100;
+    const TIME_LIMIT = 5 * 60 * 1000; // 5 минут в мс
+
+    // ======================
+    // Вспомогательные функции
+    // ======================
+    function randomColor() {
+      return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const min = Math.floor(totalSec / 60).toString().padStart(2, '0');
+      const sec = (totalSec % 60).toString().padStart(2, '0');
+      return `${min}:${sec}`;
+    }
+
+    function getStars(timeMs) {
+      if (timeMs <= 3 * 60 * 1000) return 3;
+      if (timeMs <= 4 * 60 * 1000) return 2;
+      if (timeMs <= 5 * 60 * 1000) return 1;
+      return 0;
+    }
+
+    // ======================
+    // Класс: Ball
+    // ======================
+    class Ball {
+      constructor(x, y, color, isFalling = false) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.isFalling = isFalling;
+        this.radius = BALL_RADIUS;
+      }
+
+      draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.closePath();
+      }
+    }
+
+    // ======================
+    // Класс: LevelBuffer
+    // ======================
+    class LevelBuffer {
+      constructor() {
+        this.levels = []; // [{ id, structure: Ball[], stars }]
+      }
+
+      get(id) {
+        return this.levels.find(l => l.id === id);
+      }
+
+      save(id, structure, stars = null) {
+        if (this.get(id)) return; // уже есть
+        this.levels.push({ id, structure: [...structure], stars });
+        if (this.levels.length > 3) {
+          this.levels.shift(); // удаляем старейший
+        }
+      }
+
+      setStars(id, stars) {
+        const level = this.get(id);
+        if (level) level.stars = stars;
+      }
+    }
+
+    // ======================
+    // Класс: Queue
+    // ======================
+    class Queue {
+      constructor(difficulty) {
+        this.difficulty = difficulty;
+        this.colors = [];
+        this.refill();
+      }
+
+      refill() {
+        while (this.colors.length < this.difficulty) {
+          this.colors.push(randomColor());
+        }
+      }
+
+      currentColor() {
+        return this.colors[0] || randomColor();
+      }
+
+      pop() {
+        const color = this.colors.shift();
+        this.colors.push(randomColor());
+        return color;
+      }
+
+      nextColors() {
+        return this.colors.slice(1);
+      }
+    }
+
+    // ======================
+    // Класс: Structure
+    // ======================
+    class Structure {
+      constructor() {
+        this.balls = [];
+      }
+
+      add(ball) {
+        this.balls.push(ball);
+      }
+
+      // Удаляет группу и возвращает их координаты для анимации
+      removeGroup(group) {
+        const removed = [];
+        for (let ball of group) {
+          const idx = this.balls.indexOf(ball);
+          if (idx !== -1) {
+            removed.push({ x: ball.x, y: ball.y });
+            this.balls.splice(idx, 1);
+          }
+        }
+        return removed;
+      }
+
+      // Находит связную группу (4-связность)
+      findConnected(startBall) {
+        const visited = new Set();
+        const stack = [startBall];
+        const group = [];
+        const targetColor = startBall.color;
+
+        while (stack.length > 0) {
+          const current = stack.pop();
+          if (visited.has(current)) continue;
+          visited.add(current);
+          if (current.color === targetColor) {
+            group.push(current);
+            // Проверяем соседей
+            for (let other of this.balls) {
+              if (visited.has(other)) continue;
+              const dx = other.x - current.x;
+              const dy = other.y - current.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist <= BALL_RADIUS * 2 + 2) {
+                stack.push(other);
+              }
+            }
+          }
+        }
+        return group.length >= 3 ? group : [];
+      }
+
+      // Обновляет isFalling для шариков, не связанных с верхом
+      updateConnectedness() {
+        if (this.balls.length === 0) return;
+
+        // Находим самый верхний ряд (минимальный y)
+        let minY = Infinity;
+        for (let b of this.balls) {
+          if (b.y < minY) minY = b.y;
+        }
+
+        // Все, кто в ~BALL_RADIUS от minY — "корень"
+        const rootBalls = this.balls.filter(b => Math.abs(b.y - minY) <= BALL_RADIUS);
+        const connected = new Set();
+
+        // BFS от корневых
+        const queue = [...rootBalls];
+        for (let b of rootBalls) connected.add(b);
+
+        while (queue.length > 0) {
+          const current = queue.shift();
+          for (let other of this.balls) {
+            if (connected.has(other)) continue;
+            const dx = other.x - current.x;
+            const dy = other.y - current.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= BALL_RADIUS * 2 + 2) {
+              connected.add(other);
+              queue.push(other);
+            }
+          }
+        }
+
+        // Помечаем неподключённые как падающие
+        for (let b of this.balls) {
+          b.isFalling = !connected.has(b);
+        }
+      }
+
+      // Проверяет, касается ли НЕ-падающая структура зоны смерти
+      checkGameOver(deathLineY) {
+        for (let b of this.balls) {
+          if (!b.isFalling && b.y + b.radius >= deathLineY) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Удаляет все падающие шарики (возвращает их для анимации)
+      collectFalling() {
+        const falling = this.balls.filter(b => b.isFalling);
+        this.balls = this.balls.filter(b => !b.isFalling);
+        return falling;
+      }
+    }
+
+    // ======================
+    // Основная логика игры
+    // ======================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const levelBuffer = new LevelBuffer();
+
+    let gameState = {
+      mode: 'menu', // 'menu', 'levelSelect', 'playing', 'victory', 'gameOver'
+      difficulty: 2, // 1, 2, 3
+      currentLevel: 1,
+      queue: null,
+      structure: null,
+      startTime: null,
+      elapsedTime: 0,
+      cannonAngle: 0,
+      touchStart: null,
+      aimLine: { points: [] },
+      fallingBalls: [],
+      lastFrame: 0
+    };
+
+    // ======================
+    // Генерация уровня
+    // ======================
+    function generateLevelStructure(levelId) {
+      const structure = new Structure();
+      const rows = 3 + Math.min(2, Math.floor(levelId / 20)); // от 3 до 5 рядов
+      const cols = 8;
+      const startX = canvas.width / 2 - (cols * BALL_RADIUS * 2) / 2 + BALL_RADIUS;
+      const startY = 100;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          // Случайно пропускаем некоторые позиции
+          if (Math.random() < 0.2) continue;
+          const x = startX + col * BALL_RADIUS * 2;
+          const y = startY + row * BALL_RADIUS * 2;
+          structure.add(new Ball(x, y, randomColor()));
+        }
+      }
+      return structure;
+    }
+
+    // ======================
+    // Отрисовка
+    // ======================
+    function drawBackground() {
+      ctx.fillStyle = '#d6e2eb';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCannon() {
+      ctx.save();
+      ctx.translate(CANNON_X, CANNON_Y);
+      ctx.rotate(gameState.cannonAngle);
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.lineTo(10, 0);
+      ctx.lineTo(5, -30);
+      ctx.lineTo(-5, -30);
+      ctx.closePath();
+      ctx.fillStyle = '#555';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawAimLine() {
+      const points = gameState.aimLine.points;
+      if (points.length < 2) return;
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = '#777';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawQueue() {
+      const container = document.getElementById('queueDisplay');
+      container.innerHTML = '';
+      const currentColor = gameState.queue.currentColor();
+      // Текущий в пушке — не рисуем в очереди, только следующие
+      const next = gameState.queue.nextColors();
+      for (let color of next) {
+        const div = document.createElement('div');
+        div.style.width = '20px';
+        div.style.height = '20px';
+        div.style.borderRadius = '50%';
+        div.style.backgroundColor = color;
+        div.style.border = '2px solid white';
+        container.appendChild(div);
+      }
+    }
+
+    function drawDeathLine() {
+      ctx.strokeStyle = '#ff000044';
+      ctx.setLineDash([10, 5]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, DEATH_LINE_Y);
+      ctx.lineTo(canvas.width, DEATH_LINE_Y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawFallingBalls() {
+      for (let ball of gameState.fallingBalls) {
+        ball.draw(ctx);
+      }
+    }
+
+    function render() {
+      drawBackground();
+      if (gameState.mode === 'playing') {
+        drawDeathLine();
+        drawAimLine();
+        gameState.structure.balls.forEach(b => b.draw(ctx));
+        drawFallingBalls();
+        drawCannon();
+        // Текущий шарик в пушке
+        ctx.beginPath();
+        ctx.arc(
+          CANNON_X + Math.sin(gameState.cannonAngle) * 40,
+          CANNON_Y - Math.cos(gameState.cannonAngle) * 40,
+          BALL_RADIUS,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = gameState.queue.currentColor();
+        ctx.fill();
+      }
+    }
+
+    // ======================
+    // Обновление
+    // ======================
+    function calculateAimLine(touchX, touchY) {
+      const dx = touchX - CANNON_X;
+      const dy = touchY - CANNON_Y;
+      const angle = Math.atan2(dx, -dy); // вверх = 0
+      gameState.cannonAngle = angle;
+
+      const points = [];
+      let x = CANNON_X;
+      let y = CANNON_Y;
+      let vx = Math.sin(angle) * 10;
+      let vy = -Math.cos(angle) * 10;
+      let length = 0;
+      const maxLength = 500;
+
+      while (length < maxLength) {
+        x += vx;
+        y += vy;
+        length += Math.sqrt(vx * vx + vy * vy);
+
+        // Отскок от стен
+        if (x <= BALL_RADIUS) {
+          x = BALL_RADIUS;
+          vx = -vx;
+        } else if (x >= canvas.width - BALL_RADIUS) {
+          x = canvas.width - BALL_RADIUS;
+          vx = -vx;
+        }
+
+        points.push({ x, y });
+
+        if (y <= 50) break; // дошли до верха
+      }
+
+      gameState.aimLine.points = points;
+    }
+
+    function shoot() {
+      if (gameState.mode !== 'playing') return;
+
+      const color = gameState.queue.pop();
+      const angle = gameState.cannonAngle;
+      const speed = 8;
+      let x = CANNON_X;
+      let y = CANNON_Y;
+      let vx = Math.sin(angle) * speed;
+      let vy = -Math.cos(angle) * speed;
+
+      function moveBall() {
+        x += vx;
+        y += vy;
+
+        // Отскок от стен
+        if (x <= BALL_RADIUS || x >= canvas.width - BALL_RADIUS) {
+          vx = -vx;
+          x = Math.max(BALL_RADIUS, Math.min(canvas.width - BALL_RADIUS, x));
+        }
+
+        // Проверка столкновения со структурой
+        let collided = false;
+        for (let ball of gameState.structure.balls) {
+          const dx = x - ball.x;
+          const dy = y - ball.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= BALL_RADIUS * 2) {
+            // Прилипаем рядом
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const attachX = ball.x + nx * BALL_RADIUS * 2;
+            const attachY = ball.y + ny * BALL_RADIUS * 2;
+            const newBall = new Ball(attachX, attachY, color);
+            gameState.structure.add(newBall);
+
+            // Проверка на группу
+            const group = gameState.structure.findConnected(newBall);
+            if (group.length >= 3) {
+              gameState.structure.removeGroup(group);
+            }
+
+            // Обновление связности и падение
+            gameState.structure.updateConnectedness();
+            const falling = gameState.structure.collectFalling();
+            gameState.fallingBalls = falling.map(b => ({ ...b, vy: 2 })); // копия с скоростью
+
+            collided = true;
+            break;
+          }
+        }
+
+        // Если долетел до верха — тоже прилипает
+        if (!collided && y <= 80) {
+          const newBall = new Ball(x, 80, color);
+          gameState.structure.add(newBall);
+          collided = true;
+        }
+
+        if (collided) {
+          // Проверка Game Over (только не-падающие)
+          if (gameState.structure.checkGameOver(DEATH_LINE_Y)) {
+            gameState.mode = 'gameOver';
+            showScreen('gameOverScreen');
+            return;
+          }
+
+          // Победа?
+          if (gameState.structure.balls.length === 0) {
+            const time = Date.now() - gameState.startTime;
+            const stars = getStars(time);
+            levelBuffer.setStars(gameState.currentLevel, stars);
+            gameState.mode = 'victory';
+            document.getElementById('timeDisplay').textContent = `Время: ${formatTime(time)}`;
+            document.getElementById('starsDisplay').textContent = '⭐'.repeat(stars);
+            showScreen('victoryScreen');
+            return;
+          }
+
+          drawQueue();
+          return;
+        }
+
+        requestAnimationFrame(moveBall);
+      }
+
+      moveBall();
+    }
+
+    function updateFallingBalls(deltaTime) {
+      const gravity = 0.1;
+      for (let i = gameState.fallingBalls.length - 1; i >= 0; i--) {
+        const ball = gameState.fallingBalls[i];
+        ball.vy += gravity;
+        ball.y += ball.vy;
+        if (ball.y > canvas.height + 100) {
+          gameState.fallingBalls.splice(i, 1);
+        }
+      }
+    }
+
+    function gameLoop(timestamp) {
+      const deltaTime = timestamp - gameState.lastFrame;
+      gameState.lastFrame = timestamp;
+
+      if (gameState.mode === 'playing') {
+        gameState.elapsedTime = Date.now() - gameState.startTime;
+        document.getElementById('timer').textContent = formatTime(gameState.elapsedTime);
+
+        // Таймер поражения
+        if (gameState.elapsedTime > TIME_LIMIT) {
+          gameState.mode = 'gameOver';
+          showScreen('gameOverScreen');
+          return;
+        }
+
+        updateFallingBalls(deltaTime);
+      }
+
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ======================
+    // UI и навигация
+    // ======================
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function startGame() {
+      const levelData = levelBuffer.get(gameState.currentLevel);
+      let structure;
+      if (levelData) {
+        structure = new Structure();
+        structure.balls = levelData.structure.map(b => new Ball(b.x, b.y, b.color));
+      } else {
+        structure = generateLevelStructure(gameState.currentLevel);
+        levelBuffer.save(gameState.currentLevel, structure.balls);
+      }
+
+      gameState.mode = 'playing';
+      gameState.structure = structure;
+      gameState.queue = new Queue(gameState.difficulty);
+      gameState.startTime = Date.now();
+      gameState.elapsedTime = 0;
+      gameState.fallingBalls = [];
+      gameState.cannonAngle = 0;
+      document.getElementById('timer').textContent = '00:00';
+      drawQueue();
+      showScreen('inGameUI');
+    }
+
+    // ======================
+    // Обработчики событий
+    // ======================
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      gameState.touchStart = { x, y };
+      if (gameState.mode === 'playing') {
+        calculateAimLine(x, y);
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!gameState.touchStart) return;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      if (gameState.mode === 'playing') {
+        calculateAimLine(x, y);
+      }
+    });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (gameState.mode === 'playing' && gameState.touchStart) {
+        shoot();
+      }
+      gameState.touchStart = null;
+    });
+
+    // Мышь (для тестирования на ПК)
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      gameState.touchStart = { x, y };
+      if (gameState.mode === 'playing') {
+        calculateAimLine(x, y);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!gameState.touchStart) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (gameState.mode === 'playing') {
+        calculateAimLine(x, y);
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (gameState.mode === 'playing' && gameState.touchStart) {
+        shoot();
+      }
+      gameState.touchStart = null;
+    });
+
+    // Кнопки меню
+    document.getElementById('btnExit').addEventListener('click', () => {
+      console.log('exit'); // заглушка
+    });
+
+    document.getElementById('btnDifficulty').addEventListener('click', () => {
+      const btn = document.getElementById('btnDifficulty');
+      gameState.difficulty = gameState.difficulty % 3 + 1;
+      const labels = { 1: 'Сложно', 2: 'Средне', 3: 'Легко' };
+      btn.textContent = `Сложность: ${labels[gameState.difficulty]}`;
+    });
+
+    document.getElementById('btnPlay').addEventListener('click', () => {
+      showScreen('levelSelect');
+    });
+
+    // Выбор уровня
+    const levelBtn = document.getElementById('btnCurrent');
+    const prevBtn = document.getElementById('btnPrev');
+    const nextBtn = document.getElementById('btnNext');
+
+    function updateLevelButtons() {
+      levelBtn.textContent = gameState.currentLevel;
+      prevBtn.disabled = gameState.currentLevel === 1;
+      nextBtn.disabled = gameState.currentLevel === MAX_LEVELS;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (gameState.currentLevel > 1) {
+        gameState.currentLevel--;
+        updateLevelButtons();
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (gameState.currentLevel < MAX_LEVELS) {
+        gameState.currentLevel++;
+        updateLevelButtons();
+      }
+    });
+
+    document.getElementById('btnStartLevel').addEventListener('click', startGame);
+    document.getElementById('btnBackToMenu').addEventListener('click', () => showScreen('mainMenu'));
+
+    // Победа/поражение
+    document.getElementById('btnNextLevel').addEventListener('click', () => {
+      if (gameState.currentLevel < MAX_LEVELS) {
+        gameState.currentLevel++;
+        updateLevelButtons();
+        startGame();
+      }
+    });
+
+    document.getElementById('btnReplay').addEventListener('click', startGame);
+    document.getElementById('btnToMenuVictory').addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnRetry').addEventListener('click', startGame);
+    document.getElementById('btnToMenuGameOver').addEventListener('click', () => showScreen('mainMenu'));
+
+    // Старт
+    updateLevelButtons();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+  </html>
