@@ -25,11 +25,13 @@
       z-index: 10;
     }
     #main-menu.hidden { display: none; }
-    #main-menu h1 {
+    #rounds-title {
       font-size: 32px;
       margin-bottom: 40px;
       text-align: center;
       color: #4cc9f0;
+      cursor: pointer;
+      user-select: none;
     }
     .btn {
       width: 220px;
@@ -118,7 +120,7 @@
 <body>
 
 <div id="main-menu">
-  <h1>ГОНКИ: 1 КРУГ</h1>
+  <h1 id="rounds-title">ГОНКИ: 1 КРУГ</h1>
   <button id="btn-start" class="btn">Начать гонку</button>
   <button id="btn-exit" class="btn">К списку игр</button>
 </div>
@@ -146,7 +148,11 @@ const trackWidth = 12;
 const R_in = trackRadius - trackWidth / 2;
 const R_out = trackRadius + trackWidth / 2;
 
-// === Состояния ===
+// === Состояния кругов ===
+let totalLaps = 1; // 1, 2 или 3
+let currentLap = 0;
+
+// === Управление ===
 let isGas = false, isBrake = false;
 let passedMid = false;
 let finished = false;
@@ -155,7 +161,17 @@ let finished = false;
 let initialGamma = null;
 let gamma = 0;
 
-// === Элементы DOM ===
+// === ФИЗИКА ===
+const maxSpeedForward = 23.0;
+const maxSpeedBackward = 3.9;
+let currentSpeed = 0;
+const approachRate = 0.25;
+const clock = new THREE.Clock();
+
+// === Колёса ===
+let wheelFL, wheelFR, wheelRL, wheelRR;
+
+// === DOM ===
 const mainMenu = document.getElementById('main-menu');
 const pauseBtn = document.getElementById('pause-btn');
 const gasBtn = document.getElementById('btn-gas');
@@ -164,18 +180,22 @@ const messageEl = document.getElementById('message');
 const miniMapCanvas = document.getElementById('mini-map');
 const miniMapCtx = miniMapCanvas.getContext('2d');
 const speedometerEl = document.getElementById('speedometer');
+const roundsTitle = document.getElementById('rounds-title');
 
-// === ФИЗИКА ===
-const maxSpeedForward = 23.0;   // 230 км/ч
-const maxSpeedBackward = 7.9;   // 79 км/ч
-let currentSpeed = 0;
-const approachRate = 0.25;
-const clock = new THREE.Clock();
+// === Вспомогательная функция для склонения ===
+function getLapText(n) {
+  if (n === 1) return '1 КРУГ';
+  if (n >= 2 && n <= 4) return `${n} КРУГА`;
+  return `${n} КРУГОВ`;
+}
 
-// === Колёса (для поворота) ===
-let wheelFL, wheelFR, wheelRL, wheelRR;
+// === Переключение кругов ===
+roundsTitle.addEventListener('click', () => {
+  totalLaps = totalLaps === 3 ? 1 : totalLaps + 1;
+  roundsTitle.textContent = `ГОНКИ: ${getLapText(totalLaps)}`;
+});
 
-// === Инициализация ===
+// === Кнопки меню ===
 document.getElementById('btn-start').addEventListener('click', () => {
   mainMenu.classList.add('hidden');
   startGame();
@@ -206,7 +226,7 @@ const bindButton = (el, down, up) => {
 bindButton(gasBtn, () => isGas = true, () => isGas = false);
 bindButton(brakeBtn, () => isBrake = true, () => isBrake = false);
 
-// === Создание машины как в первом файле ===
+// === Создание машины ===
 function createCar() {
   const carGroup = new THREE.Group();
 
@@ -265,7 +285,7 @@ function startGame() {
   renderer.setPixelRatio(window.devicePixelRatio);
   document.body.appendChild(renderer.domElement);
 
-  // Базовая площадка (из первого файла)
+  // Большая площадка
   const asphalt = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
     new THREE.MeshStandardMaterial({ color: 0x333333 })
@@ -273,7 +293,7 @@ function startGame() {
   asphalt.rotation.x = -Math.PI / 2;
   scene.add(asphalt);
 
-  // Трасса (из второго файла) — в центре площадки
+  // Круговая трасса
   const road = new THREE.Mesh(
     new THREE.RingGeometry(R_in, R_out, 128),
     new THREE.MeshStandardMaterial({ color: 0x444444 })
@@ -289,7 +309,7 @@ function startGame() {
   lineOuter.rotation.x = Math.PI / 2;
   scene.add(lineOuter);
 
-  // Старт/финиш линия
+  // Старт/финиш
   const startLine = new THREE.Mesh(
     new THREE.PlaneGeometry(trackWidth, 1.5),
     new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
@@ -313,7 +333,7 @@ function startGame() {
   createBarrier(R_in - 0.6, 0x0066ff);
   createBarrier(R_out + 0.6, 0xff0000);
 
-  // Ориентиры (столбики из первого файла)
+  // Столбики
   const poleMat = new THREE.MeshStandardMaterial();
   const poleGeo = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
   const addPole = (x, z, color) => {
@@ -327,8 +347,10 @@ function startGame() {
   for (let z = -100; z <= 100; z += 20) addPole(-100, z, 0x9400d3);
   for (let z = -100; z <= 100; z += 20) addPole(100, z, 0xff69b4);
 
-  // Машина
+  // Машина — НОВОЕ РАСПОЛОЖЕНИЕ
   car = createCar();
+  car.position.set(trackRadius - 1.5, 0.62, 0); // чуть внутри от линии
+  car.rotation.y = 0; // смотрит вдоль трассы (+Z)
   scene.add(car);
 
   // Освещение
@@ -351,10 +373,9 @@ function startGame() {
   // Сброс состояний
   initialGamma = null;
   currentSpeed = 0;
+  currentLap = 0;
   passedMid = false;
   finished = false;
-  car.position.set(trackRadius - 0.70, 0.2, 0);
-  car.rotation.y = Math.PI / 2;
 
   miniMapCanvas.width = 120;
   miniMapCanvas.height = 120;
@@ -365,7 +386,7 @@ function startGame() {
   animate();
 }
 
-// === Обновление размеров ===
+// === Resize ===
 window.addEventListener('resize', () => {
   if (state === 'playing') {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -374,7 +395,7 @@ window.addEventListener('resize', () => {
   }
 });
 
-// === Коллизия с границами трассы ===
+// === Коллизия с трассой ===
 function constrain(posX, posZ) {
   const d = Math.sqrt(posX * posX + posZ * posZ);
   if (d < R_in) {
@@ -389,13 +410,13 @@ function constrain(posX, posZ) {
   return { x: posX, z: posZ };
 }
 
-// === Основной цикл ===
+// === Игровой цикл ===
 function animate() {
   if (state !== 'playing') return;
 
   const delta = Math.min(clock.getDelta(), 0.1);
 
-  // УПРАВЛЕНИЕ СКОРОСТЬЮ
+  // УСКОРЕНИЕ/ТОРМОЖЕНИЕ
   if (isGas) {
     currentSpeed += (maxSpeedForward - currentSpeed) * (1 - Math.exp(-approachRate * delta));
   } else if (isBrake) {
@@ -409,7 +430,7 @@ function animate() {
     currentSpeed *= Math.pow(0.94, delta * 60);
   }
 
-  // ПОВОРОТ (гироскоп)
+  // ПОВОРОТ
   let steerAngle = 0;
   if (initialGamma !== null) {
     const deltaGamma = gamma - initialGamma;
@@ -427,14 +448,14 @@ function animate() {
   wheelRL.rotation.y = 0;
   wheelRR.rotation.y = 0;
 
-  // Ограничение скорости на поворотах
+  // ОГРАНИЧЕНИЕ СКОРОСТИ НА ПОВОРОТАХ
   const steerAbs = Math.abs(steerAngle / (Math.PI / 4));
   const effectiveMax = maxSpeedForward * (1 - 0.4 * steerAbs);
   if (currentSpeed > effectiveMax) {
     currentSpeed = effectiveMax;
   }
 
-  // ВРАЩЕНИЕ КУЗОВА
+  // ПОВОРОТ КУЗОВА
   if (Math.abs(currentSpeed) > 0.1 && Math.abs(steerAngle) > 0.01) {
     const turnRate = (Math.abs(currentSpeed) / maxSpeedForward) * 1.4;
     car.rotation.y -= steerAngle * turnRate * delta;
@@ -447,7 +468,7 @@ function animate() {
   car.position.x += dir.x * currentSpeed * delta;
   car.position.z += dir.z * currentSpeed * delta;
 
-  // Коллизия с трассой
+  // КОЛЛИЗИЯ
   const clamped = constrain(car.position.x, car.position.z);
   car.position.x = clamped.x;
   car.position.z = clamped.z;
@@ -458,7 +479,7 @@ function animate() {
   camera.position.y += 8;
   camera.lookAt(car.position.x, car.position.y + 1.5, car.position.z + forward.z * 5);
 
-  // ФИНИШ
+  // ФИНИШ: подсчёт кругов
   const curAngle = Math.atan2(car.position.z, car.position.x);
   let normA = curAngle;
   if (normA < 0) normA += Math.PI * 2;
@@ -471,8 +492,12 @@ function animate() {
   const nearStartPoint = Math.abs(car.position.x - trackRadius) < 5 && Math.abs(car.position.z) < 2;
 
   if (passedMid && inFinishZone && nearStartPoint && !finished) {
-    finished = true;
-    showMessage("КРУГ ЗАВЕРШЕН!");
+    currentLap++;
+    passedMid = false; // сброс для следующего круга
+    if (currentLap >= totalLaps) {
+      finished = true;
+      showMessage(`ГОНКА ЗАВЕРШЕНА!\n${getLapText(totalLaps)}`);
+    }
   }
 
   // СПИДОМЕТР
@@ -506,7 +531,7 @@ function animate() {
 }
 
 function showMessage(text) {
-  messageEl.textContent = text;
+  messageEl.innerHTML = text.replace('\n', '<br>');
   messageEl.style.opacity = '1';
   state = 'finished';
   setTimeout(() => {
