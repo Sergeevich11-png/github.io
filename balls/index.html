@@ -691,6 +691,18 @@
       } catch (e) { /* игнор */ }
     }
 
+    function returnToMainMenu() {
+      gameState.mode = 'menu';
+      gameState.structure = null;
+      gameState.queue = null;
+      gameState.flyingBalls = [];
+      gameState.fallingBalls = [];
+      gameState.disappearingBalls = [];
+      gameState.isAiming = false;
+      gameState.isShooting = false;
+      showScreen('mainMenu');
+    }
+
     function startGame() {
       const levelData = levelBuffer.get(gameState.currentLevel);
       let structure;
@@ -758,7 +770,6 @@
       return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
-    // ✅ НОВАЯ ФУНКЦИЯ: проверка, нажата ли кнопка "Назад"
     function isClickOnButton(clientX, clientY) {
       const backButton = document.getElementById('btnBackToMenuInGame');
       if (!backButton) return false;
@@ -772,7 +783,6 @@
       );
     }
 
-    // ✅ ЗАМЕНЕНЫ ОБРАБОТЧИКИ КАСАНИЙ
     function handleTouchStart(e) {
       if (gameState.mode !== 'playing') return;
       if (e.touches.length === 0) return;
@@ -780,10 +790,9 @@
       const touch = e.touches[0];
       if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
 
-      // ✅ Проверяем, не нажата ли кнопка "Назад"
       if (isClickOnButton(touch.clientX, touch.clientY)) {
         e.preventDefault();
-        showScreen('mainMenu');
+        returnToMainMenu();
         return;
       }
 
@@ -801,7 +810,6 @@
       const touch = e.touches[0];
       if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
 
-      // ✅ Если движение началось над кнопкой — игнорируем
       if (isClickOnButton(touch.clientX, touch.clientY)) {
         e.preventDefault();
         return;
@@ -817,9 +825,8 @@
       if (gameState.mode !== 'playing') return;
       e.preventDefault();
 
-      // ✅ Если отпускание произошло над кнопкой "Назад" — срабатываем
       if (isClickOnButton(e.changedTouches[0].clientX, e.changedTouches[0].clientY)) {
-        showScreen('mainMenu');
+        returnToMainMenu();
         return;
       }
 
@@ -870,8 +877,16 @@
     });
 
     document.getElementById('btnStartLevel')?.addEventListener('click', startGame);
-    document.getElementById('btnBackToMenu')?.addEventListener('click', () => showScreen('mainMenu'));
-    document.getElementById('btnBackToMenuInGame')?.addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnBackToMenu')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      returnToMainMenu();
+    });
+    document.getElementById('btnBackToMenuInGame')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      returnToMainMenu();
+    });
     document.getElementById('btnNextLevel')?.addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
         gameState.currentLevel++;
