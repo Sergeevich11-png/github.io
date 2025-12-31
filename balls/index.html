@@ -203,7 +203,8 @@
 
     const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
     const MAX_LEVELS = 100;
-    const TIME_LIMIT = 5 * 60 * 1000;
+    // ✅ НОВЫЙ ЛИМИТ: 12 минут = 720 секунд = 720_000 мс
+    const TIME_LIMIT = 12 * 60 * 1000;
 
     function randomColor() {
       return COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -216,10 +217,11 @@
       return `${min}:${sec}`;
     }
 
+    // ✅ НОВАЯ СИСТЕМА ЗВЁЗД
     function getStars(timeMs) {
-      if (timeMs <= 3 * 60 * 1000) return 3;
-      if (timeMs <= 4 * 60 * 1000) return 2;
-      if (timeMs <= 5 * 60 * 1000) return 1;
+      if (timeMs <= 4 * 60 * 1000) return 3;   // ≤ 4 мин
+      if (timeMs <= 8 * 60 * 1000) return 2;   // ≤ 8 мин
+      if (timeMs <= 12 * 60 * 1000) return 1;  // ≤ 12 мин
       return 0;
     }
 
@@ -571,7 +573,6 @@
               })));
             }
 
-            // ✅ Обновляем связи и собираем падающие шары с гарантией наличия vy
             gameState.structure.updateConnectedness();
             const falling = gameState.structure.collectFalling();
             gameState.fallingBalls.push(...falling.map(b => {
