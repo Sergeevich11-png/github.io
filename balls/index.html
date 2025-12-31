@@ -31,7 +31,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: none; /* делает весь UI "прозрачным" для касаний по умолчанию */
     }
     .screen {
       display: none;
@@ -41,7 +41,7 @@
       width: 100%;
       height: 100%;
       padding: 20px;
-      pointer-events: auto;
+      pointer-events: auto; /* но активные экраны получают события */
     }
     .screen.active {
       display: flex;
@@ -80,7 +80,7 @@
       background: rgba(255,255,255,0.8);
       padding: 6px 12px;
       border-radius: 8px;
-      pointer-events: none;
+      pointer-events: auto;
       z-index: 10;
     }
     .queue-container {
@@ -90,7 +90,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      pointer-events: none;
+      pointer-events: auto;
     }
     .ball-queue {
       width: 24px;
@@ -106,7 +106,7 @@
       height: 28px;
       border-radius: 50%;
       border: 2px solid white;
-      pointer-events: none;
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -156,7 +156,7 @@
 
   <script>
     // ======================
-    // Адаптивный canvas под любой экран
+    // Адаптивный canvas
     // ======================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -165,16 +165,13 @@
       const displayWidth = window.innerWidth;
       const displayHeight = window.innerHeight;
       
-      // Сохраняем пропорции 9:15 (480x800)
       const aspectRatio = 9 / 15;
       let width, height;
       
       if (displayWidth / displayHeight > aspectRatio) {
-        // Широкий экран → ограничиваем по высоте
         height = displayHeight;
         width = height * aspectRatio;
       } else {
-        // Узкий экран → ограничиваем по ширине
         width = displayWidth;
         height = width / aspectRatio;
       }
@@ -182,7 +179,6 @@
       canvas.width = width;
       canvas.height = height;
 
-      // Центрируем canvas, если есть свободное место
       canvas.style.width = width + 'px';
       canvas.style.height = height + 'px';
       canvas.style.margin = 'auto';
@@ -196,13 +192,13 @@
     resizeCanvas();
 
     // ======================
-    // Конфигурация игры
+    // Конфигурация
     // ======================
     const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
-    const BALL_RADIUS = canvas.height * 0.01875; // ~15 при 800px
+    const BALL_RADIUS = canvas.height * 0.01875;
     const CANNON_X = canvas.width / 2;
-    const CANNON_Y = canvas.height - canvas.height * 0.0625; // ~750 при 800px
-    const DEATH_LINE_Y = CANNON_Y - canvas.height * 0.125; // ~650 при 800px
+    const CANNON_Y = canvas.height - canvas.height * 0.0625;
+    const DEATH_LINE_Y = CANNON_Y - canvas.height * 0.125;
     const MAX_LEVELS = 100;
     const TIME_LIMIT = 5 * 60 * 1000;
 
@@ -410,7 +406,7 @@
       const rows = 3 + Math.min(2, Math.floor(levelId / 20));
       const cols = 8;
       const startX = canvas.width / 2 - (cols * BALL_RADIUS * 2) / 2 + BALL_RADIUS;
-      const startY = canvas.height * 0.125; // ~100 при 800px
+      const startY = canvas.height * 0.125;
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -529,7 +525,7 @@
     }
 
     // ======================
-    // Обновление
+    // Обновление и выстрел
     // ======================
     function shoot() {
       if (gameState.mode !== 'playing' || !gameState.isAiming) return;
@@ -695,30 +691,41 @@
     }
 
     // ======================
-    // Обработка сенсора — ТОЛЬКО МОБИЛЬНОЕ
+    // Обработка касаний — ПЕРЕНЕСЕНА НА DOCUMENT
     // ======================
+    function getCanvasCoords(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / canvas.clientWidth;
+      const scaleY = canvas.height / canvas.clientHeight;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
     function handleTouchStart(e) {
+      if (gameState.mode !== 'playing') return;
       if (e.touches.length === 0) return;
       e.preventDefault();
       const touch = e.touches[0];
-      const x = (touch.clientX - canvas.getBoundingClientRect().left) * (canvas.width / canvas.clientWidth);
-      const y = (touch.clientY - canvas.getBoundingClientRect().top) * (canvas.height / canvas.clientHeight);
+      const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
       gameState.isAiming = true;
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     }
 
     function handleTouchMove(e) {
-      if (!gameState.isAiming || e.touches.length === 0) return;
+      if (!gameState.isAiming || gameState.mode !== 'playing') return;
+      if (e.touches.length === 0) return;
       e.preventDefault();
       const touch = e.touches[0];
-      const x = (touch.clientX - canvas.getBoundingClientRect().left) * (canvas.width / canvas.clientWidth);
-      const y = (touch.clientY - canvas.getBoundingClientRect().top) * (canvas.height / canvas.clientHeight);
+      const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     }
 
     function handleTouchEnd(e) {
+      if (gameState.mode !== 'playing') return;
       e.preventDefault();
       if (gameState.isAiming) {
         shoot();
@@ -726,28 +733,23 @@
       gameState.isAiming = false;
     }
 
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-    canvas.addEventListener('touchcancel', () => { gameState.isAiming = false; }, { passive: false });
+    // ✅ Ключевое изменение: слушаем события на document
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('touchcancel', () => { gameState.isAiming = false; }, { passive: false });
 
     // ======================
     // Кнопки
     // ======================
-    document.getElementById('btnExit').addEventListener('click', () => {
-      // Заглушка — ничего не делает, но не вызывает ошибок
-    });
-
+    document.getElementById('btnExit').addEventListener('click', () => {});
     document.getElementById('btnDifficulty').addEventListener('click', () => {
       const btn = document.getElementById('btnDifficulty');
       gameState.difficulty = gameState.difficulty % 3 + 1;
       const labels = { 1: 'Сложно', 2: 'Средне', 3: 'Легко' };
       btn.textContent = `Сложность: ${labels[gameState.difficulty]}`;
     });
-
-    document.getElementById('btnPlay').addEventListener('click', () => {
-      showScreen('levelSelect');
-    });
+    document.getElementById('btnPlay').addEventListener('click', () => showScreen('levelSelect'));
 
     const levelBtn = document.getElementById('btnCurrent');
     const prevBtn = document.getElementById('btnPrev');
@@ -776,7 +778,6 @@
     document.getElementById('btnStartLevel').addEventListener('click', startGame);
     document.getElementById('btnBackToMenu').addEventListener('click', () => showScreen('mainMenu'));
     document.getElementById('btnBackToMenuInGame').addEventListener('click', () => showScreen('mainMenu'));
-
     document.getElementById('btnNextLevel').addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
         gameState.currentLevel++;
@@ -784,7 +785,6 @@
         startGame();
       }
     });
-
     document.getElementById('btnReplay').addEventListener('click', startGame);
     document.getElementById('btnToMenuVictory').addEventListener('click', () => showScreen('mainMenu'));
     document.getElementById('btnRetry').addEventListener('click', startGame);
