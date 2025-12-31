@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
   <title>Шарики-рикошет</title>
   <style>
     * {
@@ -11,19 +11,19 @@
       box-sizing: border-box;
       touch-action: none;
     }
-    body {
-      background: #d6e2eb; /* мягкий серо-голубой */
-      font-family: sans-serif;
+    html, body {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: #222;
+      background: #d6e2eb;
+      font-family: sans-serif;
+      user-select: none;
     }
     #gameCanvas {
       display: block;
       background: #d6e2eb;
+      width: 100%;
+      height: 100%;
     }
     #ui {
       position: absolute;
@@ -38,80 +38,91 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      width: 100%;
       height: 100%;
+      padding: 20px;
       pointer-events: auto;
     }
     .screen.active {
       display: flex;
     }
     button {
-      padding: 12px 24px;
+      padding: 14px 28px;
       font-size: 18px;
       background: #4a90e2;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
       pointer-events: auto;
-    }
-    button:hover {
-      background: #357abd;
+      margin: 10px;
+      width: 80%;
+      max-width: 300px;
     }
     .menu-btn {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 15px;
+      left: 15px;
       padding: 8px 16px;
-      font-size: 14px;
-      z-index: 100;
+      font-size: 16px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      pointer-events: auto;
+      z-index: 10;
     }
     .timer {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 15px;
+      right: 15px;
       font-size: 18px;
-      background: rgba(255,255,255,0.7);
-      padding: 5px 10px;
-      border-radius: 5px;
+      background: rgba(255,255,255,0.8);
+      padding: 6px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .queue-container {
+      position: absolute;
+      bottom: 30px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       pointer-events: none;
     }
-    .queue-display {
-      position: absolute;
-      bottom: 50px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      pointer-events: none;
+    .ball-queue {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid white;
     }
     .ball-in-cannon {
       position: absolute;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 20px;
-      height: 20px;
+      bottom: 30px;
+      left: 55px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
+      border: 2px solid white;
       pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="480" height="800"></canvas>
+  <canvas id="gameCanvas"></canvas>
   <div id="ui">
-    <!-- Главное меню -->
     <div id="mainMenu" class="screen active">
-      <h2>Шарики-рикошет</h2>
+      <h2 style="font-size: 24px; margin-bottom: 20px; color: #333;">Шарики-рикошет</h2>
       <button id="btnDifficulty">Сложность: Средне</button>
       <button id="btnPlay">Играть</button>
       <button id="btnExit">Выход</button>
     </div>
 
-    <!-- Выбор уровня -->
     <div id="levelSelect" class="screen">
-      <h2>Уровень</h2>
-      <div style="display: flex; gap: 10px;">
+      <h2 style="font-size: 24px; margin-bottom: 20px;">Уровень</h2>
+      <div style="display: flex; gap: 10px; margin: 10px 0;">
         <button id="btnPrev">←</button>
         <button id="btnCurrent">1</button>
         <button id="btnNext">→</button>
@@ -120,27 +131,24 @@
       <button id="btnBackToMenu">Назад</button>
     </div>
 
-    <!-- Игровой экран (UI поверх canvas) -->
     <div id="inGameUI" class="screen">
       <div class="timer" id="timer">00:00</div>
       <button class="menu-btn" id="btnBackToMenuInGame">Назад</button>
-      <div class="queue-display" id="queueDisplay"></div>
+      <div class="queue-container" id="queueDisplay"></div>
       <div class="ball-in-cannon" id="cannonBall"></div>
     </div>
 
-    <!-- Победа -->
     <div id="victoryScreen" class="screen">
-      <h2>Победа!</h2>
-      <div id="starsDisplay">⭐⭐⭐</div>
-      <div id="timeDisplay">Время: 00:00</div>
+      <h2 style="font-size: 24px;">Победа!</h2>
+      <div id="starsDisplay" style="font-size: 32px; margin: 15px 0;">⭐⭐⭐</div>
+      <div id="timeDisplay" style="font-size: 18px;">Время: 00:00</div>
       <button id="btnNextLevel">Следующий уровень</button>
       <button id="btnReplay">Повторить</button>
       <button id="btnToMenuVictory">В меню</button>
     </div>
 
-    <!-- Поражение -->
     <div id="gameOverScreen" class="screen">
-      <h2>Поражение!</h2>
+      <h2 style="font-size: 24px;">Поражение!</h2>
       <button id="btnRetry">Повторить</button>
       <button id="btnToMenuGameOver">В меню</button>
     </div>
@@ -148,19 +156,56 @@
 
   <script>
     // ======================
-    // Конфигурация
+    // Адаптивный canvas под любой экран
     // ======================
-    const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
-    const BALL_RADIUS = 15;
-    const CANNON_X = 240;
-    const CANNON_Y = 750;
-    const DEATH_LINE_Y = CANNON_Y - 100; // 650
-    const MAX_LEVELS = 100;
-    const TIME_LIMIT = 5 * 60 * 1000; // 5 минут в мс
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const displayWidth = window.innerWidth;
+      const displayHeight = window.innerHeight;
+      
+      // Сохраняем пропорции 9:15 (480x800)
+      const aspectRatio = 9 / 15;
+      let width, height;
+      
+      if (displayWidth / displayHeight > aspectRatio) {
+        // Широкий экран → ограничиваем по высоте
+        height = displayHeight;
+        width = height * aspectRatio;
+      } else {
+        // Узкий экран → ограничиваем по ширине
+        width = displayWidth;
+        height = width / aspectRatio;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Центрируем canvas, если есть свободное место
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      canvas.style.margin = 'auto';
+      canvas.style.position = 'absolute';
+      canvas.style.top = '50%';
+      canvas.style.left = '50%';
+      canvas.style.transform = 'translate(-50%, -50%)';
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     // ======================
-    // Вспомогательные функции
+    // Конфигурация игры
     // ======================
+    const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+    const BALL_RADIUS = canvas.height * 0.01875; // ~15 при 800px
+    const CANNON_X = canvas.width / 2;
+    const CANNON_Y = canvas.height - canvas.height * 0.0625; // ~750 при 800px
+    const DEATH_LINE_Y = CANNON_Y - canvas.height * 0.125; // ~650 при 800px
+    const MAX_LEVELS = 100;
+    const TIME_LIMIT = 5 * 60 * 1000;
+
     function randomColor() {
       return COLORS[Math.floor(Math.random() * COLORS.length)];
     }
@@ -180,7 +225,7 @@
     }
 
     // ======================
-    // Класс: Ball
+    // Классы
     // ======================
     class Ball {
       constructor(x, y, color, isFalling = false) {
@@ -200,12 +245,9 @@
       }
     }
 
-    // ======================
-    // Класс: LevelBuffer
-    // ======================
     class LevelBuffer {
       constructor() {
-        this.levels = []; // [{ id, structure: Ball[], stars }]
+        this.levels = [];
       }
 
       get(id) {
@@ -213,11 +255,9 @@
       }
 
       save(id, structure, stars = null) {
-        if (this.get(id)) return; // уже есть
+        if (this.get(id)) return;
         this.levels.push({ id, structure: [...structure], stars });
-        if (this.levels.length > 3) {
-          this.levels.shift(); // удаляем старейший
-        }
+        if (this.levels.length > 3) this.levels.shift();
       }
 
       setStars(id, stars) {
@@ -226,9 +266,6 @@
       }
     }
 
-    // ======================
-    // Класс: Queue
-    // ======================
     class Queue {
       constructor(difficulty) {
         this.difficulty = difficulty;
@@ -257,9 +294,6 @@
       }
     }
 
-    // ======================
-    // Класс: Structure
-    // ======================
     class Structure {
       constructor() {
         this.balls = [];
@@ -269,7 +303,6 @@
         this.balls.push(ball);
       }
 
-      // Удаляет группу и возвращает их координаты для анимации
       removeGroup(group) {
         const removed = [];
         for (let ball of group) {
@@ -282,7 +315,6 @@
         return removed;
       }
 
-      // Находит связную группу (4-связность)
       findConnected(startBall) {
         const visited = new Set();
         const stack = [startBall];
@@ -295,7 +327,6 @@
           visited.add(current);
           if (current.color === targetColor) {
             group.push(current);
-            // Проверяем соседей
             for (let other of this.balls) {
               if (visited.has(other)) continue;
               const dx = other.x - current.x;
@@ -310,21 +341,14 @@
         return group.length >= 3 ? group : [];
       }
 
-      // Обновляет isFalling для шариков, не связанных с верхом
       updateConnectedness() {
         if (this.balls.length === 0) return;
 
-        // Находим самый верхний ряд (минимальный y)
         let minY = Infinity;
-        for (let b of this.balls) {
-          if (b.y < minY) minY = b.y;
-        }
+        for (let b of this.balls) if (b.y < minY) minY = b.y;
 
-        // Все, кто в ~BALL_RADIUS от minY — "корень"
         const rootBalls = this.balls.filter(b => Math.abs(b.y - minY) <= BALL_RADIUS);
         const connected = new Set();
-
-        // BFS от корневых
         const queue = [...rootBalls];
         for (let b of rootBalls) connected.add(b);
 
@@ -342,23 +366,16 @@
           }
         }
 
-        // Помечаем неподключённые как падающие
-        for (let b of this.balls) {
-          b.isFalling = !connected.has(b);
-        }
+        for (let b of this.balls) b.isFalling = !connected.has(b);
       }
 
-      // Проверяет, касается ли НЕ-падающая структура зоны смерти
       checkGameOver(deathLineY) {
         for (let b of this.balls) {
-          if (!b.isFalling && b.y + b.radius >= deathLineY) {
-            return true;
-          }
+          if (!b.isFalling && b.y + b.radius >= deathLineY) return true;
         }
         return false;
       }
 
-      // Удаляет все падающие шарики (возвращает их для анимации)
       collectFalling() {
         const falling = this.balls.filter(b => b.isFalling);
         this.balls = this.balls.filter(b => !b.isFalling);
@@ -367,15 +384,12 @@
     }
 
     // ======================
-    // Основная логика игры
+    // Игровое состояние
     // ======================
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
     const levelBuffer = new LevelBuffer();
-
     let gameState = {
-      mode: 'menu', // 'menu', 'levelSelect', 'playing', 'victory', 'gameOver'
-      difficulty: 2, // 1, 2, 3
+      mode: 'menu',
+      difficulty: 2,
       currentLevel: 1,
       queue: null,
       structure: null,
@@ -393,14 +407,13 @@
     // ======================
     function generateLevelStructure(levelId) {
       const structure = new Structure();
-      const rows = 3 + Math.min(2, Math.floor(levelId / 20)); // от 3 до 5 рядов
+      const rows = 3 + Math.min(2, Math.floor(levelId / 20));
       const cols = 8;
       const startX = canvas.width / 2 - (cols * BALL_RADIUS * 2) / 2 + BALL_RADIUS;
-      const startY = 100;
+      const startY = canvas.height * 0.125; // ~100 при 800px
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
-          // Случайно пропускаем некоторые позиции
           if (Math.random() < 0.2) continue;
           const x = startX + col * BALL_RADIUS * 2;
           const y = startY + row * BALL_RADIUS * 2;
@@ -423,10 +436,10 @@
       ctx.translate(CANNON_X, CANNON_Y);
       ctx.rotate(gameState.cannonAngle);
       ctx.beginPath();
-      ctx.moveTo(-10, 0);
-      ctx.lineTo(10, 0);
-      ctx.lineTo(5, -30);
-      ctx.lineTo(-5, -30);
+      ctx.moveTo(-12, 0);
+      ctx.lineTo(12, 0);
+      ctx.lineTo(6, -35);
+      ctx.lineTo(-6, -35);
       ctx.closePath();
       ctx.fillStyle = '#555';
       ctx.fill();
@@ -445,14 +458,13 @@
       let vx = Math.sin(angle) * 10;
       let vy = -Math.cos(angle) * 10;
       let length = 0;
-      const maxLength = 500;
+      const maxLength = canvas.height * 0.6;
 
       while (length < maxLength) {
         x += vx;
         y += vy;
         length += Math.sqrt(vx * vx + vy * vy);
 
-        // Отскок от стен
         if (x <= BALL_RADIUS) {
           x = BALL_RADIUS;
           vx = -vx;
@@ -463,7 +475,7 @@
 
         points.push({ x, y });
 
-        if (y <= 50) break; // дошли до верха
+        if (y <= canvas.height * 0.1) break;
       }
 
       ctx.beginPath();
@@ -471,8 +483,8 @@
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i].x, points[i].y);
       }
-      ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = '#777';
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#666';
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.setLineDash([]);
@@ -503,7 +515,16 @@
         gameState.structure.balls.forEach(b => b.draw(ctx));
         drawFallingBalls();
         drawCannon();
-        // Текущий шарик в пушке — рисуется в HTML
+        ctx.beginPath();
+        ctx.arc(
+          CANNON_X + Math.sin(gameState.cannonAngle) * 40,
+          CANNON_Y - Math.cos(gameState.cannonAngle) * 40,
+          BALL_RADIUS,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = gameState.queue.currentColor();
+        ctx.fill();
       }
     }
 
@@ -517,7 +538,7 @@
       const dx = gameState.aimPoint.x - CANNON_X;
       const dy = gameState.aimPoint.y - CANNON_Y;
       const angle = Math.atan2(dx, -dy);
-      const speed = 8;
+      const speed = canvas.height * 0.01;
       let x = CANNON_X;
       let y = CANNON_Y;
       let vx = Math.sin(angle) * speed;
@@ -527,20 +548,17 @@
         x += vx;
         y += vy;
 
-        // Отскок от стен
         if (x <= BALL_RADIUS || x >= canvas.width - BALL_RADIUS) {
           vx = -vx;
           x = Math.max(BALL_RADIUS, Math.min(canvas.width - BALL_RADIUS, x));
         }
 
-        // Проверка столкновения со структурой
         let collided = false;
         for (let ball of gameState.structure.balls) {
           const dx = x - ball.x;
           const dy = y - ball.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= BALL_RADIUS * 2) {
-            // Прилипаем рядом
             const nx = dx / dist;
             const ny = dy / dist;
             const attachX = ball.x + nx * BALL_RADIUS * 2;
@@ -548,38 +566,33 @@
             const newBall = new Ball(attachX, attachY, color);
             gameState.structure.add(newBall);
 
-            // Проверка на группу
             const group = gameState.structure.findConnected(newBall);
             if (group.length >= 3) {
               gameState.structure.removeGroup(group);
             }
 
-            // Обновление связности и падение
             gameState.structure.updateConnectedness();
             const falling = gameState.structure.collectFalling();
-            gameState.fallingBalls = falling.map(b => ({ ...b, vy: 2 })); // копия с скоростью
+            gameState.fallingBalls = falling.map(b => ({ ...b, vy: canvas.height * 0.003 }));
 
             collided = true;
             break;
           }
         }
 
-        // Если долетел до верха — тоже прилипает
-        if (!collided && y <= 80) {
-          const newBall = new Ball(x, 80, color);
+        if (!collided && y <= canvas.height * 0.1) {
+          const newBall = new Ball(x, canvas.height * 0.1, color);
           gameState.structure.add(newBall);
           collided = true;
         }
 
         if (collided) {
-          // Проверка Game Over (только не-падающие)
           if (gameState.structure.checkGameOver(DEATH_LINE_Y)) {
             gameState.mode = 'gameOver';
             showScreen('gameOverScreen');
             return;
           }
 
-          // Победа?
           if (gameState.structure.balls.length === 0) {
             const time = Date.now() - gameState.startTime;
             const stars = getStars(time);
@@ -591,7 +604,6 @@
             return;
           }
 
-          // Обновляем очередь в UI
           updateQueueDisplay();
           return;
         }
@@ -603,7 +615,7 @@
     }
 
     function updateFallingBalls(deltaTime) {
-      const gravity = 0.1;
+      const gravity = canvas.height * 0.0001;
       for (let i = gameState.fallingBalls.length - 1; i >= 0; i--) {
         const ball = gameState.fallingBalls[i];
         ball.vy += gravity;
@@ -622,7 +634,6 @@
         gameState.elapsedTime = Date.now() - gameState.startTime;
         document.getElementById('timer').textContent = formatTime(gameState.elapsedTime);
 
-        // Таймер поражения
         if (gameState.elapsedTime > TIME_LIMIT) {
           gameState.mode = 'gameOver';
           showScreen('gameOverScreen');
@@ -637,7 +648,7 @@
     }
 
     // ======================
-    // UI и навигация
+    // UI
     // ======================
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -674,81 +685,57 @@
       const next = gameState.queue.nextColors();
       for (let color of next) {
         const div = document.createElement('div');
-        div.style.width = '20px';
-        div.style.height = '20px';
-        div.style.borderRadius = '50%';
+        div.className = 'ball-queue';
         div.style.backgroundColor = color;
-        div.style.border = '2px solid white';
         container.appendChild(div);
       }
 
-      // Обновляем цвет шарика в пушке
       const cannonBall = document.getElementById('cannonBall');
       cannonBall.style.backgroundColor = gameState.queue.currentColor();
     }
 
     // ======================
-    // Обработчики событий
+    // Обработка сенсора — ТОЛЬКО МОБИЛЬНОЕ
     // ======================
-    canvas.addEventListener('touchstart', (e) => {
+    function handleTouchStart(e) {
+      if (e.touches.length === 0) return;
       e.preventDefault();
       const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
+      const x = (touch.clientX - canvas.getBoundingClientRect().left) * (canvas.width / canvas.clientWidth);
+      const y = (touch.clientY - canvas.getBoundingClientRect().top) * (canvas.height / canvas.clientHeight);
       gameState.isAiming = true;
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
-    });
+    }
 
-    canvas.addEventListener('touchmove', (e) => {
+    function handleTouchMove(e) {
+      if (!gameState.isAiming || e.touches.length === 0) return;
       e.preventDefault();
-      if (!gameState.isAiming) return;
       const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
+      const x = (touch.clientX - canvas.getBoundingClientRect().left) * (canvas.width / canvas.clientWidth);
+      const y = (touch.clientY - canvas.getBoundingClientRect().top) * (canvas.height / canvas.clientHeight);
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
-    });
+    }
 
-    canvas.addEventListener('touchend', (e) => {
+    function handleTouchEnd(e) {
       e.preventDefault();
       if (gameState.isAiming) {
         shoot();
       }
       gameState.isAiming = false;
-    });
+    }
 
-    // Мышь (для тестирования на ПК)
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      gameState.isAiming = true;
-      gameState.aimPoint = { x, y };
-      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
-    });
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    canvas.addEventListener('touchcancel', () => { gameState.isAiming = false; }, { passive: false });
 
-    canvas.addEventListener('mousemove', (e) => {
-      if (!gameState.isAiming) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      gameState.aimPoint = { x, y };
-      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
-    });
-
-    canvas.addEventListener('mouseup', () => {
-      if (gameState.isAiming) {
-        shoot();
-      }
-      gameState.isAiming = false;
-    });
-
-    // Кнопки меню
+    // ======================
+    // Кнопки
+    // ======================
     document.getElementById('btnExit').addEventListener('click', () => {
-      console.log('exit'); // заглушка
+      // Заглушка — ничего не делает, но не вызывает ошибок
     });
 
     document.getElementById('btnDifficulty').addEventListener('click', () => {
@@ -762,7 +749,6 @@
       showScreen('levelSelect');
     });
 
-    // Выбор уровня
     const levelBtn = document.getElementById('btnCurrent');
     const prevBtn = document.getElementById('btnPrev');
     const nextBtn = document.getElementById('btnNext');
@@ -789,13 +775,8 @@
 
     document.getElementById('btnStartLevel').addEventListener('click', startGame);
     document.getElementById('btnBackToMenu').addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnBackToMenuInGame').addEventListener('click', () => showScreen('mainMenu'));
 
-    // Кнопка «Назад в меню» в игре
-    document.getElementById('btnBackToMenuInGame').addEventListener('click', () => {
-      showScreen('mainMenu');
-    });
-
-    // Победа/поражение
     document.getElementById('btnNextLevel').addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
         gameState.currentLevel++;
