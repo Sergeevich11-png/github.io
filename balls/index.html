@@ -158,6 +158,22 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    let config = {
+      BALL_RADIUS: 0,
+      CANNON_X: 0,
+      CANNON_Y: 0,
+      DEATH_LINE_Y: 0,
+      MIN_AIM_DISTANCE: 0
+    };
+
+    function updateConfig() {
+      config.BALL_RADIUS = canvas.height * 0.01875;
+      config.CANNON_X = canvas.width / 2;
+      config.CANNON_Y = canvas.height - canvas.height * 0.0625;
+      config.DEATH_LINE_Y = config.CANNON_Y - canvas.height * 0.125;
+      config.MIN_AIM_DISTANCE = canvas.height * 0.05;
+    }
+
     function resizeCanvas() {
       const displayWidth = window.innerWidth;
       const displayHeight = window.innerHeight;
@@ -179,6 +195,7 @@
       canvas.style.top = '50%';
       canvas.style.left = '50%';
       canvas.style.transform = 'translate(-50%, -50%)';
+      updateConfig();
     }
 
     window.addEventListener('resize', resizeCanvas);
@@ -206,26 +223,15 @@
       return 0;
     }
 
-    // Динамическая конфигурация
-    function getConfig() {
-      return {
-        BALL_RADIUS: canvas.height * 0.01875,
-        CANNON_X: canvas.width / 2,
-        CANNON_Y: canvas.height - canvas.height * 0.0625,
-        DEATH_LINE_Y: canvas.height * 0.8125, // CANNON_Y - canvas.height * 0.125
-        MIN_AIM_DISTANCE: canvas.height * 0.05
-      };
-    }
-
     class Ball {
       constructor(x, y, color, isFalling = false) {
         this.x = x;
         this.y = y;
         this.color = color;
         this.isFalling = isFalling;
-        this.radius = getConfig().BALL_RADIUS;
+        this.radius = config.BALL_RADIUS;
+        this.vy = 0;
       }
-
       draw(ctx, alpha = 1) {
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -239,12 +245,8 @@
     }
 
     class LevelBuffer {
-      constructor() {
-        this.levels = [];
-      }
-      get(id) {
-        return this.levels.find(l => l.id === id);
-      }
+      constructor() { this.levels = []; }
+      get(id) { return this.levels.find(l => l.id === id); }
       save(id, structure, stars = null) {
         if (this.get(id)) return;
         this.levels.push({ id, structure: [...structure], stars });
@@ -267,26 +269,18 @@
           this.colors.push(randomColor());
         }
       }
-      currentColor() {
-        return this.colors[0] || randomColor();
-      }
+      currentColor() { return this.colors[0] || randomColor(); }
       pop() {
         const color = this.colors.shift();
         this.colors.push(randomColor());
         return color;
       }
-      nextColors() {
-        return this.colors.slice(1);
-      }
+      nextColors() { return this.colors.slice(1); }
     }
 
     class Structure {
-      constructor() {
-        this.balls = [];
-      }
-      add(ball) {
-        this.balls.push(ball);
-      }
+      constructor() { this.balls = []; }
+      add(ball) { this.balls.push(ball); }
       removeGroup(group) {
         const removed = [];
         for (let ball of group) {
@@ -303,8 +297,6 @@
         const stack = [startBall];
         const group = [];
         const targetColor = startBall.color;
-        const BALL_RADIUS = getConfig().BALL_RADIUS;
-
         while (stack.length > 0) {
           const current = stack.pop();
           if (visited.has(current)) continue;
@@ -316,7 +308,7 @@
               const dx = other.x - current.x;
               const dy = other.y - current.y;
               const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist <= BALL_RADIUS * 2 + 2) {
+              if (dist <= config.BALL_RADIUS * 2 + 2) {
                 stack.push(other);
               }
             }
@@ -324,36 +316,47 @@
         }
         return group.length >= 3 ? group : [];
       }
+
       updateConnectedness() {
         if (this.balls.length === 0) return;
-        const BALL_RADIUS = getConfig().BALL_RADIUS;
-        let minY = Infinity;
-        for (let b of this.balls) if (b.y < minY) minY = b.y;
-        const rootBalls = this.balls.filter(b => Math.abs(b.y - minY) <= BALL_RADIUS);
+
         const connected = new Set();
-        const queue = [...rootBalls];
-        for (let b of rootBalls) connected.add(b);
+        const queue = [];
+        const CEILING_Y = canvas.height * 0.125;
+
+        for (const ball of this.balls) {
+          if (ball.y <= CEILING_Y + config.BALL_RADIUS) {
+            connected.add(ball);
+            queue.push(ball);
+          }
+        }
+
         while (queue.length > 0) {
           const current = queue.shift();
-          for (let other of this.balls) {
+          for (const other of this.balls) {
             if (connected.has(other)) continue;
             const dx = other.x - current.x;
             const dy = other.y - current.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= BALL_RADIUS * 2 + 2) {
+            if (dist <= config.BALL_RADIUS * 2 + 2) {
               connected.add(other);
               queue.push(other);
             }
           }
         }
-        for (let b of this.balls) b.isFalling = !connected.has(b);
+
+        for (const ball of this.balls) {
+          ball.isFalling = !connected.has(ball);
+        }
       }
+
       checkGameOver(deathLineY) {
         for (let b of this.balls) {
           if (!b.isFalling && b.y + b.radius >= deathLineY) return true;
         }
         return false;
       }
+
       collectFalling() {
         const falling = this.balls.filter(b => b.isFalling);
         this.balls = this.balls.filter(b => !b.isFalling);
@@ -381,18 +384,17 @@
     };
 
     function generateLevelStructure(levelId) {
-      const { BALL_RADIUS } = getConfig();
       const structure = new Structure();
       const rows = 3 + Math.min(2, Math.floor(levelId / 20));
       const cols = 8;
-      const startX = canvas.width / 2 - (cols * BALL_RADIUS * 2) / 2 + BALL_RADIUS;
+      const startX = canvas.width / 2 - (cols * config.BALL_RADIUS * 2) / 2 + config.BALL_RADIUS;
       const startY = canvas.height * 0.125;
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           if (Math.random() < 0.2) continue;
-          const x = startX + col * BALL_RADIUS * 2;
-          const y = startY + row * BALL_RADIUS * 2;
+          const x = startX + col * config.BALL_RADIUS * 2;
+          const y = startY + row * config.BALL_RADIUS * 2;
           structure.add(new Ball(x, y, randomColor()));
         }
       }
@@ -405,9 +407,8 @@
     }
 
     function drawCannon() {
-      const { CANNON_X, CANNON_Y } = getConfig();
       ctx.save();
-      ctx.translate(CANNON_X, CANNON_Y);
+      ctx.translate(config.CANNON_X, config.CANNON_Y);
       ctx.rotate(gameState.cannonAngle);
       ctx.beginPath();
       ctx.moveTo(-12, 0);
@@ -422,36 +423,30 @@
 
     function drawAimLine() {
       if (!gameState.isAiming) return;
-      const { BALL_RADIUS, CANNON_X, CANNON_Y } = getConfig();
       const points = [];
-      let x = CANNON_X;
-      let y = CANNON_Y;
-      const dx = gameState.aimPoint.x - CANNON_X;
-      const dy = gameState.aimPoint.y - CANNON_Y;
+      let x = config.CANNON_X;
+      let y = config.CANNON_Y;
+      const dx = gameState.aimPoint.x - config.CANNON_X;
+      const dy = gameState.aimPoint.y - config.CANNON_Y;
       const angle = Math.atan2(dx, -dy);
       let vx = Math.sin(angle) * 10;
       let vy = -Math.cos(angle) * 10;
       let length = 0;
       const maxLength = canvas.height * 0.6;
-
       while (length < maxLength) {
         x += vx;
         y += vy;
         length += Math.sqrt(vx * vx + vy * vy);
-
-        if (x <= BALL_RADIUS) {
-          x = BALL_RADIUS;
+        if (x <= config.BALL_RADIUS) {
+          x = config.BALL_RADIUS;
           vx = -vx;
-        } else if (x >= canvas.width - BALL_RADIUS) {
-          x = canvas.width - BALL_RADIUS;
+        } else if (x >= canvas.width - config.BALL_RADIUS) {
+          x = canvas.width - config.BALL_RADIUS;
           vx = -vx;
         }
-
         points.push({ x, y });
-
         if (y <= canvas.height * 0.1) break;
       }
-
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
@@ -465,88 +460,79 @@
     }
 
     function drawDeathLine() {
-      const { DEATH_LINE_Y } = getConfig();
       ctx.strokeStyle = '#ff000044';
       ctx.setLineDash([10, 5]);
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, DEATH_LINE_Y);
-      ctx.lineTo(canvas.width, DEATH_LINE_Y);
+      ctx.moveTo(0, config.DEATH_LINE_Y);
+      ctx.lineTo(canvas.width, config.DEATH_LINE_Y);
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    function drawFallingBalls() {
-      for (let ball of gameState.fallingBalls) {
-        ball.draw(ctx);
-      }
-    }
-
-    function drawFlyingBalls() {
-      for (let fb of gameState.flyingBalls) {
-        fb.ball.draw(ctx);
-      }
-    }
-
-    function drawDisappearingBalls(deltaTime) {
-      for (let i = gameState.disappearingBalls.length - 1; i >= 0; i--) {
-        const db = gameState.disappearingBalls[i];
-        db.time += deltaTime;
-        const alpha = 1 - db.time / 500;
-        if (alpha <= 0) {
-          gameState.disappearingBalls.splice(i, 1);
-        } else {
-          db.ball.draw(ctx, alpha);
-        }
-      }
-    }
-
     function render() {
-      const { CANNON_X, CANNON_Y, BALL_RADIUS } = getConfig();
       drawBackground();
       if (gameState.mode === 'playing') {
         drawDeathLine();
         drawAimLine();
-        gameState.structure.balls.forEach(b => b.draw(ctx));
-        drawFallingBalls();
-        drawFlyingBalls();
-        drawDisappearingBalls(gameState.lastDelta || 16);
+        for (const ball of gameState.structure.balls) {
+          if (ball && typeof ball.draw === 'function') ball.draw(ctx);
+        }
+        for (const ball of gameState.fallingBalls) {
+          if (ball && typeof ball.draw === 'function') ball.draw(ctx);
+        }
+        for (const fb of gameState.flyingBalls) {
+          if (fb) {
+            const tempBall = new Ball(fb.x, fb.y, fb.color);
+            tempBall.draw(ctx);
+          }
+        }
+        for (const db of gameState.disappearingBalls) {
+          if (db && db.ball) {
+            const alpha = Math.max(0, 1 - (db.time || 0) / 500);
+            db.ball.draw(ctx, alpha);
+          }
+        }
         drawCannon();
         ctx.beginPath();
         ctx.arc(
-          CANNON_X + Math.sin(gameState.cannonAngle) * 40,
-          CANNON_Y - Math.cos(gameState.cannonAngle) * 40,
-          BALL_RADIUS,
+          config.CANNON_X + Math.sin(gameState.cannonAngle) * 40,
+          config.CANNON_Y - Math.cos(gameState.cannonAngle) * 40,
+          config.BALL_RADIUS,
           0,
           Math.PI * 2
         );
-        ctx.fillStyle = gameState.queue.currentColor();
+        ctx.fillStyle = (gameState.queue && typeof gameState.queue.currentColor === 'function')
+          ? gameState.queue.currentColor()
+          : '#999';
         ctx.fill();
       }
     }
 
     function shoot() {
-      if (gameState.mode !== 'playing' || !gameState.isAiming || gameState.isShooting) return;
+      if (gameState.mode !== 'playing' || !gameState.isAiming || gameState.isShooting || !gameState.queue) return;
 
-      const { BALL_RADIUS, CANNON_X, CANNON_Y, MIN_AIM_DISTANCE } = getConfig();
-      const dx = gameState.aimPoint.x - CANNON_X;
-      const dy = gameState.aimPoint.y - CANNON_Y;
+      const dx = gameState.aimPoint.x - config.CANNON_X;
+      const dy = gameState.aimPoint.y - config.CANNON_Y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < MIN_AIM_DISTANCE) return; // слишком близко
+      if (dist < config.MIN_AIM_DISTANCE) return;
 
       gameState.isShooting = true;
       const color = gameState.queue.pop();
       const angle = Math.atan2(dx, -dy);
       const speed = canvas.height * 0.01;
-      let x = CANNON_X;
-      let y = CANNON_Y;
-      let vx = Math.sin(angle) * speed;
-      let vy = -Math.cos(angle) * speed;
 
-      const flyingBall = { x, y, vx, vy, color };
+      const flyingBall = {
+        x: config.CANNON_X,
+        y: config.CANNON_Y,
+        vx: Math.sin(angle) * speed,
+        vy: -Math.cos(angle) * speed,
+        color: color
+      };
+
       gameState.flyingBalls.push(flyingBall);
 
-      function moveBall() {
+      const animateFlight = (timestamp) => {
         if (gameState.mode !== 'playing') {
           gameState.flyingBalls = gameState.flyingBalls.filter(fb => fb !== flyingBall);
           gameState.isShooting = false;
@@ -556,23 +542,23 @@
         flyingBall.x += flyingBall.vx;
         flyingBall.y += flyingBall.vy;
 
-        const { BALL_RADIUS, CANNON_X, CANNON_Y } = getConfig();
-
-        if (flyingBall.x <= BALL_RADIUS || flyingBall.x >= canvas.width - BALL_RADIUS) {
+        if (flyingBall.x <= config.BALL_RADIUS || flyingBall.x >= canvas.width - config.BALL_RADIUS) {
           flyingBall.vx = -flyingBall.vx;
-          flyingBall.x = Math.max(BALL_RADIUS, Math.min(canvas.width - BALL_RADIUS, flyingBall.x));
+          flyingBall.x = Math.max(config.BALL_RADIUS, Math.min(canvas.width - config.BALL_RADIUS, flyingBall.x));
         }
 
         let collided = false;
-        for (let ball of gameState.structure.balls) {
+        for (let i = gameState.structure.balls.length - 1; i >= 0; i--) {
+          const ball = gameState.structure.balls[i];
+          if (!ball) continue;
           const dx = flyingBall.x - ball.x;
           const dy = flyingBall.y - ball.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist <= BALL_RADIUS * 2) {
+          if (dist <= config.BALL_RADIUS * 2) {
             const nx = dx / dist;
             const ny = dy / dist;
-            const attachX = ball.x + nx * BALL_RADIUS * 2;
-            const attachY = ball.y + ny * BALL_RADIUS * 2;
+            const attachX = ball.x + nx * config.BALL_RADIUS * 2;
+            const attachY = ball.y + ny * config.BALL_RADIUS * 2;
             const newBall = new Ball(attachX, attachY, flyingBall.color);
             gameState.structure.add(newBall);
 
@@ -585,9 +571,14 @@
               })));
             }
 
+            // ✅ Обновляем связи и собираем падающие шары с гарантией наличия vy
             gameState.structure.updateConnectedness();
             const falling = gameState.structure.collectFalling();
-            gameState.fallingBalls = falling.map(b => ({ ...b, vy: canvas.height * 0.003 }));
+            gameState.fallingBalls.push(...falling.map(b => {
+              const fallBall = new Ball(b.x, b.y, b.color, true);
+              fallBall.vy = 0;
+              return fallBall;
+            }));
 
             collided = true;
             break;
@@ -597,6 +588,13 @@
         if (!collided && flyingBall.y <= canvas.height * 0.1) {
           const newBall = new Ball(flyingBall.x, canvas.height * 0.1, flyingBall.color);
           gameState.structure.add(newBall);
+          gameState.structure.updateConnectedness();
+          const falling = gameState.structure.collectFalling();
+          gameState.fallingBalls.push(...falling.map(b => {
+            const fallBall = new Ball(b.x, b.y, b.color, true);
+            fallBall.vy = 0;
+            return fallBall;
+          }));
           collided = true;
         }
 
@@ -604,8 +602,7 @@
           gameState.flyingBalls = gameState.flyingBalls.filter(fb => fb !== flyingBall);
           gameState.isShooting = false;
 
-          const { DEATH_LINE_Y } = getConfig();
-          if (gameState.structure.checkGameOver(DEATH_LINE_Y)) {
+          if (gameState.structure.checkGameOver(config.DEATH_LINE_Y)) {
             gameState.mode = 'gameOver';
             showScreen('gameOverScreen');
             return;
@@ -622,21 +619,27 @@
             return;
           }
 
-          updateQueueDisplay();
+          if (gameState.queue) {
+            updateQueueDisplay();
+          }
           return;
         }
 
-        requestAnimationFrame(moveBall);
-      }
+        requestAnimationFrame(animateFlight);
+      };
 
-      moveBall();
+      requestAnimationFrame(animateFlight);
     }
 
     function updateFallingBalls(deltaTime) {
-      const gravity = canvas.height * 0.0001;
+      const gravity = canvas.height * 0.0002;
       for (let i = gameState.fallingBalls.length - 1; i >= 0; i--) {
         const ball = gameState.fallingBalls[i];
-        ball.vy += gravity;
+        if (!ball || typeof ball.vy !== 'number') {
+          gameState.fallingBalls.splice(i, 1);
+          continue;
+        }
+        ball.vy += gravity * (deltaTime / 16);
         ball.y += ball.vy;
         if (ball.y > canvas.height + 100) {
           gameState.fallingBalls.splice(i, 1);
@@ -644,14 +647,29 @@
       }
     }
 
+    function updateDisappearingBalls(deltaTime) {
+      for (let i = gameState.disappearingBalls.length - 1; i >= 0; i--) {
+        const db = gameState.disappearingBalls[i];
+        if (!db) {
+          gameState.disappearingBalls.splice(i, 1);
+          continue;
+        }
+        db.time = (db.time || 0) + deltaTime;
+        if (db.time >= 500) {
+          gameState.disappearingBalls.splice(i, 1);
+        }
+      }
+    }
+
     function gameLoop(timestamp) {
       const deltaTime = timestamp - gameState.lastFrame;
       gameState.lastFrame = timestamp;
-      gameState.lastDelta = deltaTime;
 
       if (gameState.mode === 'playing') {
         gameState.elapsedTime = Date.now() - gameState.startTime;
-        document.getElementById('timer').textContent = formatTime(gameState.elapsedTime);
+        try {
+          document.getElementById('timer').textContent = formatTime(gameState.elapsedTime);
+        } catch (e) { /* игнор */ }
 
         if (gameState.elapsedTime > TIME_LIMIT) {
           gameState.mode = 'gameOver';
@@ -660,6 +678,7 @@
         }
 
         updateFallingBalls(deltaTime);
+        updateDisappearingBalls(deltaTime);
       }
 
       render();
@@ -667,8 +686,10 @@
     }
 
     function showScreen(id) {
-      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      try {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+      } catch (e) { /* игнор */ }
     }
 
     function startGame() {
@@ -693,23 +714,34 @@
       gameState.cannonAngle = 0;
       gameState.isAiming = false;
       gameState.isShooting = false;
-      document.getElementById('timer').textContent = '00:00';
+      try {
+        document.getElementById('timer').textContent = '00:00';
+      } catch (e) { /* игнор */ }
       updateQueueDisplay();
       showScreen('inGameUI');
     }
 
     function updateQueueDisplay() {
-      const container = document.getElementById('queueDisplay');
-      container.innerHTML = '';
-      const next = gameState.queue.nextColors();
-      for (let color of next) {
-        const div = document.createElement('div');
-        div.className = 'ball-queue';
-        div.style.backgroundColor = color;
-        container.appendChild(div);
-      }
-      const cannonBall = document.getElementById('cannonBall');
-      cannonBall.style.backgroundColor = gameState.queue.currentColor();
+      try {
+        const container = document.getElementById('queueDisplay');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!gameState.queue || typeof gameState.queue.nextColors !== 'function') return;
+
+        const next = gameState.queue.nextColors();
+        for (let color of next) {
+          const div = document.createElement('div');
+          div.className = 'ball-queue';
+          div.style.backgroundColor = color;
+          container.appendChild(div);
+        }
+
+        const cannonBall = document.getElementById('cannonBall');
+        if (cannonBall && gameState.queue && typeof gameState.queue.currentColor === 'function') {
+          cannonBall.style.backgroundColor = gameState.queue.currentColor();
+        }
+      } catch (e) { /* игнор */ }
     }
 
     function getCanvasCoords(clientX, clientY) {
@@ -734,10 +766,9 @@
       if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
       e.preventDefault();
       const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
-      const { CANNON_X, CANNON_Y } = getConfig();
       gameState.isAiming = true;
       gameState.aimPoint = { x, y };
-      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
+      gameState.cannonAngle = Math.atan2(x - config.CANNON_X, -(y - config.CANNON_Y));
     }
 
     function handleTouchMove(e) {
@@ -747,9 +778,8 @@
       if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
       e.preventDefault();
       const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
-      const { CANNON_X, CANNON_Y } = getConfig();
       gameState.aimPoint = { x, y };
-      gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
+      gameState.cannonAngle = Math.atan2(x - config.CANNON_X, -(y - config.CANNON_Y));
     }
 
     function handleTouchEnd(e) {
@@ -766,53 +796,55 @@
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
     document.addEventListener('touchcancel', () => { gameState.isAiming = false; }, { passive: false });
 
-    document.getElementById('btnExit').addEventListener('click', () => {});
-    document.getElementById('btnDifficulty').addEventListener('click', () => {
+    // === Кнопки ===
+    document.getElementById('btnExit')?.addEventListener('click', () => {});
+    document.getElementById('btnDifficulty')?.addEventListener('click', () => {
       const btn = document.getElementById('btnDifficulty');
+      if (!btn) return;
       gameState.difficulty = gameState.difficulty % 3 + 1;
       const labels = { 1: 'Сложно', 2: 'Средне', 3: 'Легко' };
       btn.textContent = `Сложность: ${labels[gameState.difficulty]}`;
     });
-    document.getElementById('btnPlay').addEventListener('click', () => showScreen('levelSelect'));
+    document.getElementById('btnPlay')?.addEventListener('click', () => showScreen('levelSelect'));
 
     const levelBtn = document.getElementById('btnCurrent');
     const prevBtn = document.getElementById('btnPrev');
     const nextBtn = document.getElementById('btnNext');
 
     function updateLevelButtons() {
-      levelBtn.textContent = gameState.currentLevel;
-      prevBtn.disabled = gameState.currentLevel === 1;
-      nextBtn.disabled = gameState.currentLevel === MAX_LEVELS;
+      if (levelBtn) levelBtn.textContent = gameState.currentLevel;
+      if (prevBtn) prevBtn.disabled = gameState.currentLevel === 1;
+      if (nextBtn) nextBtn.disabled = gameState.currentLevel === MAX_LEVELS;
     }
 
-    prevBtn.addEventListener('click', () => {
+    prevBtn?.addEventListener('click', () => {
       if (gameState.currentLevel > 1) {
         gameState.currentLevel--;
         updateLevelButtons();
       }
     });
 
-    nextBtn.addEventListener('click', () => {
+    nextBtn?.addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
         gameState.currentLevel++;
         updateLevelButtons();
       }
     });
 
-    document.getElementById('btnStartLevel').addEventListener('click', startGame);
-    document.getElementById('btnBackToMenu').addEventListener('click', () => showScreen('mainMenu'));
-    document.getElementById('btnBackToMenuInGame').addEventListener('click', () => showScreen('mainMenu'));
-    document.getElementById('btnNextLevel').addEventListener('click', () => {
+    document.getElementById('btnStartLevel')?.addEventListener('click', startGame);
+    document.getElementById('btnBackToMenu')?.addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnBackToMenuInGame')?.addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnNextLevel')?.addEventListener('click', () => {
       if (gameState.currentLevel < MAX_LEVELS) {
         gameState.currentLevel++;
         updateLevelButtons();
         startGame();
       }
     });
-    document.getElementById('btnReplay').addEventListener('click', startGame);
-    document.getElementById('btnToMenuVictory').addEventListener('click', () => showScreen('mainMenu'));
-    document.getElementById('btnRetry').addEventListener('click', startGame);
-    document.getElementById('btnToMenuGameOver').addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnReplay')?.addEventListener('click', startGame);
+    document.getElementById('btnToMenuVictory')?.addEventListener('click', () => showScreen('mainMenu'));
+    document.getElementById('btnRetry')?.addEventListener('click', startGame);
+    document.getElementById('btnToMenuGameOver')?.addEventListener('click', () => showScreen('mainMenu'));
 
     updateLevelButtons();
     requestAnimationFrame(gameLoop);
