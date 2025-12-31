@@ -31,7 +31,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* делает весь UI "прозрачным" для касаний по умолчанию */
+      pointer-events: none;
     }
     .screen {
       display: none;
@@ -41,7 +41,7 @@
       width: 100%;
       height: 100%;
       padding: 20px;
-      pointer-events: auto; /* но активные экраны получают события */
+      pointer-events: auto;
     }
     .screen.active {
       display: flex;
@@ -155,19 +155,14 @@
   </div>
 
   <script>
-    // ======================
-    // Адаптивный canvas
-    // ======================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     function resizeCanvas() {
       const displayWidth = window.innerWidth;
       const displayHeight = window.innerHeight;
-      
       const aspectRatio = 9 / 15;
       let width, height;
-      
       if (displayWidth / displayHeight > aspectRatio) {
         height = displayHeight;
         width = height * aspectRatio;
@@ -175,10 +170,8 @@
         width = displayWidth;
         height = width / aspectRatio;
       }
-
       canvas.width = width;
       canvas.height = height;
-
       canvas.style.width = width + 'px';
       canvas.style.height = height + 'px';
       canvas.style.margin = 'auto';
@@ -191,14 +184,7 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // ======================
-    // Конфигурация
-    // ======================
     const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
-    const BALL_RADIUS = canvas.height * 0.01875;
-    const CANNON_X = canvas.width / 2;
-    const CANNON_Y = canvas.height - canvas.height * 0.0625;
-    const DEATH_LINE_Y = CANNON_Y - canvas.height * 0.125;
     const MAX_LEVELS = 100;
     const TIME_LIMIT = 5 * 60 * 1000;
 
@@ -220,24 +206,35 @@
       return 0;
     }
 
-    // ======================
-    // Классы
-    // ======================
+    // Динамическая конфигурация
+    function getConfig() {
+      return {
+        BALL_RADIUS: canvas.height * 0.01875,
+        CANNON_X: canvas.width / 2,
+        CANNON_Y: canvas.height - canvas.height * 0.0625,
+        DEATH_LINE_Y: canvas.height * 0.8125, // CANNON_Y - canvas.height * 0.125
+        MIN_AIM_DISTANCE: canvas.height * 0.05
+      };
+    }
+
     class Ball {
       constructor(x, y, color, isFalling = false) {
         this.x = x;
         this.y = y;
         this.color = color;
         this.isFalling = isFalling;
-        this.radius = BALL_RADIUS;
+        this.radius = getConfig().BALL_RADIUS;
       }
 
-      draw(ctx) {
+      draw(ctx, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
         ctx.fill();
         ctx.closePath();
+        ctx.restore();
       }
     }
 
@@ -245,17 +242,14 @@
       constructor() {
         this.levels = [];
       }
-
       get(id) {
         return this.levels.find(l => l.id === id);
       }
-
       save(id, structure, stars = null) {
         if (this.get(id)) return;
         this.levels.push({ id, structure: [...structure], stars });
         if (this.levels.length > 3) this.levels.shift();
       }
-
       setStars(id, stars) {
         const level = this.get(id);
         if (level) level.stars = stars;
@@ -268,23 +262,19 @@
         this.colors = [];
         this.refill();
       }
-
       refill() {
         while (this.colors.length < this.difficulty) {
           this.colors.push(randomColor());
         }
       }
-
       currentColor() {
         return this.colors[0] || randomColor();
       }
-
       pop() {
         const color = this.colors.shift();
         this.colors.push(randomColor());
         return color;
       }
-
       nextColors() {
         return this.colors.slice(1);
       }
@@ -294,28 +284,26 @@
       constructor() {
         this.balls = [];
       }
-
       add(ball) {
         this.balls.push(ball);
       }
-
       removeGroup(group) {
         const removed = [];
         for (let ball of group) {
           const idx = this.balls.indexOf(ball);
           if (idx !== -1) {
-            removed.push({ x: ball.x, y: ball.y });
+            removed.push({ x: ball.x, y: ball.y, color: ball.color });
             this.balls.splice(idx, 1);
           }
         }
         return removed;
       }
-
       findConnected(startBall) {
         const visited = new Set();
         const stack = [startBall];
         const group = [];
         const targetColor = startBall.color;
+        const BALL_RADIUS = getConfig().BALL_RADIUS;
 
         while (stack.length > 0) {
           const current = stack.pop();
@@ -336,18 +324,15 @@
         }
         return group.length >= 3 ? group : [];
       }
-
       updateConnectedness() {
         if (this.balls.length === 0) return;
-
+        const BALL_RADIUS = getConfig().BALL_RADIUS;
         let minY = Infinity;
         for (let b of this.balls) if (b.y < minY) minY = b.y;
-
         const rootBalls = this.balls.filter(b => Math.abs(b.y - minY) <= BALL_RADIUS);
         const connected = new Set();
         const queue = [...rootBalls];
         for (let b of rootBalls) connected.add(b);
-
         while (queue.length > 0) {
           const current = queue.shift();
           for (let other of this.balls) {
@@ -361,17 +346,14 @@
             }
           }
         }
-
         for (let b of this.balls) b.isFalling = !connected.has(b);
       }
-
       checkGameOver(deathLineY) {
         for (let b of this.balls) {
           if (!b.isFalling && b.y + b.radius >= deathLineY) return true;
         }
         return false;
       }
-
       collectFalling() {
         const falling = this.balls.filter(b => b.isFalling);
         this.balls = this.balls.filter(b => !b.isFalling);
@@ -379,9 +361,6 @@
       }
     }
 
-    // ======================
-    // Игровое состояние
-    // ======================
     const levelBuffer = new LevelBuffer();
     let gameState = {
       mode: 'menu',
@@ -395,13 +374,14 @@
       isAiming: false,
       aimPoint: { x: 0, y: 0 },
       fallingBalls: [],
-      lastFrame: 0
+      flyingBalls: [],
+      disappearingBalls: [],
+      lastFrame: 0,
+      isShooting: false
     };
 
-    // ======================
-    // Генерация уровня
-    // ======================
     function generateLevelStructure(levelId) {
+      const { BALL_RADIUS } = getConfig();
       const structure = new Structure();
       const rows = 3 + Math.min(2, Math.floor(levelId / 20));
       const cols = 8;
@@ -419,15 +399,13 @@
       return structure;
     }
 
-    // ======================
-    // Отрисовка
-    // ======================
     function drawBackground() {
       ctx.fillStyle = '#d6e2eb';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     function drawCannon() {
+      const { CANNON_X, CANNON_Y } = getConfig();
       ctx.save();
       ctx.translate(CANNON_X, CANNON_Y);
       ctx.rotate(gameState.cannonAngle);
@@ -444,7 +422,7 @@
 
     function drawAimLine() {
       if (!gameState.isAiming) return;
-
+      const { BALL_RADIUS, CANNON_X, CANNON_Y } = getConfig();
       const points = [];
       let x = CANNON_X;
       let y = CANNON_Y;
@@ -487,6 +465,7 @@
     }
 
     function drawDeathLine() {
+      const { DEATH_LINE_Y } = getConfig();
       ctx.strokeStyle = '#ff000044';
       ctx.setLineDash([10, 5]);
       ctx.lineWidth = 2;
@@ -503,13 +482,35 @@
       }
     }
 
+    function drawFlyingBalls() {
+      for (let fb of gameState.flyingBalls) {
+        fb.ball.draw(ctx);
+      }
+    }
+
+    function drawDisappearingBalls(deltaTime) {
+      for (let i = gameState.disappearingBalls.length - 1; i >= 0; i--) {
+        const db = gameState.disappearingBalls[i];
+        db.time += deltaTime;
+        const alpha = 1 - db.time / 500;
+        if (alpha <= 0) {
+          gameState.disappearingBalls.splice(i, 1);
+        } else {
+          db.ball.draw(ctx, alpha);
+        }
+      }
+    }
+
     function render() {
+      const { CANNON_X, CANNON_Y, BALL_RADIUS } = getConfig();
       drawBackground();
       if (gameState.mode === 'playing') {
         drawDeathLine();
         drawAimLine();
         gameState.structure.balls.forEach(b => b.draw(ctx));
         drawFallingBalls();
+        drawFlyingBalls();
+        drawDisappearingBalls(gameState.lastDelta || 16);
         drawCannon();
         ctx.beginPath();
         ctx.arc(
@@ -524,15 +525,17 @@
       }
     }
 
-    // ======================
-    // Обновление и выстрел
-    // ======================
     function shoot() {
-      if (gameState.mode !== 'playing' || !gameState.isAiming) return;
+      if (gameState.mode !== 'playing' || !gameState.isAiming || gameState.isShooting) return;
 
-      const color = gameState.queue.pop();
+      const { BALL_RADIUS, CANNON_X, CANNON_Y, MIN_AIM_DISTANCE } = getConfig();
       const dx = gameState.aimPoint.x - CANNON_X;
       const dy = gameState.aimPoint.y - CANNON_Y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < MIN_AIM_DISTANCE) return; // слишком близко
+
+      gameState.isShooting = true;
+      const color = gameState.queue.pop();
       const angle = Math.atan2(dx, -dy);
       const speed = canvas.height * 0.01;
       let x = CANNON_X;
@@ -540,31 +543,46 @@
       let vx = Math.sin(angle) * speed;
       let vy = -Math.cos(angle) * speed;
 
-      function moveBall() {
-        x += vx;
-        y += vy;
+      const flyingBall = { x, y, vx, vy, color };
+      gameState.flyingBalls.push(flyingBall);
 
-        if (x <= BALL_RADIUS || x >= canvas.width - BALL_RADIUS) {
-          vx = -vx;
-          x = Math.max(BALL_RADIUS, Math.min(canvas.width - BALL_RADIUS, x));
+      function moveBall() {
+        if (gameState.mode !== 'playing') {
+          gameState.flyingBalls = gameState.flyingBalls.filter(fb => fb !== flyingBall);
+          gameState.isShooting = false;
+          return;
+        }
+
+        flyingBall.x += flyingBall.vx;
+        flyingBall.y += flyingBall.vy;
+
+        const { BALL_RADIUS, CANNON_X, CANNON_Y } = getConfig();
+
+        if (flyingBall.x <= BALL_RADIUS || flyingBall.x >= canvas.width - BALL_RADIUS) {
+          flyingBall.vx = -flyingBall.vx;
+          flyingBall.x = Math.max(BALL_RADIUS, Math.min(canvas.width - BALL_RADIUS, flyingBall.x));
         }
 
         let collided = false;
         for (let ball of gameState.structure.balls) {
-          const dx = x - ball.x;
-          const dy = y - ball.y;
+          const dx = flyingBall.x - ball.x;
+          const dy = flyingBall.y - ball.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= BALL_RADIUS * 2) {
             const nx = dx / dist;
             const ny = dy / dist;
             const attachX = ball.x + nx * BALL_RADIUS * 2;
             const attachY = ball.y + ny * BALL_RADIUS * 2;
-            const newBall = new Ball(attachX, attachY, color);
+            const newBall = new Ball(attachX, attachY, flyingBall.color);
             gameState.structure.add(newBall);
 
             const group = gameState.structure.findConnected(newBall);
             if (group.length >= 3) {
-              gameState.structure.removeGroup(group);
+              const removed = gameState.structure.removeGroup(group);
+              gameState.disappearingBalls.push(...removed.map(pos => ({
+                ball: new Ball(pos.x, pos.y, pos.color),
+                time: 0
+              })));
             }
 
             gameState.structure.updateConnectedness();
@@ -576,13 +594,17 @@
           }
         }
 
-        if (!collided && y <= canvas.height * 0.1) {
-          const newBall = new Ball(x, canvas.height * 0.1, color);
+        if (!collided && flyingBall.y <= canvas.height * 0.1) {
+          const newBall = new Ball(flyingBall.x, canvas.height * 0.1, flyingBall.color);
           gameState.structure.add(newBall);
           collided = true;
         }
 
         if (collided) {
+          gameState.flyingBalls = gameState.flyingBalls.filter(fb => fb !== flyingBall);
+          gameState.isShooting = false;
+
+          const { DEATH_LINE_Y } = getConfig();
           if (gameState.structure.checkGameOver(DEATH_LINE_Y)) {
             gameState.mode = 'gameOver';
             showScreen('gameOverScreen');
@@ -625,6 +647,7 @@
     function gameLoop(timestamp) {
       const deltaTime = timestamp - gameState.lastFrame;
       gameState.lastFrame = timestamp;
+      gameState.lastDelta = deltaTime;
 
       if (gameState.mode === 'playing') {
         gameState.elapsedTime = Date.now() - gameState.startTime;
@@ -643,9 +666,6 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // ======================
-    // UI
-    // ======================
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -668,8 +688,11 @@
       gameState.startTime = Date.now();
       gameState.elapsedTime = 0;
       gameState.fallingBalls = [];
+      gameState.flyingBalls = [];
+      gameState.disappearingBalls = [];
       gameState.cannonAngle = 0;
       gameState.isAiming = false;
+      gameState.isShooting = false;
       document.getElementById('timer').textContent = '00:00';
       updateQueueDisplay();
       showScreen('inGameUI');
@@ -685,30 +708,33 @@
         div.style.backgroundColor = color;
         container.appendChild(div);
       }
-
       const cannonBall = document.getElementById('cannonBall');
       cannonBall.style.backgroundColor = gameState.queue.currentColor();
     }
 
-    // ======================
-    // Обработка касаний — ПЕРЕНЕСЕНА НА DOCUMENT
-    // ======================
     function getCanvasCoords(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / canvas.clientWidth;
-      const scaleY = canvas.height / canvas.clientHeight;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
       return {
         x: (clientX - rect.left) * scaleX,
         y: (clientY - rect.top) * scaleY
       };
     }
 
+    function isPointInCanvas(x, y) {
+      const rect = canvas.getBoundingClientRect();
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    }
+
     function handleTouchStart(e) {
       if (gameState.mode !== 'playing') return;
       if (e.touches.length === 0) return;
-      e.preventDefault();
       const touch = e.touches[0];
+      if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
+      e.preventDefault();
       const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
+      const { CANNON_X, CANNON_Y } = getConfig();
       gameState.isAiming = true;
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
@@ -717,9 +743,11 @@
     function handleTouchMove(e) {
       if (!gameState.isAiming || gameState.mode !== 'playing') return;
       if (e.touches.length === 0) return;
-      e.preventDefault();
       const touch = e.touches[0];
+      if (!isPointInCanvas(touch.clientX, touch.clientY)) return;
+      e.preventDefault();
       const { x, y } = getCanvasCoords(touch.clientX, touch.clientY);
+      const { CANNON_X, CANNON_Y } = getConfig();
       gameState.aimPoint = { x, y };
       gameState.cannonAngle = Math.atan2(x - CANNON_X, -(y - CANNON_Y));
     }
@@ -733,15 +761,11 @@
       gameState.isAiming = false;
     }
 
-    // ✅ Ключевое изменение: слушаем события на document
     document.addEventListener('touchstart', handleTouchStart, { passive: false });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd, { passive: false });
     document.addEventListener('touchcancel', () => { gameState.isAiming = false; }, { passive: false });
 
-    // ======================
-    // Кнопки
-    // ======================
     document.getElementById('btnExit').addEventListener('click', () => {});
     document.getElementById('btnDifficulty').addEventListener('click', () => {
       const btn = document.getElementById('btnDifficulty');
@@ -790,7 +814,6 @@
     document.getElementById('btnRetry').addEventListener('click', startGame);
     document.getElementById('btnToMenuGameOver').addEventListener('click', () => showScreen('mainMenu'));
 
-    // Старт
     updateLevelButtons();
     requestAnimationFrame(gameLoop);
   </script>
