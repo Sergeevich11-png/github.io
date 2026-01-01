@@ -12,11 +12,19 @@
   <div class="holiday-title">С Новым Годом!</div>
   <div class="corner-decoration top-left-bell">🌲</div>
   <div class="corner-decoration top-right-corner">🎀<span class="top-right-bell">🔔</span></div>
-  <h1>Выберите игру</h1>
-  <div id="games-container"></div>
+  <h1>Меню</h1>
+
+  <!-- Четвёртая кнопка: "Игры" -->
+  <button id="show-games-btn" class="game-link default">Игры</button>
+
+  <!-- Контейнер для списка игр (изначально скрыт) -->
+  <div id="games-container" style="display:none;"></div>
+
+  <!-- Ваши 3 кнопки -->
   <a href="support/index.html" class="game-link support">На кофе</a>
   <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
   <button id="share-btn" class="game-link share">Поделиться</button>
+
   <div class="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
 
   <script>
@@ -28,11 +36,14 @@
       {name: "Ход от 1 до 3", path: "From_1to_3/index.html"},
       {name: "Гонки", path: "cardrive/index.html"},
       {name: "СловоУгадайка", path: "WorldGuesser/index.html"},
-      {name: "Шарики", path: "balls/index.html"}
-      {name: "3 в ряд",path: "Match-Three/index.html"} // ← просто добавляй сюда!
+      {name: "Шарики", path: "balls/index.html"},
+      {name: "3 в ряд", path: "Match-Three/index.html"} // ← теперь с запятой!
     ];
 
     const container = document.getElementById('games-container');
+    const btn = document.getElementById('show-games-btn');
+
+    // Заполняем контейнер (но не показываем сразу)
     games.forEach(game => {
       const link = document.createElement('a');
       link.href = game.path;
@@ -41,6 +52,14 @@
       container.appendChild(link);
     });
 
+    // Переключаем отображение списка при клике
+    btn.addEventListener('click', () => {
+      const isVisible = container.style.display === 'block';
+      container.style.display = isVisible ? 'none' : 'block';
+      btn.textContent = isVisible ? 'Игры' : 'Скрыть игры';
+    });
+
+    // Кнопка "Поделиться"
     document.getElementById('share-btn').addEventListener('click', async () => {
       const url = window.location.href;
       if (navigator.share) {
