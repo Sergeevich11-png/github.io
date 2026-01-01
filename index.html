@@ -1,246 +1,54 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Игры</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    /* Новогодний фон */
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #0d3b1e 0%, #1a5c2d 100%) fixed;
-      color: #f8f8f8;
-      padding: 40px 20px;
-      text-align: center;
-      line-height: 1.6;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Дальний (медленный) снег */
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        radial-gradient(circle, white 1px, transparent 1px),
-        radial-gradient(circle, white 0.8px, transparent 0.8px),
-        radial-gradient(circle, white 0.6px, transparent 0.6px);
-      background-size: 100px 150px, 80px 120px, 60px 100px;
-      background-position: 0 0, 30px 40px, 60px 20px;
-      opacity: 0.35;
-      pointer-events: none;
-      animation: snowfall 20s linear infinite;
-      z-index: -1;
-    }
-
-    /* Ближний (немного быстрее и крупнее) снег */
-    body::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        radial-gradient(circle, white 1.4px, transparent 1.4px),
-        radial-gradient(circle, white 1px, transparent 1px);
-      background-size: 120px 180px, 90px 140px;
-      background-position: 0 0, 50px 30px;
-      opacity: 0.25;
-      pointer-events: none;
-      animation: snowfall 12s linear infinite; /* быстрее */
-      z-index: -1;
-    }
-
-    @keyframes snowfall {
-      0% {
-        background-position: 0 0, 50px 30px, 60px 20px;
-      }
-      100% {
-        background-position: 0 180px, 50px 170px, 60px 200px;
-      }
-    }
-
-    /* Декоративный заголовок "С Новым Годом!" */
-    .holiday-title {
-      font-family: 'Brush Script MT', 'Lucida Handwriting', cursive, sans-serif;
-      font-size: 2.8rem;
-      font-weight: bold;
-      background: linear-gradient(to right, #ffd700, #ffaa00, #ffd700);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      margin-bottom: 12px;
-      letter-spacing: 2px;
-      position: relative;
-      z-index: 5;
-    }
-
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 30px;
-      color: #ffd700;
-      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-      font-weight: bold;
-      position: relative;
-      z-index: 5;
-    }
-
-    .game-link {
-      display: block;
-      margin: 14px auto;
-      padding: 14px 0;
-      width: 240px;
-      color: white;
-      text-decoration: none;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      font-weight: 600;
-      position: relative;
-      z-index: 5;
-    }
-
-    .game-link:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-    }
-
-    .game-link.default {
-      background: linear-gradient(to bottom, #e74c3c, #c0392b);
-    }
-    .game-link.default:hover {
-      background: linear-gradient(to bottom, #c0392b, #a93226);
-    }
-
-    .game-link.support {
-      background: linear-gradient(to bottom, #2ecc71, #27ae60);
-    }
-    .game-link.support:hover {
-      background: linear-gradient(to bottom, #27ae60, #219653);
-    }
-
-    .game-link.qr {
-      background: linear-gradient(to bottom, #3498db, #2980b9);
-    }
-    .game-link.qr:hover {
-      background: linear-gradient(to bottom, #2980b9, #1f618d);
-    }
-
-    .game-link.share {
-      background: linear-gradient(to bottom, #f1c40f, #d4ac0d);
-      color: #2c3e50;
-    }
-    .game-link.share:hover {
-      background: linear-gradient(to bottom, #d4ac0d, #b7950b);
-    }
-
-    .footer {
-      margin-top: 40px;
-      color: #ecf0f1;
-      font-size: 0.95rem;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-      position: relative;
-      z-index: 5;
-    }
-
-    .game-link::after {
-      content: "🎄";
-      margin-left: 8px;
-      font-size: 0.9em;
-    }
-    .game-link.support::after { content: "☕"; }
-    .game-link.qr::after { content: "📱"; }
-    .game-link.share::after { content: "🎁"; }
-
-    /* Угловые декорации — через смайлики */
-    .corner-decoration {
-      position: absolute;
-      font-size: 2.5rem;
-      line-height: 1;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .top-right-corner {
-      top: 10px;
-      right: 10px;
-      color: #e74c3c;
-    }
-
-    .top-left-bell {
-      top: 10px;
-      left: 10px;
-      color: #27ae60;
-    }
-
-    .top-right-bell {
-      color: #ffd700;
-      font-size: 3rem;
-      margin-left: 5px;
-    }
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#0d3b1e 0%,#1a5c2d 100%) fixed;color:#f8f8f8;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden}body::before,body::after{content:"";position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;opacity:.35;background-image:radial-gradient(circle,white 1px,transparent 1px),radial-gradient(circle,white .8px,transparent .8px),radial-gradient(circle,white .6px,transparent .6px);background-size:100px 150px,80px 120px,60px 100px;background-position:0 0,30px 40px,60px 20px;animation:snowfall 20s linear infinite}body::after{opacity:.25;background-image:radial-gradient(circle,white 1.4px,transparent 1.4px),radial-gradient(circle,white 1px,transparent 1px);background-size:120px 180px,90px 140px;background-position:0 0,50px 30px;animation:snowfall 12s linear infinite}@keyframes snowfall{0%{background-position:0 0,50px 30px,60px 20px}100%{background-position:0 180px,50px 170px,60px 200px}}.holiday-title{font-family:'Brush Script MT','Lucida Handwriting',cursive,sans-serif;font-size:2.8rem;font-weight:bold;background:linear-gradient(to right,#ffd700,#ffaa00,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 4px 8px rgba(0,0,0,.3);margin-bottom:12px;letter-spacing:2px;position:relative;z-index:5}h1{font-size:2.2rem;margin-bottom:30px;color:#ffd700;text-shadow:0 2px 6px rgba(0,0,0,.4);font-weight:bold;position:relative;z-index:5}.game-link{display:block;margin:14px auto;padding:14px 0;width:240px;color:white;text-decoration:none;border-radius:12px;font-size:1.1rem;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 8px rgba(0,0,0,.3);font-weight:600;position:relative;z-index:5}.game-link:hover{transform:translateY(-2px);box-shadow:0 6px 12px rgba(0,0,0,.4)}.game-link.default{background:linear-gradient(to bottom,#e74c3c,#c0392b)}.game-link.default:hover{background:linear-gradient(to bottom,#c0392b,#a93226)}.game-link.support{background:linear-gradient(to bottom,#2ecc71,#27ae60)}.game-link.support:hover{background:linear-gradient(to bottom,#27ae60,#219653)}.game-link.qr{background:linear-gradient(to bottom,#3498db,#2980b9)}.game-link.qr:hover{background:linear-gradient(to bottom,#2980b9,#1f618d)}.game-link.share{background:linear-gradient(to bottom,#f1c40f,#d4ac0d);color:#2c3e50}.game-link.share:hover{background:linear-gradient(to bottom,#d4ac0d,#b7950b)}.footer{margin-top:40px;color:#ecf0f1;font-size:.95rem;text-shadow:0 1px 2px rgba(0,0,0,.5);position:relative;z-index:5}.game-link::after{content:"🎄";margin-left:8px;font-size:.9em}.game-link.support::after{content:"☕"}.game-link.qr::after{content:"📱"}.game-link.share::after{content:"🎁"}.corner-decoration{position:absolute;font-size:2.5rem;line-height:1;pointer-events:none;z-index:10}.top-right-corner{top:10px;right:10px;color:#e74c3c}.top-left-bell{top:10px;left:10px;color:#27ae60}.top-right-bell{color:#ffd700;font-size:3rem;margin-left:5px}
   </style>
 </head>
 <body>
-
   <div class="holiday-title">С Новым Годом!</div>
-
   <div class="corner-decoration top-left-bell">🌲</div>
   <div class="corner-decoration top-right-corner">🎀<span class="top-right-bell">🔔</span></div>
-
   <h1>Выберите игру</h1>
-  
-  <a href="maze/index.html" class="game-link default">Лабиринт</a>
-  <a href="Zmeyka/index.html" class="game-link default">Лоза</a>
-  <a href="TicTacToe/index.html" class="game-link default">Крестики-нолики</a>
-  <a href="ugaday-chislo/index.html" class="game-link default">Угадай число</a>
-  <a href="From_1to_3/index.html" class="game-link default">Ход от 1 до 3</a>
-  <a href="cardrive/index.html" class="game-link default">Гонки</a>
-  <a href="WorldGuesser/index.html" class="game-link default">СловоУгадайка</a>
-
-  <!-- 🔥 КНОПКА ДОБАВЛЕНА ЗДЕСЬ — ПОСЛЕ "СловоУгадайка" 🔥 -->
-  <a href="balls/index.html" class="game-link default">Шарики</a>
-
+  <div id="games-container"></div>
   <a href="support/index.html" class="game-link support">На кофе</a>
   <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
-
   <button id="share-btn" class="game-link share">Поделиться</button>
-
-  <div class="footer">
-    © 2025 • Спасибо за интерес к моим работам! ❤️
-  </div>
+  <div class="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
 
   <script>
+    const games = [
+      {name: "Лабиринт", path: "maze/index.html"},
+      {name: "Лоза", path: "Zmeyka/index.html"},
+      {name: "Крестики-нолики", path: "TicTacToe/index.html"},
+      {name: "Угадай число", path: "ugaday-chislo/index.html"},
+      {name: "Ход от 1 до 3", path: "From_1to_3/index.html"},
+      {name: "Гонки", path: "cardrive/index.html"},
+      {name: "СловоУгадайка", path: "WorldGuesser/index.html"},
+      {name: "Шарики", path: "balls/index.html"} // ← просто добавляй сюда!
+    ];
+
+    const container = document.getElementById('games-container');
+    games.forEach(game => {
+      const link = document.createElement('a');
+      link.href = game.path;
+      link.className = 'game-link default';
+      link.textContent = game.name;
+      container.appendChild(link);
+    });
+
     document.getElementById('share-btn').addEventListener('click', async () => {
       const url = window.location.href;
-
       if (navigator.share) {
-        try {
-          await navigator.share({
-            title: ' игры',
-            text: 'Попробуй  игры!',
-            url: url
-          });
-        } catch (err) {
-          // Пользователь отменил — ничего не делаем
-        }
+        try { await navigator.share({ title: ' игры', text: 'Попробуй  игры!', url }); } catch (e) {}
       } else {
         try {
           await navigator.clipboard.writeText(url);
           alert('Ссылка скопирована! Отправь её кому хочешь.');
-        } catch (err) {
+        } catch (e) {
           alert('Не удалось скопировать ссылку. Скопируй вручную:\n\n' + url);
         }
       }
