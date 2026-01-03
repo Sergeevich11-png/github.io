@@ -85,27 +85,42 @@
     }
     #coordinates.visible { opacity: 1; }
 
-    #joystick {
+    #joystick,
+    #lookJoystick {
       position: absolute;
       width: 84px;
       height: 84px;
-      border: 2px solid rgba(138, 43, 226, 0.6);
       border-radius: 50%;
-      background: rgba(94, 23, 235, 0.08);
       display: none;
       pointer-events: none;
       z-index: 20;
     }
-    #joystick-inner {
+    #joystick {
+      border: 2px solid rgba(138, 43, 226, 0.6);
+      background: rgba(94, 23, 235, 0.08);
+    }
+    #lookJoystick {
+      border: 2px solid rgba(66, 200, 255, 0.5);
+      background: rgba(30, 144, 255, 0.08);
+    }
+
+    #joystick-inner,
+    #lookJoystick-inner {
       position: absolute;
       width: 32px;
       height: 32px;
-      background: #9a4cff;
       border-radius: 50%;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+    }
+    #joystick-inner {
+      background: #9a4cff;
       box-shadow: 0 0 12px #9a4cff;
+    }
+    #lookJoystick-inner {
+      background: #44aaff;
+      box-shadow: 0 0 12px #44aaff;
     }
 
     #gameOver {
@@ -159,6 +174,7 @@
   <div id="coordinates">X: 0  Y: 0  Z: 0</div>
 
   <div id="joystick"><div id="joystick-inner"></div></div>
+  <div id="lookJoystick"><div id="lookJoystick-inner"></div></div>
 
   <div id="gameOver">
     <h2>Вас поглотила другая дыра...</h2>
@@ -171,11 +187,11 @@
   <script>
     // === CONFIG ===
     const START_RADIUS = 3.0;
-    const MAX_OBJECTS = 1200;
-    const SPAWN_INTERVAL = 100;
+    const MAX_OBJECTS = 3000;
+    const SPAWN_INTERVAL = 80;
     const MAX_PLAYER_SPEED = 400;
-    const INITIAL_WORLD_HALF = 36000; // Увеличено в 3 раза
-    const LOOK_SENSITIVITY = 0.0006;
+    const INITIAL_WORLD_HALF = 36000;
+    const LOOK_SENSITIVITY = 0.02;
 
     // === STATE ===
     let gameState = 'menu';
@@ -190,21 +206,22 @@
     let camera = null;
     let scene = null;
     let renderer = null;
-    let joystickActive = false;
-    let inputX = 0, inputY = 0;
     let rafId = null;
     let lastSpawn = 0;
     let growthCounter = 0;
-    let yaw = 0;
-    let pitch = 0;
+
+    let moveInputX = 0, moveInputY = 0;
+    let lookInputX = 0, lookInputY = 0;
+    let playerYaw = 0;
+    let playerPitch = 0;
 
     const objectTypes = [
-      { name: 'asteroid', color: 0x555555, emissive: 0x111111, roughness: 0.9, metalness: 0.1, min: 0.3, max: 1.8, points: 1 },
-      { name: 'planet', color: 0x44aa44, emissive: 0x113311, roughness: 0.7, metalness: 0.0, min: 1.9, max: 3.5, points: 2 },
-      { name: 'oasis-planet', color: 0x3388dd, emissive: 0x114466, roughness: 0.6, metalness: 0.0, min: 2.0, max: 3.2, points: 3 },
-      { name: 'gas-giant', color: 0x4444cc, emissive: 0x111144, roughness: 0.5, metalness: 0.2, min: 3.6, max: 6.0, points: 4 },
-      { name: 'star', color: 0xffff66, emissive: 0x888800, roughness: 0.1, metalness: 0.9, emissiveIntensity: 2, min: 6.1, max: 12.0, points: 8 },
-      { name: 'moving-asteroid', color: 0xaa8844, emissive: 0x332211, roughness: 0.85, metalness: 0.1, min: 0.5, max: 1.5, points: 1 },
+      { name: 'asteroid', color: 0x555555, emissive: 0x222222, roughness: 0.9, metalness: 0.1, min: 0.3, max: 1.8, points: 1, emissiveIntensity: 1.8 },
+      { name: 'planet', color: 0x44aa44, emissive: 0x113311, roughness: 0.7, metalness: 0.0, min: 1.9, max: 3.5, points: 2, emissiveIntensity: 1.8 },
+      { name: 'oasis-planet', color: 0x3388dd, emissive: 0x114466, roughness: 0.6, metalness: 0.0, min: 2.0, max: 3.2, points: 3, emissiveIntensity: 1.8 },
+      { name: 'gas-giant', color: 0x4444cc, emissive: 0x111144, roughness: 0.5, metalness: 0.2, min: 3.6, max: 6.0, points: 4, emissiveIntensity: 1.8 },
+      { name: 'star', color: 0xffff66, emissive: 0x888800, roughness: 0.1, metalness: 0.9, emissiveIntensity: 3, min: 6.1, max: 12.0, points: 8 },
+      { name: 'moving-asteroid', color: 0xaa8844, emissive: 0x332211, roughness: 0.85, metalness: 0.1, min: 0.5, max: 1.5, points: 1, emissiveIntensity: 1.8 },
       { name: 'black-hole', color: 0x000000, emissive: 0x050515, roughness: 0.1, metalness: 0.98, min: 2.0, max: 3.5, points: 0 }
     ];
 
@@ -349,7 +366,7 @@
       accretionGlow = new THREE.Points(particles, material);
       player.add(accretionGlow);
 
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 300000);
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 80000);
       scene.add(camera);
 
       const canvas = document.querySelector('canvas');
@@ -445,7 +462,7 @@
       
       let pos;
       if (nearPlayer) {
-        const distance = 10 + Math.random() * 40;
+        const distance = 30 + Math.random() * 170;
         const angle1 = Math.random() * Math.PI * 2;
         const angle2 = Math.random() * Math.PI * 2;
         pos = new THREE.Vector3(
@@ -490,15 +507,10 @@
     function updateCamera() {
       if (!camera || !player) return;
       const camDistance = 60 + playerRadius * 8;
-      const camX = Math.sin(yaw) * Math.cos(pitch) * camDistance;
-      const camY = Math.sin(pitch) * camDistance;
-      const camZ = Math.cos(yaw) * Math.cos(pitch) * camDistance;
-
-      camera.position.set(
-        player.position.x - camX,
-        player.position.y - camY,
-        player.position.z - camZ
-      );
+      const camX = player.position.x - Math.sin(playerYaw) * Math.cos(playerPitch) * camDistance;
+      const camY = player.position.y + Math.sin(playerPitch) * camDistance;
+      const camZ = player.position.z - Math.cos(playerYaw) * Math.cos(playerPitch) * camDistance;
+      camera.position.set(camX, camY, camZ);
       camera.lookAt(player.position);
     }
 
@@ -541,35 +553,35 @@
       rafId = requestAnimationFrame(gameLoop);
       if (gameState !== 'playing' || !scene || !camera || !renderer) return;
 
-      const dt = Math.min(0.016, 0.1);
+      const dt = 0.016;
 
       if (accretionGlow) {
         const scale = playerRadius / START_RADIUS;
         accretionGlow.scale.setScalar(scale);
         const time = Date.now() * 0.001;
         accretionGlow.material.size = (0.6 + Math.sin(time * 2) * 0.2) * scale;
-        accretionGlow.rotation.x += 0.005;
-        accretionGlow.rotation.y += 0.007;
+        accretionGlow.rotation.x += 0.01;
+        accretionGlow.rotation.y += 0.015;
       }
 
-      if (Math.abs(inputX) > 0.01 || Math.abs(inputY) > 0.01) {
-        const speed = Math.min(150 + playerRadius * 8, MAX_PLAYER_SPEED);
+      // === FLY-УПРАВЛЕНИЕ ===
+      if (Math.abs(moveInputX) > 0.01 || Math.abs(moveInputY) > 0.01) {
+        const speed = Math.min(150 + playerRadius * 8, MAX_PLAYER_SPEED) * dt;
+
         const forward = new THREE.Vector3(
-          -Math.sin(yaw) * Math.cos(pitch),
-          -Math.sin(pitch),
-          -Math.cos(yaw) * Math.cos(pitch)
+          -Math.sin(playerYaw) * Math.cos(playerPitch),
+          Math.sin(playerPitch),
+          -Math.cos(playerYaw) * Math.cos(playerPitch)
         );
+
         const right = new THREE.Vector3(
-          Math.cos(yaw),
+          Math.cos(playerYaw),
           0,
-          -Math.sin(yaw)
+          -Math.sin(playerYaw)
         );
 
-        const move = new THREE.Vector3();
-        move.add(forward.multiplyScalar(inputY * speed * dt));
-        move.add(right.multiplyScalar(inputX * speed * dt));
-
-        player.position.add(move);
+        player.position.add(forward.multiplyScalar(moveInputY * speed));
+        player.position.add(right.multiplyScalar(moveInputX * speed));
 
         const h = worldHalf;
         player.position.x = Math.max(-h, Math.min(h, player.position.x));
@@ -577,7 +589,16 @@
         player.position.z = Math.max(-h, Math.min(h, player.position.z));
       }
 
-      // >>> Обновление координат игрока
+      // === УПРАВЛЕНИЕ ВЗГЛЯДОМ ===
+      if (Math.abs(lookInputX) > 0.01 || Math.abs(lookInputY) > 0.01) {
+        playerYaw += lookInputX * LOOK_SENSITIVITY;
+        playerPitch = THREE.MathUtils.clamp(
+          playerPitch + lookInputY * LOOK_SENSITIVITY,
+          -Math.PI / 2 + 0.1,
+          Math.PI / 2 - 0.1
+        );
+      }
+
       if (player && gameState === 'playing') {
         const coordsEl = document.getElementById('coordinates');
         if (coordsEl) {
@@ -644,7 +665,7 @@
             document.getElementById('size').textContent = playerRadius.toFixed(1);
             document.getElementById('universe').textContent = `${Math.round(worldSize)}³`;
 
-            spawnNewObject(false); // Спавн в случайной точке ВСЕЛЕННОЙ
+            spawnNewObject(Math.random() < 0.8);
           } else if (obj.userData.isBlackHole) {
             showGameOver();
             return;
@@ -654,7 +675,7 @@
 
       const now = performance.now();
       if (objects.length < MAX_OBJECTS && now - lastSpawn > SPAWN_INTERVAL) {
-        spawnNewObject(false);
+        spawnNewObject(Math.random() < 0.6);
         lastSpawn = now;
       }
 
@@ -662,37 +683,51 @@
     }
 
     // === УПРАВЛЕНИЕ ===
-    function showJoystick(x, y) {
-      const el = document.getElementById('joystick');
+    function showJoystick(x, y, type) {
+      const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
       if (el) {
         el.style.left = (x - 42) + 'px';
         el.style.top = (y - 42) + 'px';
         el.style.display = 'block';
       }
     }
-    function updateJoystick(x, y, baseX, baseY) {
+    function updateJoystick(x, y, baseX, baseY, type) {
       const dx = x - baseX;
       const dy = y - baseY;
       const maxDist = 42;
       const dist = Math.hypot(dx, dy);
+      let ix = 0, iy = 0;
       if (dist > maxDist) {
         const angle = Math.atan2(dy, dx);
-        inputX = Math.cos(angle);
-        inputY = Math.sin(angle);
+        ix = Math.cos(angle);
+        iy = Math.sin(angle);
       } else {
-        inputX = dx / maxDist;
-        inputY = dy / maxDist;
+        ix = dx / maxDist;
+        iy = dy / maxDist;
       }
-      const inner = document.getElementById('joystick-inner');
+
+      const inner = document.getElementById(type === 'move' ? 'joystick-inner' : 'lookJoystick-inner');
       if (inner) {
-        inner.style.left = (42 + inputX * maxDist - 16) + 'px';
-        inner.style.top = (42 + inputY * maxDist - 16) + 'px';
+        inner.style.left = (42 + ix * maxDist - 16) + 'px';
+        inner.style.top = (42 + iy * maxDist - 16) + 'px';
+      }
+
+      if (type === 'move') {
+        moveInputX = ix;
+        moveInputY = iy;
+      } else {
+        lookInputX = ix;
+        lookInputY = iy;
       }
     }
-    function hideJoystick() {
-      const el = document.getElementById('joystick');
+    function hideJoystick(type) {
+      const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
       if (el) el.style.display = 'none';
-      inputX = 0; inputY = 0;
+      if (type === 'move') {
+        moveInputX = 0; moveInputY = 0;
+      } else {
+        lookInputX = 0; lookInputY = 0;
+      }
     }
 
     function startGame() {
@@ -703,8 +738,8 @@
       worldSize = worldHalf * 2;
       score = 0;
       growthCounter = 0;
-      yaw = 0;
-      pitch = 0;
+      playerYaw = 0;
+      playerPitch = 0;
       document.getElementById('score').textContent = '0';
       document.getElementById('size').textContent = START_RADIUS.toFixed(1);
       document.getElementById('universe').textContent = `${worldSize}³`;
@@ -713,17 +748,17 @@
       
       initThreeJS();
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 10; i++) {
         spawnNewObject(true);
       }
-      for (let i = 0; i < MAX_OBJECTS - 3; i++) {
+      for (let i = 0; i < MAX_OBJECTS - 10; i++) {
         spawnNewObject(false);
       }
       spawnEnemyBlackHoles(1 + Math.floor(Math.random() * 3));
 
       const canvas = renderer.domElement;
       let lookTouchId = null;
-      let joystickTouchId = null;
+      let moveTouchId = null;
 
       canvas.addEventListener('touchstart', (e) => {
         if (gameState !== 'playing') return;
@@ -732,12 +767,12 @@
           if (touch.clientY < window.innerHeight / 2) {
             if (lookTouchId === null) {
               lookTouchId = touch.identifier;
+              showJoystick(touch.clientX, touch.clientY, 'look');
             }
           } else {
-            if (joystickTouchId === null) {
-              joystickTouchId = touch.identifier;
-              joystickActive = true;
-              showJoystick(touch.clientX, touch.clientY);
+            if (moveTouchId === null) {
+              moveTouchId = touch.identifier;
+              showJoystick(touch.clientX, touch.clientY, 'move');
             }
           }
         }
@@ -749,15 +784,16 @@
         for (let i = 0; i < e.touches.length; i++) {
           const touch = e.touches[i];
           if (touch.identifier === lookTouchId) {
-            const deltaX = touch.clientX - (window.innerWidth / 2);
-            const deltaY = touch.clientY - (window.innerHeight / 4);
-            yaw -= deltaX * LOOK_SENSITIVITY;
-            pitch = THREE.MathUtils.clamp(pitch - deltaY * LOOK_SENSITIVITY, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
-          } else if (touch.identifier === joystickTouchId) {
+            const el = document.getElementById('lookJoystick');
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'look');
+            }
+          } else if (touch.identifier === moveTouchId) {
             const el = document.getElementById('joystick');
             if (el) {
               const rect = el.getBoundingClientRect();
-              updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42);
+              updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'move');
             }
           }
         }
@@ -769,10 +805,10 @@
           const touch = e.changedTouches[i];
           if (touch.identifier === lookTouchId) {
             lookTouchId = null;
-          } else if (touch.identifier === joystickTouchId) {
-            joystickTouchId = null;
-            joystickActive = false;
-            hideJoystick();
+            hideJoystick('look');
+          } else if (touch.identifier === moveTouchId) {
+            moveTouchId = null;
+            hideJoystick('move');
           }
         }
       };
@@ -786,6 +822,9 @@
         document.getElementById('ui').classList.add('visible');
         document.getElementById('coordinates').classList.add('visible');
       }, 300);
+
+      if (rafId) cancelAnimationFrame(rafId);
+      gameLoop();
     }
 
     function showGameOver() {
@@ -796,6 +835,7 @@
 
     function backToMenu() {
       gameState = 'menu';
+      if (rafId) cancelAnimationFrame(rafId);
       cleanupScene();
       if (renderer) {
         renderer.domElement.remove();
@@ -819,8 +859,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
     });
-
-    gameLoop();
   </script>
 </body>
-  </html>
+</html>
