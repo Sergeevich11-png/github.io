@@ -574,14 +574,15 @@
           -Math.cos(playerYaw) * Math.cos(playerPitch)
         );
 
+        // 🔧 ИСПРАВЛЕНИЕ: инвертирован вектор "вправо"
         const right = new THREE.Vector3(
-          Math.cos(playerYaw),
+          -Math.cos(playerYaw),   // ← было Math.cos(playerYaw)
           0,
-          -Math.sin(playerYaw)
+          Math.sin(playerYaw)     // ← было -Math.sin(playerYaw)
         );
 
         player.position.add(forward.multiplyScalar(moveInputY * speed));
-        player.position.add(right.multiplyScalar(moveInputX * speed));
+        player.position.add(right.multiplyScalar(moveInputX * speed)); // ← без инверсии
 
         const h = worldHalf;
         player.position.x = Math.max(-h, Math.min(h, player.position.x));
@@ -589,7 +590,7 @@
         player.position.z = Math.max(-h, Math.min(h, player.position.z));
       }
 
-      // === УПРАВЛЕНИЕ ВЗГЛЯДОМ ===
+      // === УПРАВЛЕНИЕ ВЗГЛЯДОМ === (оставлено без изменений — работает правильно)
       if (Math.abs(lookInputX) > 0.01 || Math.abs(lookInputY) > 0.01) {
         playerYaw += lookInputX * LOOK_SENSITIVITY;
         playerPitch = THREE.MathUtils.clamp(
