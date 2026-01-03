@@ -590,9 +590,9 @@
         player.position.z = Math.max(-h, Math.min(h, player.position.z));
       }
 
-      // === УПРАВЛЕНИЕ ВЗГЛЯДОМ === (оставлено без изменений — работает правильно)
+      // === УПРАВЛЕНИЕ ВЗГЛЯДОМ === (ИСПРАВЛЕНО: инверсия по X)
       if (Math.abs(lookInputX) > 0.01 || Math.abs(lookInputY) > 0.01) {
-        playerYaw += lookInputX * LOOK_SENSITIVITY;
+        playerYaw -= lookInputX * LOOK_SENSITIVITY; // ← ИЗМЕНЕНО ЗДЕСЬ: было +=
         playerPitch = THREE.MathUtils.clamp(
           playerPitch + lookInputY * LOOK_SENSITIVITY,
           -Math.PI / 2 + 0.1,
