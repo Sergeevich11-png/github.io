@@ -1,1065 +1,1146 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Чёрная Дыра: Бескрайний Космос</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; touch-action: none; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; color: white; }
-    canvas { display: block; }
-
-    #menu {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #0a041a, #140a2a);
-      z-index: 100;
-      opacity: 1;
-      pointer-events: auto;
-      transition: opacity 0.6s;
-    }
-    #menu.hidden { opacity: 0; pointer-events: none; }
-    #title {
-      font-size: 48px;
-      font-weight: 900;
-      margin-bottom: 36px;
-      background: linear-gradient(90deg, #e0b3ff, #b16ce9, #8a2be2);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      background-size: 300% auto;
-      animation: titleShine 6s infinite linear;
-      text-shadow: 0 0 25px rgba(138, 43, 226, 0.6);
-    }
-    @keyframes titleShine {
-      to { background-position: 300% center; }
-    }
-    .btn {
-      padding: 14px 44px;
-      font-size: 22px;
-      border: none;
-      border-radius: 60px;
-      background: linear-gradient(90deg, #9a4cff, #5e17eb);
-      color: white;
-      cursor: pointer;
-      margin: 12px;
-      width: 260px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      box-shadow: 0 6px 22px rgba(154, 76, 255, 0.7);
-      transition: all 0.25s;
-    }
-    .btn:hover {
-      transform: translateY(-4px) scale(1.03);
-      box-shadow: 0 8px 30px rgba(154, 76, 255, 0.9);
-    }
-
-    #ui {
-      position: absolute;
-      top: 22px;
-      left: 22px;
-      font-size: 19px;
-      text-shadow: 0 0 8px rgba(138, 43, 226, 0.9);
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 0.6s;
-    }
-    #ui.visible { opacity: 1; }
-    #ui div { margin: 5px 0; font-weight: 500; }
-
-    #coordinates {
-      position: absolute;
-      top: 22px;
-      right: 22px;
-      font-size: 19px;
-      text-shadow: 0 0 8px rgba(138, 43, 226, 0.9);
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 0.6s;
-      font-weight: 500;
-      letter-spacing: 1px;
-    }
-    #coordinates.visible { opacity: 1; }
-
-    #joystick,
-    #lookJoystick {
-      position: absolute;
-      width: 84px;
-      height: 84px;
-      border-radius: 50%;
-      display: none;
-      pointer-events: none;
-      z-index: 20;
-    }
-    #joystick {
-      border: 2px solid rgba(138, 43, 226, 0.6);
-      background: rgba(94, 23, 235, 0.08);
-    }
-    #lookJoystick {
-      border: 2px solid rgba(66, 200, 255, 0.5);
-      background: rgba(30, 144, 255, 0.08);
-    }
-
-    #joystick-inner,
-    #lookJoystick-inner {
-      position: absolute;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-    #joystick-inner {
-      background: #9a4cff;
-      box-shadow: 0 0 12px #9a4cff;
-    }
-    #lookJoystick-inner {
-      background: #44aaff;
-      box-shadow: 0 0 12px #44aaff;
-    }
-
-    #gameOver {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: rgba(10, 4, 26, 0.92);
-      z-index: 50;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.6s;
-    }
-    #gameOver.visible {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    #gameOver h2 {
-      font-size: 38px;
-      margin-bottom: 22px;
-      color: #ff66cc;
-      text-shadow: 0 0 16px rgba(255, 102, 204, 0.7);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.03); }
-    }
-    #finalScore {
-      font-size: 26px;
-      margin-bottom: 32px;
-      color: #b16ce9;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Чёрная Дыра: Бескрайний Космос</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; touch-action: none; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; color: white; }
+canvas { display: block; }
+#menu, #settingsPanel, #infoPanel, #gameOver, #pauseMenu {
+position: absolute;
+inset: 0;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+background: linear-gradient(135deg, #0a041a, #140a2a);
+z-index: 100;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.5s ease;
+}
+#menu.visible, #settingsPanel.visible, #infoPanel.visible, #gameOver.visible, #pauseMenu.visible {
+opacity: 1;
+pointer-events: auto;
+}
+#title {
+font-size: 48px;
+font-weight: 900;
+margin-bottom: 36px;
+background: linear-gradient(90deg, #e0b3ff, #b16ce9, #8a2be2);
+-webkit-background-clip: text;
+background-clip: text;
+color: transparent;
+background-size: 300% auto;
+animation: titleShine 6s infinite linear;
+text-shadow: 0 0 25px rgba(138, 43, 226, 0.6);
+}
+@keyframes titleShine {
+to { background-position: 300% center; }
+}
+.btn {
+padding: 14px 44px;
+font-size: 22px;
+border: none;
+border-radius: 60px;
+background: linear-gradient(90deg, #9a4cff, #5e17eb);
+color: white;
+cursor: pointer;
+margin: 12px;
+width: 260px;
+font-weight: bold;
+letter-spacing: 1px;
+box-shadow: 0 6px 22px rgba(154, 76, 255, 0.7);
+transition: all 0.2s;
+}
+.btn:hover {
+transform: translateY(-3px) scale(1.02);
+box-shadow: 0 8px 30px rgba(154, 76, 255, 0.9);
+}
+.btn:active {
+transform: scale(0.97);
+}
+#ui {
+position: absolute;
+top: 22px;
+left: 22px;
+font-size: 19px;
+text-shadow: 0 0 8px rgba(138, 43, 226, 0.9);
+z-index: 10;
+opacity: 0;
+transition: opacity 0.5s;
+}
+#ui.visible { opacity: 1; }
+#ui div { margin: 5px 0; font-weight: 500; }
+#coordinates {
+position: absolute;
+top: 22px;
+right: 22px;
+font-size: 19px;
+text-shadow: 0 0 8px rgba(138, 43, 226, 0.9);
+z-index: 10;
+opacity: 0;
+transition: opacity 0.5s;
+font-weight: 500;
+letter-spacing: 1px;
+}
+#coordinates.visible { opacity: 1; }
+#pauseBtn {
+position: absolute;
+top: 22px;
+left: 50%;
+transform: translateX(-50%);
+width: 44px;
+height: 44px;
+border-radius: 50%;
+background: rgba(94, 23, 235, 0.3);
+border: none;
+color: white;
+font-size: 18px;
+cursor: pointer;
+display: none;
+z-index: 20;
+}
+#pauseMenu {
+background: rgba(10, 4, 26, 0.85);
+justify-content: center;
+align-items: center;
+}
+#pauseControls {
+display: flex;
+gap: 40px;
+}
+.pause-icon-btn {
+width: 60px;
+height: 60px;
+border-radius: 50%;
+border: none;
+font-size: 24px;
+cursor: pointer;
+background: rgba(94, 23, 235, 0.4);
+color: white;
+display: flex;
+justify-content: center;
+align-items: center;
+box-shadow: 0 4px 16px rgba(154, 76, 255, 0.6);
+}
+.pause-icon-btn:hover {
+transform: scale(1.1);
+}
+#joystick, #lookJoystick {
+position: absolute;
+width: 84px;
+height: 84px;
+border-radius: 50%;
+display: none;
+pointer-events: none;
+z-index: 20;
+}
+#joystick {
+border: 2px solid rgba(138, 43, 226, 0.6);
+background: rgba(94, 23, 235, 0.08);
+}
+#lookJoystick {
+border: 2px solid rgba(66, 200, 255, 0.5);
+background: rgba(30, 144, 255, 0.08);
+}
+#joystick-inner, #lookJoystick-inner {
+position: absolute;
+width: 32px;
+height: 32px;
+border-radius: 50%;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+}
+#joystick-inner {
+background: #9a4cff;
+box-shadow: 0 0 12px #9a4cff;
+}
+#lookJoystick-inner {
+background: #44aaff;
+box-shadow: 0 0 12px #44aaff;
+}
+#gameOver h2 {
+font-size: 38px;
+margin-bottom: 22px;
+color: #ff66cc;
+text-shadow: 0 0 16px rgba(255, 102, 204, 0.7);
+animation: pulse 2s infinite;
+}
+@keyframes pulse {
+0%, 100% { transform: scale(1); }
+50% { transform: scale(1.03); }
+}
+#finalScore {
+font-size: 26px;
+margin-bottom: 32px;
+color: #b16ce9;
+font-weight: bold;
+}
+.settings-group {
+margin: 16px 0;
+text-align: center;
+width: 100%;
+max-width: 320px;
+}
+.settings-group label {
+display: block;
+margin-bottom: 8px;
+font-size: 18px;
+font-weight: 500;
+}
+.settings-group input[type="range"] {
+width: 100%;
+}
+.settings-group select, .settings-group button {
+width: 100%;
+padding: 10px;
+margin-top: 4px;
+border-radius: 12px;
+border: 1px solid #5e17eb;
+background: rgba(94, 23, 235, 0.2);
+color: white;
+font-size: 18px;
+}
+#closeSettings, #closeInfo {
+width: 260px;
+}
+</style>
 </head>
 <body>
-  <div id="menu">
-    <div id="title">ЧЁРНАЯ ДЫРА</div>
-    <button id="startBtn" class="btn">Играть</button>
-  </div>
-
-  <div id="ui">
-    <div>Очки: <span id="score">0</span></div>
-    <div>Размер: <span id="size">3.0</span></div>
-    <div>Вселенная: <span id="universe">72000³</span></div>
-  </div>
-  
-  <div id="coordinates">X: 0  Y: 0  Z: 0</div>
-
-  <div id="joystick"><div id="joystick-inner"></div></div>
-  <div id="lookJoystick"><div id="lookJoystick-inner"></div></div>
-
-  <div id="gameOver">
-    <h2>Вас поглотила другая дыра...</h2>
-    <div>Очки: <span id="finalScore">0</span></div>
-    <button id="restartBtn" class="btn">Заново</button>
-    <button id="menuBtn" class="btn" style="background:linear-gradient(90deg, #ff66cc, #ff0077);">В меню</button>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
-  <script>
-    // === CONFIG ===
-    const START_RADIUS = 3.0;
-    const MAX_OBJECTS = 3000;
-    const SPAWN_INTERVAL = 80;
-    const MAX_PLAYER_SPEED = 400;
-    const INITIAL_WORLD_HALF = 36000;
-    const LOOK_SENSITIVITY = 0.02;
-
-    // === STATE ===
-    let gameState = 'menu';
-    let playerRadius = START_RADIUS;
-    let worldHalf = INITIAL_WORLD_HALF;
-    let worldSize = worldHalf * 2;
-    let score = 0;
-    let objects = [];
-    let player = null;
-    let blackHoleMesh = null;
-    let accretionGlow = null;
-    let camera = null;
-    let scene = null;
-    let renderer = null;
-    let rafId = null;
-    let lastSpawn = 0;
-    let growthCounter = 0;
-
-    let moveInputX = 0, moveInputY = 0;
-    let lookInputX = 0, lookInputY = 0;
-    let playerYaw = 0;
-    let playerPitch = 0;
-
-    const objectTypes = [
-      { name: 'asteroid', color: 0x555555, emissive: 0x222222, roughness: 0.9, metalness: 0.1, min: 0.3, max: 1.8, points: 1, emissiveIntensity: 1.8 },
-      { name: 'planet', color: 0x44aa44, emissive: 0x113311, roughness: 0.7, metalness: 0.0, min: 1.9, max: 3.5, points: 2, emissiveIntensity: 1.8 },
-      { name: 'oasis-planet', color: 0x3388dd, emissive: 0x114466, roughness: 0.6, metalness: 0.0, min: 2.0, max: 3.2, points: 3, emissiveIntensity: 1.8 },
-      { name: 'gas-giant', color: 0x4444cc, emissive: 0x111144, roughness: 0.5, metalness: 0.2, min: 3.6, max: 6.0, points: 4, emissiveIntensity: 1.8 },
-      { name: 'star', color: 0xffff66, emissive: 0x888800, roughness: 0.1, metalness: 0.9, emissiveIntensity: 3, min: 6.1, max: 12.0, points: 8 },
-      { name: 'moving-asteroid', color: 0xaa8844, emissive: 0x332211, roughness: 0.85, metalness: 0.1, min: 0.5, max: 1.5, points: 1, emissiveIntensity: 1.8 },
-      { name: 'black-hole', color: 0x000000, emissive: 0x050515, roughness: 0.1, metalness: 0.98, min: 2.0, max: 3.5, points: 0 }
-    ];
-
-    function dist3(a, b) {
-      if (!a || !b) return Infinity;
-      const ax = a.x !== undefined ? a.x : (a.position ? a.position.x : 0);
-      const ay = a.y !== undefined ? a.y : (a.position ? a.position.y : 0);
-      const az = a.z !== undefined ? a.z : (a.position ? a.position.z : 0);
-      const bx = b.x !== undefined ? b.x : (b.position ? b.position.x : 0);
-      const by = b.y !== undefined ? b.y : (b.position ? b.position.y : 0);
-      const bz = b.z !== undefined ? b.z : (b.position ? b.position.z : 0);
-      const dx = ax - bx;
-      const dy = ay - by;
-      const dz = az - bz;
-      return dx*dx + dy*dy + dz*dz;
-    }
-
-    function safeRemove(obj) {
-      if (!obj) return;
-      try {
-        if (obj.parent) obj.parent.remove(obj);
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach(m => m?.dispose?.());
-          else obj.material?.dispose?.();
-        }
-      } catch (e) { console.warn('Cleanup:', e); }
-    }
-
-    // === ОБЪЁМНЫЕ ТУМАННОСТИ ===
-    function createVolumetricNebulaLayer(textures) {
-      const group = new THREE.Group();
-      const nebulae = [];
-
-      for (let i = 0; i < 5; i++) {
-        const tex = textures[Math.floor(Math.random() * textures.length)];
-
-        const geometry = new THREE.BoxGeometry(8000, 8000, 8000);
-        const material = new THREE.ShaderMaterial({
-          uniforms: {
-            uTexture: { value: tex },
-            uTime: { value: 0 }
-          },
-          vertexShader: `
-            varying vec3 vPosition;
-            void main() {
-              vPosition = position;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform sampler2D uTexture;
-            uniform float uTime;
-            varying vec3 vPosition;
-
-            void main() {
-              vec2 uv = vPosition.xy * 0.0001 + vec2(uTime * 0.01, 0.0);
-              vec4 color = texture2D(uTexture, uv);
-              color.a *= 0.6;
-              if (color.a < 0.05) discard;
-              gl_FragColor = color;
-            }
-          `,
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          side: THREE.BackSide
-        });
-
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(
-          (Math.random() - 0.5) * worldSize * 0.8,
-          (Math.random() - 0.5) * 2000,
-          (Math.random() - 0.5) * worldSize * 0.8
-        );
-        mesh.rotation.set(
-          Math.random() * Math.PI,
-          Math.random() * Math.PI,
-          Math.random() * Math.PI
-        );
-
-        nebulae.push({ mesh });
-        group.add(mesh);
-      }
-
-      window.animatedVolumetricNebulae = window.animatedVolumetricNebulae || [];
-      window.animatedVolumetricNebulae.push(...nebulae);
-
-      return group;
-    }
-
-    function createRichStarLayer(count, depthFactor = 1.0) {
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(count * 3);
-      const colors = new Float32Array(count * 3);
-      const sizes = new Float32Array(count);
-
-      const starColors = [
-        { temp: 30000, color: new THREE.Color(0x8abfff) },
-        { temp: 20000, color: new THREE.Color(0xa0d1ff) },
-        { temp: 10000, color: new THREE.Color(0xc0e0ff) },
-        { temp: 7000,  color: new THREE.Color(0xfff0d0) },
-        { temp: 6000,  color: new THREE.Color(0xffe0b0) },
-        { temp: 5000,  color: new THREE.Color(0xffc080) },
-        { temp: 3500,  color: new THREE.Color(0xff8040) },
-      ];
-
-      for (let i = 0; i < count; i++) {
-        const radius = Math.random() * worldSize * depthFactor;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-        positions[i * 3 + 2] = radius * Math.cos(phi);
-
-        const weights = [0.5, 1, 2, 5, 8, 12, 20];
-        let r = Math.random() * weights.reduce((a, b) => a + b, 0);
-        let idx = 0;
-        for (let w of weights) {
-          r -= w;
-          if (r <= 0) break;
-          idx++;
-        }
-        const starClass = starColors[Math.min(idx, starColors.length - 1)];
-
-        colors[i * 3] = starClass.color.r;
-        colors[i * 3 + 1] = starClass.color.g;
-        colors[i * 3 + 2] = starClass.color.b;
-
-        const baseSize = 0.4 + (starClass.temp / 30000) * 5.0;
-        const sizeVariation = 0.7 + Math.random() * 0.6;
-        sizes[i] = baseSize * sizeVariation * (1.0 / depthFactor);
-      }
-
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 3));
-
-      const material = new THREE.PointsMaterial({
-        size: 1,
-        vertexColors: true,
-        sizeAttenuation: true,
-        transparent: true,
-        alphaTest: 0.1,
-        blending: THREE.AdditiveBlending
-      });
-
-      const points = new THREE.Points(geometry, material);
-      points.frustumCulled = false;
-      return points;
-    }
-
-    function createStarClusterLayer(count, maxDist) {
-      const group = new THREE.Group();
-      const clusters = [];
-      for (let i = 0; i < count; i++) {
-        const cluster = createRichStarLayer(80, 0.005);
-        cluster.position.set(
-          (Math.random() - 0.5) * maxDist,
-          (Math.random() - 0.5) * maxDist * 0.3,
-          (Math.random() - 0.5) * maxDist
-        );
-        const rotSpeed = (Math.random() - 0.5) * 0.00005;
-        clusters.push({ obj: cluster, rotSpeed });
-        group.add(cluster);
-      }
-      window.animatedClusters = window.animatedClusters || [];
-      window.animatedClusters.push(...clusters);
-      return group;
-    }
-
-    function createGalaxyLayer(count) {
-      const group = new THREE.Group();
-      const loader = new THREE.TextureLoader();
-      const texture = loader.load("https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/galaxy.png");
-      const galaxies = [];
-      for (let i = 0; i < count; i++) {
-        const mat = new THREE.SpriteMaterial({
-          map: texture,
-          color: 0xffffff,
-          transparent: true,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          opacity: 0.6 + Math.random() * 0.3
-        });
-        const sprite = new THREE.Sprite(mat);
-        const d = 10000 + Math.random() * 30000;
-        const a = Math.random() * Math.PI * 2;
-        sprite.position.set(
-          Math.cos(a) * d,
-          (Math.random() - 0.5) * 3000,
-          Math.sin(a) * d
-        );
-        const scale = 800 + Math.random() * 1200;
-        sprite.scale.set(scale, scale, 1);
-        const rotationSpeed = (0.8 + Math.random() * 0.7) * 0.0001;
-        galaxies.push({ sprite, rotationSpeed });
-        group.add(sprite);
-      }
-      window.animatedGalaxies = window.animatedGalaxies || [];
-      window.animatedGalaxies.push(...galaxies);
-      return group;
-    }
-
-    function createDustLayer(count) {
-      const group = new THREE.Group();
-      for (let i = 0; i < count; i++) {
-        const geo = new THREE.SphereGeometry(20000, 32, 32);
-        const mat = new THREE.MeshBasicMaterial({
-          color: 0x1a0a2a,
-          transparent: true,
-          opacity: 0.03,
-          blending: THREE.NormalBlending
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(
-          (Math.random() - 0.5) * worldSize,
-          (Math.random() - 0.5) * 5000,
-          (Math.random() - 0.5) * worldSize
-        );
-        group.add(mesh);
-      }
-      return group;
-    }
-
-    function createMilkyWayDisk() {
-      const geo = new THREE.RingGeometry(15000, 35000, 256);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0xd0b0ff,
-        transparent: true,
-        opacity: 0.08,
-        side: THREE.DoubleSide
-      });
-      const disk = new THREE.Mesh(geo, mat);
-      disk.rotation.x = Math.PI / 2;
-      return disk;
-    }
-
-    function createCosmicBackground() {
-      // Убираем градиентную сферу — используем однородный фон
-      scene.background = new THREE.Color(0x020005);
-
-      const loader = new THREE.TextureLoader();
-      // УБРАНЫ ЛИШНИЕ ПРОБЕЛЫ В URL
-      const nebulaTextures = [
-        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-1.jpg",
-        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-2.jpg",
-        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-3.jpg"
-      ].map(url => loader.load(url));
-
-      const layers = [];
-
-      layers.push({ obj: createRichStarLayer(300, 0.1), speed: 1.2 });
-      layers.push({ obj: createRichStarLayer(1200, 0.3), speed: 1.0 });
-      layers.push({ obj: createRichStarLayer(3000, 0.6), speed: 0.6 });
-      layers.push({ obj: createRichStarLayer(12000, 1.0), speed: 0.3 });
-      layers.push({ obj: createRichStarLayer(25000, 1.8), speed: 0.12 });
-      layers.push({ obj: createStarClusterLayer(120, 8000), speed: 0.2 });
-      layers.push({ obj: createGalaxyLayer(10), speed: 0.08 });
-      layers.push({ obj: createVolumetricNebulaLayer(nebulaTextures), speed: 0.05 });
-      layers.push({ obj: createDustLayer(6), speed: 0.03 });
-      layers.push({ obj: createMilkyWayDisk(), speed: 0.02 });
-
-      layers.forEach(layer => scene.add(layer.obj));
-      window.backgroundLayers = layers;
-    }
-
-    function initThreeJS() {
-      scene = new THREE.Scene();
-
-      player = new THREE.Object3D();
-      player.position.set(0, 0, 0);
-      scene.add(player);
-
-      blackHoleMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(START_RADIUS, 64, 64),
-        new THREE.MeshStandardMaterial({
-          color: 0x000000,
-          emissive: 0x050515,
-          roughness: 0.1,
-          metalness: 0.98
-        })
-      );
-      player.add(blackHoleMesh);
-
-      const particleCount = 400;
-      const particles = new THREE.BufferGeometry();
-      const pos = new Float32Array(particleCount * 3);
-      const colors = new Float32Array(particleCount * 3);
-      const colorsList = [0xb16ce9, 0x8a2be2, 0x5e17eb, 0x9a4cff];
-      for (let i = 0; i < particleCount; i++) {
-        const radius = 1.0 + Math.random() * 2.5;
-        const angle1 = Math.random() * Math.PI * 2;
-        const angle2 = Math.random() * Math.PI * 2;
-        pos[i * 3] = Math.sin(angle1) * Math.cos(angle2) * radius;
-        pos[i * 3 + 1] = Math.sin(angle2) * radius;
-        pos[i * 3 + 2] = Math.cos(angle1) * Math.cos(angle2) * radius;
-        const color = new THREE.Color(colorsList[Math.floor(Math.random() * colorsList.length)]);
-        colors[i * 3] = color.r;
-        colors[i * 3 + 1] = color.g;
-        colors[i * 3 + 2] = color.b;
-      }
-      particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      const material = new THREE.PointsMaterial({
-        size: 0.8,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.92,
-        sizeAttenuation: true
-      });
-      accretionGlow = new THREE.Points(particles, material);
-      player.add(accretionGlow);
-
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 80000);
-      scene.add(camera);
-
-      const canvas = document.querySelector('canvas');
-      if (canvas) canvas.remove();
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      createCosmicBackground();
-    }
-
-    function cleanupScene() {
-      if (player) {
-        safeRemove(player);
-        player = null;
-        blackHoleMesh = null;
-        accretionGlow = null;
-      }
-      objects.forEach(safeRemove);
-      objects = [];
-
-      window.animatedNebulae = [];
-      window.animatedGalaxies = [];
-      window.animatedClusters = [];
-      window.backgroundLayers = [];
-      window.animatedVolumetricNebulae = [];
-    }
-
-    function getTypeBySize(size) {
-      if (size <= 1.8) return objectTypes[0];
-      if (size <= 3.2) {
-        return Math.random() < 0.3 ? objectTypes[2] : objectTypes[1];
-      }
-      if (size <= 6.0) return objectTypes[3];
-      if (size <= 12.0) return objectTypes[4];
-      return objectTypes[0];
-    }
-
-    function createObjectAtPosition(pos, isEnemy = false, forcedSize = null) {
-      let size = forcedSize;
-      if (size === null) {
-        if (isEnemy) {
-          size = 2.0 + Math.random() * 1.5;
-        } else {
-          if (Math.random() < 0.4) {
-            size = Math.random() * (playerRadius * 0.5);
-          } else {
-            size = 0.3 + Math.random() * 15;
-          }
-          if (size < 0.3) size = 0.3;
-        }
-      }
-
-      const typeObj = isEnemy ? objectTypes[6] : getTypeBySize(size);
-      const geometry = new THREE.SphereGeometry(size, 48, 48);
-      const material = new THREE.MeshStandardMaterial({
-        color: typeObj.color,
-        emissive: typeObj.emissive,
-        roughness: typeObj.roughness,
-        metalness: typeObj.metalness,
-        emissiveIntensity: typeObj.emissiveIntensity || 1
-      });
-      const obj = new THREE.Mesh(geometry, material);
-
-      obj.userData = { 
-        radius: size, 
-        points: typeObj.points, 
-        type: typeObj.name,
-        isBlackHole: typeObj.name === 'black-hole',
-        isMovingAsteroid: typeObj.name === 'moving-asteroid',
-        velocity: null,
-        wanderTimer: Math.random() * 10
-      };
-
-      obj.position.copy(pos);
-
-      if (typeObj.name === 'black-hole') {
-        const enemyGlow = accretionGlow.clone();
-        enemyGlow.scale.setScalar(1.0);
-        obj.add(enemyGlow);
-      }
-
-      if (typeObj.name === 'moving-asteroid') {
-        const angle1 = Math.random() * Math.PI * 2;
-        const angle2 = Math.random() * Math.PI * 2;
-        obj.userData.velocity = new THREE.Vector3(
-          Math.sin(angle1) * Math.cos(angle2),
-          Math.sin(angle2),
-          Math.cos(angle1) * Math.cos(angle2)
-        ).multiplyScalar(60);
-      }
-
-      return obj;
-    }
-
-    function spawnNewObject(nearPlayer = false) {
-      if (objects.length >= MAX_OBJECTS) return;
-      
-      let pos;
-      if (nearPlayer) {
-        const distance = 30 + Math.random() * 170;
-        const angle1 = Math.random() * Math.PI * 2;
-        const angle2 = Math.random() * Math.PI * 2;
-        pos = new THREE.Vector3(
-          Math.sin(angle1) * Math.cos(angle2) * distance,
-          Math.sin(angle2) * distance,
-          Math.cos(angle1) * Math.cos(angle2) * distance
-        ).add(player.position);
-      } else {
-        pos = new THREE.Vector3(
-          (Math.random() - 0.5) * (worldSize - 400),
-          (Math.random() - 0.5) * (worldSize - 400),
-          (Math.random() - 0.5) * (worldSize - 400)
-        );
-      }
-
-      let size;
-      if (Math.random() < 0.4) {
-        size = Math.random() * (playerRadius * 0.5);
-      } else {
-        size = 0.3 + Math.random() * 15;
-      }
-      if (size < 0.3) size = 0.3;
-
-      const obj = createObjectAtPosition(pos, false, size);
-      scene.add(obj);
-      objects.push(obj);
-    }
-
-    function spawnEnemyBlackHoles(count) {
-      for (let i = 0; i < count; i++) {
-        const pos = new THREE.Vector3(
-          (Math.random() - 0.5) * (worldSize - 500),
-          (Math.random() - 0.5) * (worldSize - 500),
-          (Math.random() - 0.5) * (worldSize - 500)
-        );
-        const obj = createObjectAtPosition(pos, true);
-        scene.add(obj);
-        objects.push(obj);
-      }
-    }
-
-    function updateCamera() {
-      if (!camera || !player) return;
-      const camDistance = 60 + playerRadius * 8;
-      const camX = player.position.x - Math.sin(playerYaw) * Math.cos(playerPitch) * camDistance;
-      const camY = player.position.y + Math.sin(playerPitch) * camDistance;
-      const camZ = player.position.z - Math.cos(playerYaw) * Math.cos(playerPitch) * camDistance;
-      camera.position.set(camX, camY, camZ);
-      camera.lookAt(player.position);
-    }
-
-    function updateEnemyBlackHole(bh) {
-      if (!bh || !bh.userData?.isBlackHole) return;
-      let target = null;
-      let minDist = Infinity;
-      for (const obj of objects) {
-        if (obj === bh || !obj.userData) continue;
-        if (obj.userData.radius >= bh.userData.radius) continue;
-        const d = dist3(bh.position, obj.position);
-        if (d < minDist) {
-          minDist = d;
-          target = obj;
-        }
-      }
-      if (!target && playerRadius < bh.userData.radius) {
-        target = { position: player.position };
-      }
-
-      const speed = Math.min(100 + bh.userData.radius * 5, 300);
-      if (target && target.position) {
-        const dir = new THREE.Vector3().subVectors(target.position, bh.position).normalize();
-        bh.position.add(dir.multiplyScalar(speed * 0.016));
-      } else {
-        bh.userData.wanderTimer += 0.016;
-        const wx = Math.cos(bh.userData.wanderTimer) * 20;
-        const wy = Math.sin(bh.userData.wanderTimer * 0.7) * 20;
-        const wz = Math.cos(bh.userData.wanderTimer * 0.5) * 20;
-        bh.position.add(new THREE.Vector3(wx, wy, wz));
-      }
-
-      const h = worldHalf;
-      bh.position.x = Math.max(-h, Math.min(h, bh.position.x));
-      bh.position.y = Math.max(-h, Math.min(h, bh.position.y));
-      bh.position.z = Math.max(-h, Math.min(h, bh.position.z));
-    }
-
-    function gameLoop() {
-      rafId = requestAnimationFrame(gameLoop);
-      if (gameState !== 'playing' || !scene || !camera || !renderer) return;
-
-      const dt = 0.016;
-      const time = performance.now() * 0.001;
-
-      if (accretionGlow) {
-        const scale = playerRadius / START_RADIUS;
-        accretionGlow.scale.setScalar(scale);
-        accretionGlow.material.size = (0.6 + Math.sin(time * 2) * 0.2) * scale;
-        accretionGlow.rotation.x += 0.01;
-        accretionGlow.rotation.y += 0.015;
-      }
-
-      if (Math.abs(moveInputX) > 0.01 || Math.abs(moveInputY) > 0.01) {
-        const speed = Math.min(150 + playerRadius * 8, MAX_PLAYER_SPEED) * dt;
-
-        const forward = new THREE.Vector3(
-          -Math.sin(playerYaw) * Math.cos(playerPitch),
-          Math.sin(playerPitch),
-          -Math.cos(playerYaw) * Math.cos(playerPitch)
-        );
-
-        const right = new THREE.Vector3(
-          -Math.cos(playerYaw),
-          0,
-          Math.sin(playerYaw)
-        );
-
-        player.position.add(forward.multiplyScalar(moveInputY * speed));
-        player.position.add(right.multiplyScalar(moveInputX * speed));
-
-        const h = worldHalf;
-        player.position.x = Math.max(-h, Math.min(h, player.position.x));
-        player.position.y = Math.max(-h, Math.min(h, player.position.y));
-        player.position.z = Math.max(-h, Math.min(h, player.position.z));
-      }
-
-      if (Math.abs(lookInputX) > 0.01 || Math.abs(lookInputY) > 0.01) {
-        playerYaw -= lookInputX * LOOK_SENSITIVITY;
-        playerPitch = THREE.MathUtils.clamp(
-          playerPitch + lookInputY * LOOK_SENSITIVITY,
-          -Math.PI / 2 + 0.1,
-          Math.PI / 2 - 0.1
-        );
-      }
-
-      if (player && gameState === 'playing') {
-        const coordsEl = document.getElementById('coordinates');
-        if (coordsEl) {
-          coordsEl.textContent = `X: ${Math.round(player.position.x)}  Y: ${Math.round(player.position.y)}  Z: ${Math.round(player.position.z)}`;
-        }
-      }
-
-      updateCamera();
-
-      const suctionRadius = Math.min(800, 300 + playerRadius * 10);
-      const maxPull = 15 + playerRadius * 0.5;
-
-      for (const obj of objects) {
-        if (!obj || !obj.userData) continue;
-        if (obj.userData.isBlackHole) continue;
-        if (obj.userData.radius >= playerRadius) continue;
-
-        const d = Math.sqrt(dist3(player.position, obj.position));
-        if (d < suctionRadius && d > 0.1) {
-          const pullStrength = (1 - d / suctionRadius) * maxPull;
-          const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize();
-          obj.position.add(dir.multiplyScalar(pullStrength * dt));
-        }
-      }
-
-      for (let i = objects.length - 1; i >= 0; i--) {
-        const obj = objects[i];
-        if (!obj || !obj.userData || !obj.position) continue;
-
-        if (obj.userData.isMovingAsteroid && obj.userData.velocity) {
-          obj.position.add(obj.userData.velocity.clone().multiplyScalar(dt));
-          const h = worldHalf;
-          if (Math.abs(obj.position.x) > h) obj.position.x = -obj.position.x;
-          if (Math.abs(obj.position.y) > h) obj.position.y = -obj.position.y;
-          if (Math.abs(obj.position.z) > h) obj.position.z = -obj.position.z;
-        }
-
-        if (obj.userData.isBlackHole) {
-          updateEnemyBlackHole(obj);
-        }
-      }
-
-      for (let i = objects.length - 1; i >= 0; i--) {
-        const obj = objects[i];
-        if (!obj || !obj.userData) continue;
-        const d2 = dist3(player.position, obj.position);
-        const radiusSum = playerRadius + obj.userData.radius;
-        if (d2 < radiusSum * radiusSum) {
-          if (playerRadius > obj.userData.radius) {
-            safeRemove(obj);
-            objects.splice(i, 1);
-            score += obj.userData.points || 0;
-            playerRadius += obj.userData.radius * 0.2;
-            if (blackHoleMesh) {
-              blackHoleMesh.scale.setScalar(playerRadius / START_RADIUS);
-            }
-            growthCounter++;
-            if (growthCounter >= 5) {
-              worldHalf += 500;
-              worldSize = worldHalf * 2;
-              growthCounter = 0;
-            }
-            document.getElementById('score').textContent = score;
-            document.getElementById('size').textContent = playerRadius.toFixed(1);
-            document.getElementById('universe').textContent = `${Math.round(worldSize)}³`;
-
-            spawnNewObject(Math.random() < 0.8);
-          } else if (obj.userData.isBlackHole) {
-            showGameOver();
-            return;
-          }
-        }
-      }
-
-      const now = performance.now();
-      if (objects.length < MAX_OBJECTS && now - lastSpawn > SPAWN_INTERVAL) {
-        spawnNewObject(Math.random() < 0.6);
-        lastSpawn = now;
-      }
-
-      // === АНИМАЦИЯ ОБЪЁМНЫХ ТУМАННОСТЕЙ ===
-      if (window.animatedVolumetricNebulae) {
-        window.animatedVolumetricNebulae.forEach(neb => {
-          if (neb.mesh.material.uniforms?.uTime) {
-            neb.mesh.material.uniforms.uTime.value = time;
-          }
-        });
-      }
-
-      if (window.animatedGalaxies) {
-        window.animatedGalaxies.forEach(gal => {
-          gal.sprite.rotation += gal.rotationSpeed;
-        });
-      }
-
-      if (window.animatedClusters) {
-        window.animatedClusters.forEach(cl => {
-          cl.obj.rotation.y += cl.rotSpeed;
-        });
-      }
-
-      if (window.backgroundLayers && player) {
-        const camOffset = new THREE.Vector3().subVectors(camera.position, player.position);
-        window.backgroundLayers.forEach(layer => {
-          layer.obj.position.copy(camOffset).multiplyScalar(-layer.speed);
-        });
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    function showJoystick(x, y, type) {
-      const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
-      if (el) {
-        el.style.left = (x - 42) + 'px';
-        el.style.top = (y - 42) + 'px';
-        el.style.display = 'block';
-      }
-    }
-    function updateJoystick(x, y, baseX, baseY, type) {
-      const dx = x - baseX;
-      const dy = y - baseY;
-      const maxDist = 42;
-      const dist = Math.hypot(dx, dy);
-      let ix = 0, iy = 0;
-      if (dist > maxDist) {
-        const angle = Math.atan2(dy, dx);
-        ix = Math.cos(angle);
-        iy = Math.sin(angle);
-      } else {
-        ix = dx / maxDist;
-        iy = dy / maxDist;
-      }
-
-      const inner = document.getElementById(type === 'move' ? 'joystick-inner' : 'lookJoystick-inner');
-      if (inner) {
-        inner.style.left = (42 + ix * maxDist - 16) + 'px';
-        inner.style.top = (42 + iy * maxDist - 16) + 'px';
-      }
-
-      if (type === 'move') {
-        moveInputX = ix;
-        moveInputY = iy;
-      } else {
-        lookInputX = ix;
-        lookInputY = iy;
-      }
-    }
-    function hideJoystick(type) {
-      const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
-      if (el) el.style.display = 'none';
-      if (type === 'move') {
-        moveInputX = 0; moveInputY = 0;
-      } else {
-        lookInputX = 0; lookInputY = 0;
-      }
-    }
-
-    function startGame() {
-      cleanupScene();
-      
-      playerRadius = START_RADIUS;
-      worldHalf = INITIAL_WORLD_HALF;
-      worldSize = worldHalf * 2;
-      score = 0;
-      growthCounter = 0;
-      playerYaw = 0;
-      playerPitch = 0;
-      document.getElementById('score').textContent = '0';
-      document.getElementById('size').textContent = START_RADIUS.toFixed(1);
-      document.getElementById('universe').textContent = `${worldSize}³`;
-      document.getElementById('ui').classList.remove('visible');
-      document.getElementById('coordinates').textContent = 'X: 0  Y: 0  Z: 0';
-      
-      initThreeJS();
-
-      for (let i = 0; i < 10; i++) {
-        spawnNewObject(true);
-      }
-      for (let i = 0; i < MAX_OBJECTS - 10; i++) {
-        spawnNewObject(false);
-      }
-      spawnEnemyBlackHoles(1 + Math.floor(Math.random() * 3));
-
-      const canvas = renderer.domElement;
-      let lookTouchId = null;
-      let moveTouchId = null;
-
-      canvas.addEventListener('touchstart', (e) => {
-        if (gameState !== 'playing') return;
-        for (let i = 0; i < e.touches.length; i++) {
-          const touch = e.touches[i];
-          if (touch.clientY < window.innerHeight / 2) {
-            if (lookTouchId === null) {
-              lookTouchId = touch.identifier;
-              showJoystick(touch.clientX, touch.clientY, 'look');
-            }
-          } else {
-            if (moveTouchId === null) {
-              moveTouchId = touch.identifier;
-              showJoystick(touch.clientX, touch.clientY, 'move');
-            }
-          }
-        }
-        e.preventDefault();
-      }, { passive: false });
-
-      canvas.addEventListener('touchmove', (e) => {
-        if (gameState !== 'playing') return;
-        for (let i = 0; i < e.touches.length; i++) {
-          const touch = e.touches[i];
-          if (touch.identifier === lookTouchId) {
-            const el = document.getElementById('lookJoystick');
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'look');
-            }
-          } else if (touch.identifier === moveTouchId) {
-            const el = document.getElementById('joystick');
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'move');
-            }
-          }
-        }
-        e.preventDefault();
-      }, { passive: false });
-
-      const onTouchEnd = (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          const touch = e.changedTouches[i];
-          if (touch.identifier === lookTouchId) {
-            lookTouchId = null;
-            hideJoystick('look');
-          } else if (touch.identifier === moveTouchId) {
-            moveTouchId = null;
-            hideJoystick('move');
-          }
-        }
-      };
-      canvas.addEventListener('touchend', onTouchEnd);
-      canvas.addEventListener('touchcancel', onTouchEnd);
-
-      gameState = 'playing';
-      document.getElementById('menu').classList.add('hidden');
-      document.getElementById('gameOver').classList.remove('visible');
-      setTimeout(() => {
-        document.getElementById('ui').classList.add('visible');
-        document.getElementById('coordinates').classList.add('visible');
-      }, 300);
-
-      if (rafId) cancelAnimationFrame(rafId);
-      gameLoop();
-    }
-
-    function showGameOver() {
-      gameState = 'gameOver';
-      document.getElementById('finalScore').textContent = score;
-      document.getElementById('gameOver').classList.add('visible');
-    }
-
-    function backToMenu() {
-      gameState = 'menu';
-      if (rafId) cancelAnimationFrame(rafId);
-      cleanupScene();
-      if (renderer) {
-        renderer.domElement.remove();
-        renderer.dispose();
-        renderer = null;
-      }
-      scene = null;
-      camera = null;
-      document.getElementById('gameOver').classList.remove('visible');
-      document.getElementById('menu').classList.remove('hidden');
-    }
-
-    document.getElementById('startBtn').addEventListener('click', startGame);
-    document.getElementById('restartBtn').addEventListener('click', startGame);
-    document.getElementById('menuBtn').addEventListener('click', backToMenu);
-
-    window.addEventListener('resize', () => {
-      if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-    });
-  </script>
+<div id="menu" class="visible">
+<div id="title">ЧЁРНАЯ ДЫРА</div>
+<button id="startBtn" class="btn">Играть</button>
+<button id="infoBtn" class="btn">Инфо</button>
+<button id="settingsBtn" class="btn">⚙️ Настройки</button>
+<button id="langBtn" class="btn">🇷🇺/🇬🇧</button>
+</div>
+<div id="settingsPanel">
+<h2 id="settingsTitle">Настройки</h2>
+<div class="settings-group">
+<label id="sensLabel">Чувствительность камеры</label>
+<input type="range" id="sensitivitySlider" min="10" max="50" value="20">
+</div>
+<div class="settings-group">
+<label id="musicLabel">Фоновая музыка</label>
+<select id="musicToggle">
+<option value="on">Вкл</option>
+<option value="off">Выкл</option>
+</select>
+</div>
+<div class="settings-group">
+<label id="sfxLabel">Звуковые эффекты</label>
+<select id="sfxToggle">
+<option value="on">Вкл</option>
+<option value="off">Выкл</option>
+</select>
+</div>
+<div class="settings-group">
+<label id="qualityLabel">Качество графики</label>
+<select id="qualitySelect">
+<option value="high">Высокое</option>
+<option value="low">Низкое</option>
+</select>
+</div>
+<button id="closeSettings" class="btn">Закрыть</button>
+</div>
+<div id="infoPanel">
+<h2 id="infoTitle">Информация об игре</h2>
+<p id="infoDesc">Вы — чёрная дыра в бескрайнем космосе. Поглощайте астероиды, планеты, звёзды и даже другие чёрные дыры, чтобы расти и становиться сильнее.</p>
+<p id="infoGoal"><em>Великая цель — поглотить галактику.</em></p>
+<p id="infoControls"><strong>Управление:</strong><br>• Нижняя часть экрана — движение (вперёд/назад, влево/вправо)<br>• Верхняя часть экрана — поворот взгляда (камера)<br>• Космос бесконечен — исследуйте его!</p>
+<button id="closeInfo" class="btn">Закрыть</button>
+</div>
+<div id="ui">
+<div><span id="scoreLabel">Очки:</span> <span id="score">0</span></div>
+<div><span id="sizeLabel">Размер:</span> <span id="size">3.0</span></div>
+<div><span id="universeLabel">Вселенная:</span> <span id="universe">72000³</span></div>
+</div>
+<div id="coordinates">X: 0  Y: 0  Z: 0</div>
+<button id="pauseBtn">⏸️</button>
+<div id="joystick"><div id="joystick-inner"></div></div>
+<div id="lookJoystick"><div id="lookJoystick-inner"></div></div>
+<div id="gameOver">
+<h2 id="gameOverText">Вас поглотила другая дыра...</h2>
+<div><span id="finalScoreLabel">Очки:</span> <span id="finalScore">0</span></div>
+<button id="restartBtn" class="btn">Заново</button>
+<button id="menuBtn" class="btn" style="background:linear-gradient(90deg, #ff66cc, #ff0077);">В меню</button>
+</div>
+<div id="pauseMenu">
+<div id="pauseControls">
+<button id="resumeBtn" class="pause-icon-btn">▶️</button>
+<button id="pauseMenuBtn" class="pause-icon-btn">🏠</button>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<script>
+const START_RADIUS = 3.0;
+const MAX_OBJECTS_HIGH = 3000;
+const MAX_OBJECTS_LOW = 1200;
+let MAX_OBJECTS = MAX_OBJECTS_LOW;
+const SPAWN_INTERVAL_BASE = 80;
+const MAX_PLAYER_SPEED = 400;
+const INITIAL_WORLD_HALF = 36000;
+let LOOK_SENSITIVITY = 0.02;
+const SUPERNOVA_INTERVAL_MIN = 15000;
+const SUPERNOVA_INTERVAL_MAX = 40000;
+let soundEnabled = true;
+let musicEnabled = true;
+const sounds = {
+ambient: new Howl({ src: ['https://cdn.freesound.org/previews/527/527742_7368029-lq.mp3'], loop: true, volume: 0.4 }),
+absorb: new Howl({ src: ['https://cdn.freesound.org/previews/385/385310_1366414-lq.mp3'], volume: 0.6 }),
+grow: new Howl({ src: ['https://cdn.freesound.org/previews/371/371157_6614456-lq.mp3'], volume: 0.7 }),
+enemyAggro: new Howl({ src: ['https://cdn.freesound.org/previews/514/514176_6373646-lq.mp3'], volume: 0.5 })
+};
+let gameState = 'menu';
+let playerRadius = START_RADIUS;
+let worldHalf = INITIAL_WORLD_HALF;
+let worldSize = worldHalf * 2;
+let score = 0;
+let objects = [];
+let enemyBlackHoles = [];
+let groupCenters = [];
+let player = null;
+let blackHoleMesh = null;
+let accretionGlow = null;
+let camera = null;
+let scene = null;
+let renderer = null;
+let rafId = null;
+let lastSpawn = 0;
+let growthCounter = 0;
+let moveInputX = 0, moveInputY = 0;
+let lookInputX = 0, lookInputY = 0;
+let playerYaw = 0;
+let playerPitch = 0;
+let lastSupernova = 0;
+let supernovaSprites = [];
+let screenShake = 0;
+let screenShakeTime = 0;
+let fps = 60;
+let lastFpsCheck = 0;
+let frameCount = 0;
+let qualityMode = 'low';
+let lang = 'ru';
+const translations = {
+ru: {
+title: 'ЧЁРНАЯ ДЫРА',
+play: 'Играть',
+info: 'Инфо',
+settings: '⚙️ Настройки',
+lang: '🇷🇺/🇬🇧',
+score: 'Очки:',
+size: 'Размер:',
+universe: 'Вселенная:',
+gameOver: 'Вас поглотила другая дыра...',
+finalScore: 'Очки:',
+restart: 'Заново',
+menu: 'В меню',
+close: 'Закрыть',
+infoTitle: 'Информация об игре',
+infoDesc: 'Вы — чёрная дыра в бескрайнем космосе. Поглощайте астероиды, планеты, звёзды и даже другие чёрные дыры, чтобы расти и становиться сильнее.',
+infoGoal: 'Великая цель — поглотить галактику.',
+infoControls: '<strong>Управление:</strong><br>• Нижняя часть экрана — движение (вперёд/назад, влево/вправо)<br>• Верхняя часть экрана — поворот взгляда (камера)<br>• Космос бесконечен — исследуйте его!',
+settingsTitle: 'Настройки',
+sensLabel: 'Чувствительность камеры',
+musicLabel: 'Фоновая музыка',
+sfxLabel: 'Звуковые эффекты',
+qualityLabel: 'Качество графики',
+on: 'Вкл',
+off: 'Выкл',
+high: 'Высокое',
+low: 'Низкое'
+},
+en: {
+title: 'BLACK HOLE',
+play: 'Play',
+info: 'Info',
+settings: '⚙️ Settings',
+lang: '🇬🇧/🇷🇺',
+score: 'Score:',
+size: 'Size:',
+universe: 'Universe:',
+gameOver: 'You were swallowed by another black hole...',
+finalScore: 'Score:',
+restart: 'Restart',
+menu: 'Menu',
+close: 'Close',
+infoTitle: 'About the Game',
+infoDesc: 'You are a black hole in the infinite cosmos. Absorb asteroids, planets, stars, and even other black holes to grow stronger.',
+infoGoal: 'Your ultimate goal: consume the galaxy.',
+infoControls: '<strong>Controls:</strong><br>• Bottom half: move (forward/back, left/right)<br>• Top half: look around (camera)<br>• The cosmos is endless — explore it!',
+settingsTitle: 'Settings',
+sensLabel: 'Camera Sensitivity',
+musicLabel: 'Background Music',
+sfxLabel: 'Sound Effects',
+qualityLabel: 'Graphics Quality',
+on: 'On',
+off: 'Off',
+high: 'High',
+low: 'Low'
+}
+};
+function updateTexts() {
+const t = translations[lang];
+document.getElementById('title').textContent = t.title;
+document.getElementById('startBtn').textContent = t.play;
+document.getElementById('infoBtn').textContent = t.info;
+document.getElementById('settingsBtn').textContent = t.settings;
+document.getElementById('langBtn').textContent = t.lang;
+document.getElementById('scoreLabel').textContent = t.score;
+document.getElementById('sizeLabel').textContent = t.size;
+document.getElementById('universeLabel').textContent = t.universe;
+document.getElementById('gameOverText').textContent = t.gameOver;
+document.getElementById('finalScoreLabel').textContent = t.finalScore;
+document.getElementById('restartBtn').textContent = t.restart;
+document.getElementById('menuBtn').textContent = t.menu;
+document.getElementById('infoTitle').textContent = t.infoTitle;
+document.getElementById('infoDesc').innerHTML = t.infoDesc;
+document.getElementById('infoGoal').textContent = t.infoGoal;
+document.getElementById('infoControls').innerHTML = t.infoControls;
+document.getElementById('settingsTitle').textContent = t.settingsTitle;
+document.getElementById('sensLabel').textContent = t.sensLabel;
+document.getElementById('musicLabel').textContent = t.musicLabel;
+document.getElementById('sfxLabel').textContent = t.sfxLabel;
+document.getElementById('qualityLabel').textContent = t.qualityLabel;
+document.getElementById('closeSettings').textContent = t.close;
+document.getElementById('closeInfo').textContent = t.close;
+document.querySelector('#musicToggle option[value="on"]').textContent = t.on;
+document.querySelector('#musicToggle option[value="off"]').textContent = t.off;
+document.querySelector('#sfxToggle option[value="on"]').textContent = t.on;
+document.querySelector('#sfxToggle option[value="off"]').textContent = t.off;
+document.querySelector('#qualitySelect option[value="high"]').textContent = t.high;
+document.querySelector('#qualitySelect option[value="low"]').textContent = t.low;
+}
+const objectTypes = [
+{ name: 'asteroid', color: 0x555555, emissive: 0x222222, roughness: 0.9, metalness: 0.1, min: 0.3, max: 1.8, points: 1 },
+{ name: 'planet', color: 0x44aa44, emissive: 0x113311, roughness: 0.7, metalness: 0.0, min: 1.9, max: 3.5, points: 2 },
+{ name: 'oasis-planet', color: 0x3388dd, emissive: 0x114466, roughness: 0.6, metalness: 0.0, min: 2.0, max: 3.2, points: 3 },
+{ name: 'gas-giant', color: 0x4444cc, emissive: 0x111144, roughness: 0.5, metalness: 0.2, min: 3.6, max: 6.0, points: 4 },
+{ name: 'star', color: 0xffff66, emissive: 0x888800, roughness: 0.1, metalness: 0.9, emissiveIntensity: 3, min: 6.1, max: 12.0, points: 8 },
+{ name: 'moving-asteroid', color: 0xaa8844, emissive: 0x332211, roughness: 0.85, metalness: 0.1, min: 0.5, max: 1.5, points: 1 },
+{ name: 'black-hole', color: 0x000000, emissive: 0x050515, roughness: 0.1, metalness: 0.98, min: 2.0, max: 3.5, points: 0 }
+];
+function dist3(a, b) {
+if (!a || !b) return Infinity;
+const ax = a.x ?? (a.position?.x ?? 0);
+const ay = a.y ?? (a.position?.y ?? 0);
+const az = a.z ?? (a.position?.z ?? 0);
+const bx = b.x ?? (b.position?.x ?? 0);
+const by = b.y ?? (b.position?.y ?? 0);
+const bz = b.z ?? (b.position?.z ?? 0);
+const dx = ax - bx, dy = ay - by, dz = az - bz;
+return dx*dx + dy*dy + dz*dz;
+}
+function safeRemove(obj) {
+if (!obj) return;
+try {
+if (obj.parent) obj.parent.remove(obj);
+if (obj.geometry) obj.geometry.dispose();
+if (obj.material) {
+(Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m?.dispose?.());
+}
+} catch (e) { console.warn('Cleanup:', e); }
+}
+function isPositionTooClose(pos, minDist = 800, excludePlayer = false) {
+if (!excludePlayer && player) {
+const d2 = dist3(pos, player.position);
+if (d2 < minDist * minDist) return true;
+}
+for (const center of groupCenters) {
+const d2 = dist3(pos, center);
+if (d2 < minDist * minDist) return true;
+}
+return false;
+}
+function isEnemyPositionValid(pos) {
+if (!player) return false;
+const d2Player = dist3(pos, player.position);
+const minDist = 1000 + Math.max(0, 1000 - playerRadius * 20);
+const maxDist = 2000 - Math.max(0, playerRadius * 30);
+if (d2Player < minDist*minDist || d2Player > maxDist*maxDist) return false;
+for (const enemy of enemyBlackHoles) {
+if (enemy && enemy.position) {
+const d2 = dist3(pos, enemy.position);
+if (d2 < 1000*1000) return false;
+}
+}
+return true;
+}
+function createSupernova(pos) {
+const texture = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/spark1.png');
+const material = new THREE.SpriteMaterial({ map: texture, color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending });
+const sprite = new THREE.Sprite(material);
+sprite.position.copy(pos);
+sprite.scale.set(2000, 2000, 1);
+scene.add(sprite);
+supernovaSprites.push({ sprite, time: 0 });
+if (soundEnabled) sounds.absorb.play();
+}
+function createRealisticSpaceBackground() {
+scene.background = new THREE.Color(0x020005);
+const loader = new THREE.TextureLoader();
+const starColors = [0xffffff, 0xe6e6ff, 0xccccff, 0xb3b3ff, 0x9999ff, 0x8080ff, 0x6666ff, 0x4d4dff, 0x3333ff];
+const geometry = new THREE.BufferGeometry();
+const count = qualityMode === 'low' ? 50000 : 150000;
+const positions = new Float32Array(count * 3);
+const colors = new Float32Array(count * 3);
+const sizes = new Float32Array(count);
+for (let i = 0; i < count; i++) {
+const radius = Math.random() * worldSize * 1.8;
+const theta = Math.random() * Math.PI * 2;
+const phi = Math.acos(2 * Math.random() - 1);
+positions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+positions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
+positions[i*3+2] = radius * Math.cos(phi);
+const starColor = new THREE.Color(starColors[Math.floor(Math.random() * starColors.length)]);
+colors[i*3] = starColor.r;
+colors[i*3+1] = starColor.g;
+colors[i*3+2] = starColor.b;
+sizes[i] = 0.3 + Math.random() * 2.0;
+}
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 3));
+const material = new THREE.PointsMaterial({ size: 1, vertexColors: true, sizeAttenuation: true, transparent: true, alphaTest: 0.1, blending: THREE.AdditiveBlending });
+const stars = new THREE.Points(geometry, material);
+stars.frustumCulled = false;
+scene.add(stars);
+if (qualityMode !== 'low') {
+const milkyWayGeo = new THREE.RingGeometry(20000, 50000, 128);
+const milkyWayMat = new THREE.MeshBasicMaterial({ color: 0xd0b0ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+const milkyWay = new THREE.Mesh(milkyWayGeo, milkyWayMat);
+milkyWay.rotation.x = Math.PI / 2;
+scene.add(milkyWay);
+}
+}
+function initThreeJS() {
+scene = new THREE.Scene();
+player = new THREE.Object3D(); player.position.set(0, 0, 0); scene.add(player);
+blackHoleMesh = new THREE.Mesh(new THREE.SphereGeometry(START_RADIUS, 64, 64), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x050515, roughness: 0.1, metalness: 0.98 }));
+player.add(blackHoleMesh);
+const particleCount = 400;
+const particles = new THREE.BufferGeometry();
+const pos = new Float32Array(particleCount * 3);
+const colors = new Float32Array(particleCount * 3);
+const colorsList = [0xb16ce9, 0x8a2be2, 0x5e17eb, 0x9a4cff];
+for (let i = 0; i < particleCount; i++) {
+const radius = 1.0 + Math.random() * 2.5;
+const angle1 = Math.random() * Math.PI * 2;
+const angle2 = Math.random() * Math.PI * 2;
+pos[i*3] = Math.sin(angle1) * Math.cos(angle2) * radius;
+pos[i*3+1] = Math.sin(angle2) * radius;
+pos[i*3+2] = Math.cos(angle1) * Math.cos(angle2) * radius;
+const color = new THREE.Color(colorsList[Math.floor(Math.random() * colorsList.length)]);
+colors[i*3] = color.r; colors[i*3+1] = color.g; colors[i*3+2] = color.b;
+}
+particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+const material = new THREE.PointsMaterial({ size: 0.8, vertexColors: true, transparent: true, opacity: 0.92, sizeAttenuation: true });
+accretionGlow = new THREE.Points(particles, material); player.add(accretionGlow);
+camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 100000); scene.add(camera);
+const canvas = document.querySelector('canvas');
+if (canvas) canvas.remove();
+renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
+createRealisticSpaceBackground();
+}
+function cleanupScene() {
+if (player) { safeRemove(player); player = null; blackHoleMesh = null; accretionGlow = null; }
+objects.forEach(safeRemove); objects = [];
+enemyBlackHoles = [];
+groupCenters = [];
+supernovaSprites.forEach(s => safeRemove(s.sprite)); supernovaSprites = [];
+if (window.absorptionParticles) {
+window.absorptionParticles.forEach(p => safeRemove(p.points));
+window.absorptionParticles = [];
+}
+}
+function getTypeBySize(size) {
+if (size <= 1.8) return objectTypes[0];
+if (size <= 3.2) return Math.random() < 0.3 ? objectTypes[2] : objectTypes[1];
+if (size <= 6.0) return objectTypes[3];
+if (size <= 12.0) return objectTypes[4];
+return objectTypes[0];
+}
+function createObjectAtPosition(pos, isEnemy = false, forcedSize = null) {
+let size = forcedSize;
+if (size === null) {
+if (isEnemy) size = playerRadius * (0.4 + Math.random() * 0.4);
+else size = (Math.random() < 0.4) ? Math.random() * (playerRadius * 0.5) : 0.3 + Math.random() * 15;
+if (size < 0.3) size = 0.3;
+}
+const typeObj = isEnemy ? objectTypes[6] : getTypeBySize(size);
+const geometry = new THREE.SphereGeometry(size, 48, 48);
+const material = new THREE.MeshStandardMaterial({ color: typeObj.color, emissive: typeObj.emissive, roughness: typeObj.roughness, metalness: typeObj.metalness, emissiveIntensity: typeObj.emissiveIntensity || 1 });
+const obj = new THREE.Mesh(geometry, material);
+obj.userData = {
+radius: size,
+points: typeObj.points,
+type: typeObj.name,
+isBlackHole: typeObj.name === 'black-hole',
+isMovingAsteroid: typeObj.name === 'moving-asteroid',
+velocity: null,
+wanderTimer: Math.random() * 10,
+originalGlowColor: null
+};
+obj.position.copy(pos);
+if (typeObj.name === 'black-hole') {
+const enemyGlow = accretionGlow.clone();
+enemyGlow.scale.setScalar(1.0);
+obj.add(enemyGlow);
+obj.userData.originalGlowColor = new THREE.Color(0xb16ce9);
+}
+if (typeObj.name === 'moving-asteroid') {
+const angle1 = Math.random() * Math.PI * 2;
+const angle2 = Math.random() * Math.PI * 2;
+obj.userData.velocity = new THREE.Vector3(Math.sin(angle1) * Math.cos(angle2), Math.sin(angle2), Math.cos(angle1) * Math.cos(angle2)).multiplyScalar(60);
+}
+return obj;
+}
+function spawnObjectGroup(nearPlayer = false, maxAttempts = 20) {
+if (objects.length >= MAX_OBJECTS) return null;
+let groupCenter = null;
+if (nearPlayer) {
+const distance = 200 + Math.random() * 400;
+const angle1 = Math.random() * Math.PI * 2;
+const angle2 = Math.random() * Math.PI * 2;
+groupCenter = new THREE.Vector3(
+Math.sin(angle1) * Math.cos(angle2) * distance,
+Math.sin(angle2) * distance,
+Math.cos(angle1) * Math.cos(angle2) * distance
+).add(player.position);
+} else {
+let attempts = 0;
+while (attempts < maxAttempts) {
+groupCenter = new THREE.Vector3(
+(Math.random() - 0.5) * (worldSize - 1600),
+(Math.random() - 0.5) * (worldSize - 1600),
+(Math.random() - 0.5) * (worldSize - 1600)
+);
+if (!isPositionTooClose(groupCenter, 800)) break;
+attempts++;
+}
+if (attempts >= maxAttempts) return null;
+}
+const leaderTypes = objectTypes.filter(t => t.name !== 'asteroid' && t.name !== 'moving-asteroid' && t.name !== 'black-hole');
+const leaderType = leaderTypes[Math.floor(Math.random() * leaderTypes.length)];
+const leaderSize = leaderType.min + Math.random() * (leaderType.max - leaderType.min);
+const leader = createObjectAtPosition(groupCenter, false, leaderSize);
+if (leader.material) leader.material.color = new THREE.Color(0xffff66);
+scene.add(leader);
+objects.push(leader);
+const satelliteCount = 2 + Math.floor(Math.random() * 3);
+for (let i = 0; i < satelliteCount; i++) {
+if (objects.length >= MAX_OBJECTS) break;
+const satSize = 0.3 + Math.random() * Math.min(leaderSize * 0.5, 15);
+const offset = new THREE.Vector3(
+(Math.random() - 0.5) * 80,
+(Math.random() - 0.5) * 80,
+(Math.random() - 0.5) * 80
+);
+const satPos = groupCenter.clone().add(offset);
+const satellite = createObjectAtPosition(satPos, false, satSize);
+scene.add(satellite);
+objects.push(satellite);
+}
+groupCenters.push(groupCenter.clone());
+return groupCenter;
+}
+function spawnEnemyBlackHoles(count) {
+let spawned = 0;
+let attempts = 0;
+const maxAttempts = 50;
+while (spawned < count && attempts < maxAttempts) {
+const angle1 = Math.random() * Math.PI * 2;
+const angle2 = Math.random() * Math.PI * 2;
+const distance = 1000 + Math.random() * 1000;
+const pos = new THREE.Vector3(
+Math.sin(angle1) * Math.cos(angle2) * distance,
+Math.sin(angle2) * distance,
+Math.cos(angle1) * Math.cos(angle2) * distance
+).add(player.position);
+if (isEnemyPositionValid(pos)) {
+const enemySize = playerRadius * (0.4 + Math.random() * 0.4);
+const obj = createObjectAtPosition(pos, true, enemySize);
+obj.userData.isBlackHole = true;
+obj.userData.aiWanderTimer = Math.random() * 10;
+scene.add(obj);
+objects.push(obj);
+enemyBlackHoles.push(obj);
+spawned++;
+}
+attempts++;
+}
+}
+function maintainEnemyCount() {
+const currentCount = enemyBlackHoles.length;
+let targetCount = 2;
+if (playerRadius > 10) targetCount = 3;
+if (playerRadius > 20) targetCount = 4;
+if (currentCount < targetCount) {
+spawnEnemyBlackHoles(targetCount - currentCount);
+}
+}
+function updateCamera() {
+if (!camera || !player) return;
+const camDistance = 60 + playerRadius * 8;
+const camX = player.position.x - Math.sin(playerYaw) * Math.cos(playerPitch) * camDistance;
+const camY = player.position.y + Math.sin(playerPitch) * camDistance;
+const camZ = player.position.z - Math.cos(playerYaw) * Math.cos(playerPitch) * camDistance;
+camera.position.set(camX + (Math.random() - 0.5) * screenShake,
+camY + (Math.random() - 0.5) * screenShake,
+camZ + (Math.random() - 0.5) * screenShake);
+camera.lookAt(player.position.x, player.position.y, player.position.z);
+if (screenShake > 0) {
+screenShakeTime -= 0.016;
+screenShake = Math.max(0, screenShakeTime * 20);
+}
+}
+function createAbsorptionStream(pos, color = 0xb16ce9) {
+const particleCount = 15;
+const delay = 50;
+for (let i = 0; i < particleCount; i++) {
+setTimeout(() => {
+const geometry = new THREE.BufferGeometry();
+const positions = new Float32Array(3);
+const velocities = new Float32Array(3);
+const colorsArr = new Float32Array(3);
+const colorObj = new THREE.Color(color);
+const radius = Math.random() * 5;
+const angle1 = Math.random() * Math.PI * 2;
+const angle2 = Math.random() * Math.PI * 2;
+positions[0] = pos.x + Math.sin(angle1) * Math.cos(angle2) * radius;
+positions[1] = pos.y + Math.sin(angle2) * radius;
+positions[2] = pos.z + Math.cos(angle1) * Math.cos(angle2) * radius;
+const target = player.position.clone();
+const dir = new THREE.Vector3().subVectors(target, new THREE.Vector3(positions[0], positions[1], positions[2])).normalize();
+const speed = 80 + Math.random() * 40;
+velocities[0] = dir.x * speed;
+velocities[1] = dir.y * speed;
+velocities[2] = dir.z * speed;
+colorsArr[0] = colorObj.r;
+colorsArr[1] = colorObj.g;
+colorsArr[2] = colorObj.b;
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+geometry.setAttribute('color', new THREE.BufferAttribute(colorsArr, 3));
+const material = new THREE.PointsMaterial({ size: 1.2, vertexColors: true, transparent: true, opacity: 0.9, sizeAttenuation: true, blending: THREE.AdditiveBlending });
+const points = new THREE.Points(geometry, material);
+scene.add(points);
+window.absorptionParticles ??= [];
+window.absorptionParticles.push({ points, age: 0, maxAge: 1.0 });
+}, i * delay);
+}
+}
+function triggerAbsorptionEffect(obj) {
+if (!obj) return;
+const pos = obj.position.clone();
+createAbsorptionStream(pos);
+screenShake = 8;
+screenShakeTime = 0.8;
+if (obj.material) {
+obj.material.emissiveIntensity = 5;
+obj.material.emissive = new THREE.Color(0xffffff);
+setTimeout(() => {
+if (obj.material) {
+obj.material.emissiveIntensity = obj.userData.type === 'black-hole' ? 0.1 : 1;
+obj.material.emissive = new THREE.Color(obj.userData.type === 'black-hole' ? 0x050515 : objectTypes.find(t => t.name === obj.userData.type).emissive);
+}
+}, 400);
+}
+if (soundEnabled) sounds.absorb.play();
+}
+function updateEnemyBlackHole(bh) {
+if (!bh || !bh.userData?.isBlackHole || !player) return;
+const dt = 0.016;
+const suctionRadius = Math.min(800, 300 + bh.userData.radius * 10);
+const maxPull = 15 + bh.userData.radius * 0.5;
+for (const obj of objects) {
+if (!obj || obj === bh || !obj.userData) continue;
+if (obj.userData.isBlackHole) continue;
+if (obj.userData.radius >= bh.userData.radius) continue;
+const d = Math.sqrt(dist3(bh.position, obj.position));
+if (d < suctionRadius && d > 0.1) {
+const pullStrength = (1 - d / suctionRadius) * maxPull;
+const dir = new THREE.Vector3().subVectors(bh.position, obj.position).normalize();
+obj.position.add(dir.multiplyScalar(pullStrength * dt));
+const d2 = dist3(bh.position, obj.position);
+const rSum = bh.userData.radius + obj.userData.radius;
+if (d2 < rSum * rSum) {
+safeRemove(obj);
+const objIdx = objects.indexOf(obj);
+if (objIdx !== -1) objects.splice(objIdx, 1);
+bh.userData.radius += obj.userData.radius * 0.2;
+if (bh.children.length > 0) {
+bh.children[0].scale.setScalar(bh.userData.radius / 3.0);
+}
+}
+}
+}
+const playerSuctionRadius = Math.min(800, 300 + playerRadius * 10);
+const aggroRadius = playerSuctionRadius * 2;
+const playerDist2 = dist3(bh.position, player.position);
+const inAggroRange = (playerDist2 < aggroRadius * aggroRadius);
+let target = null;
+if (inAggroRange && playerRadius < bh.userData.radius) {
+target = { position: player.position };
+if (bh.children[0]) {
+bh.children[0].material.color = new THREE.Color(0xff4444);
+setTimeout(() => {
+if (bh.children[0] && bh.userData.originalGlowColor) {
+bh.children[0].material.color = bh.userData.originalGlowColor;
+}
+}, 500);
+}
+if (soundEnabled && Math.random() < 0.3) sounds.enemyAggro.play();
+} else {
+let minDist = Infinity;
+for (const obj of objects) {
+if (!obj || obj === bh || !obj.userData) continue;
+if (obj.userData.isBlackHole) continue;
+if (obj === player) continue;
+if (obj.userData.radius >= bh.userData.radius) continue;
+const d2 = dist3(bh.position, obj.position);
+if (d2 < minDist) {
+minDist = d2;
+target = obj;
+}
+}
+}
+const playerSpeed = Math.min(150 + playerRadius * 8, MAX_PLAYER_SPEED);
+const enemyMaxSpeed = playerSpeed * 0.6;
+const speed = Math.min(100 + bh.userData.radius * 5, enemyMaxSpeed);
+if (target && target.position) {
+const dir = new THREE.Vector3().subVectors(target.position, bh.position).normalize();
+bh.position.add(dir.multiplyScalar(speed * dt));
+} else {
+bh.userData.aiWanderTimer += dt;
+const wx = Math.cos(bh.userData.aiWanderTimer) * 15;
+const wy = Math.sin(bh.userData.aiWanderTimer * 0.7) * 15;
+const wz = Math.cos(bh.userData.aiWanderTimer * 0.5) * 15;
+bh.position.add(new THREE.Vector3(wx, wy, wz));
+}
+const h = worldHalf;
+bh.position.x = THREE.MathUtils.clamp(bh.position.x, -h, h);
+bh.position.y = THREE.MathUtils.clamp(bh.position.y, -h, h);
+bh.position.z = THREE.MathUtils.clamp(bh.position.z, -h, h);
+}
+function gameLoop() {
+if (gameState !== 'playing') return;
+rafId = requestAnimationFrame(gameLoop);
+const now = performance.now();
+frameCount++;
+if (now - lastFpsCheck > 1000) {
+fps = frameCount;
+frameCount = 0;
+lastFpsCheck = now;
+}
+const dt = 0.016; const time = now * 0.001;
+if (now - lastSupernova > (SUPERNOVA_INTERVAL_MIN + Math.random() * (SUPERNOVA_INTERVAL_MAX - SUPERNOVA_INTERVAL_MIN))) {
+const distance = worldSize * 1.5 + Math.random() * worldSize;
+const theta = Math.random() * Math.PI * 2;
+const phi = Math.acos(2 * Math.random() - 1);
+const pos = new THREE.Vector3(
+Math.sin(phi) * Math.cos(theta) * distance,
+Math.sin(phi) * Math.sin(theta) * distance,
+Math.cos(phi) * distance
+);
+createSupernova(pos);
+lastSupernova = now;
+}
+for (let i = supernovaSprites.length - 1; i >= 0; i--) {
+const s = supernovaSprites[i];
+s.time += dt;
+const alpha = 1 - Math.abs(s.time - 1) * 2;
+if (alpha <= 0) {
+safeRemove(s.sprite);
+supernovaSprites.splice(i, 1);
+} else {
+s.sprite.material.opacity = Math.max(0, alpha);
+s.sprite.scale.multiplyScalar(1.05);
+}
+}
+if (window.absorptionParticles && window.absorptionParticles.length > 0) {
+for (let i = window.absorptionParticles.length - 1; i >= 0; i--) {
+const p = window.absorptionParticles[i];
+p.age += dt;
+if (p.age > p.maxAge) {
+safeRemove(p.points);
+window.absorptionParticles.splice(i, 1);
+continue;
+}
+const positions = p.points.geometry.attributes.position.array;
+const velocities = p.points.geometry.attributes.velocity.array;
+for (let j = 0; j < positions.length; j += 3) {
+positions[j] += velocities[j] * dt;
+positions[j + 1] += velocities[j + 1] * dt;
+positions[j + 2] += velocities[j + 2] * dt;
+const distToPlayer = Math.sqrt(
+Math.pow(positions[j] - player.position.x, 2) +
+Math.pow(positions[j + 1] - player.position.y, 2) +
+Math.pow(positions[j + 2] - player.position.z, 2)
+);
+const scale = Math.max(0.1, 1 - distToPlayer / 50);
+p.points.material.size = 1.2 * scale;
+p.points.material.opacity = 0.9 * scale;
+if (distToPlayer < 5) {
+positions[j] = 0;
+positions[j + 1] = 0;
+positions[j + 2] = 0;
+p.age = p.maxAge;
+}
+}
+p.points.geometry.attributes.position.needsUpdate = true;
+}
+}
+if (accretionGlow) {
+const scale = playerRadius / START_RADIUS;
+accretionGlow.scale.setScalar(scale);
+accretionGlow.material.size = (0.6 + Math.sin(time * 2) * 0.2) * scale;
+accretionGlow.rotation.x += 0.01; accretionGlow.rotation.y += 0.015;
+}
+if (Math.abs(moveInputX) > 0.01 || Math.abs(moveInputY) > 0.01) {
+const speed = Math.min(150 + playerRadius * 8, MAX_PLAYER_SPEED) * dt;
+const forward = new THREE.Vector3(-Math.sin(playerYaw) * Math.cos(playerPitch), Math.sin(playerPitch), -Math.cos(playerYaw) * Math.cos(playerPitch));
+const right = new THREE.Vector3(-Math.cos(playerYaw), 0, Math.sin(playerYaw));
+player.position.add(forward.multiplyScalar(moveInputY * speed));
+player.position.add(right.multiplyScalar(moveInputX * speed));
+const h = worldHalf;
+player.position.x = Math.max(-h, Math.min(h, player.position.x));
+player.position.y = Math.max(-h, Math.min(h, player.position.y));
+player.position.z = Math.max(-h, Math.min(h, player.position.z));
+}
+if (Math.abs(lookInputX) > 0.01 || Math.abs(lookInputY) > 0.01) {
+playerYaw -= lookInputX * LOOK_SENSITIVITY;
+playerPitch = THREE.MathUtils.clamp(playerPitch + lookInputY * LOOK_SENSITIVITY, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+}
+if (player && gameState === 'playing') {
+const coordsEl = document.getElementById('coordinates');
+if (coordsEl) coordsEl.textContent = `X: ${Math.round(player.position.x)}  Y: ${Math.round(player.position.y)}  Z: ${Math.round(player.position.z)}`;
+}
+updateCamera();
+const suctionRadius = Math.min(800, 300 + playerRadius * 10);
+const maxPull = 15 + playerRadius * 0.5;
+for (const obj of objects) {
+if (!obj || !obj.userData) continue;
+if (obj.userData.isBlackHole) continue;
+if (obj.userData.radius >= playerRadius) continue;
+const d = Math.sqrt(dist3(player.position, obj.position));
+if (d < suctionRadius && d > 0.1) {
+const pullStrength = (1 - d / suctionRadius) * maxPull;
+const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize();
+obj.position.add(dir.multiplyScalar(pullStrength * dt));
+}
+}
+for (let i = objects.length - 1; i >= 0; i--) {
+const obj = objects[i];
+if (!obj || !obj.userData || !obj.position) continue;
+if (obj.userData.isMovingAsteroid && obj.userData.velocity) {
+obj.position.add(obj.userData.velocity.clone().multiplyScalar(dt));
+const h = worldHalf;
+if (Math.abs(obj.position.x) > h) obj.position.x = -obj.position.x;
+if (Math.abs(obj.position.y) > h) obj.position.y = -obj.position.y;
+if (Math.abs(obj.position.z) > h) obj.position.z = -obj.position.z;
+}
+if (obj.userData.isBlackHole) updateEnemyBlackHole(obj);
+}
+for (let i = objects.length - 1; i >= 0; i--) {
+const obj = objects[i];
+if (!obj || !obj.userData) continue;
+const d2 = dist3(player.position, obj.position);
+const radiusSum = playerRadius + obj.userData.radius;
+if (d2 < radiusSum * radiusSum) {
+if (playerRadius > obj.userData.radius) {
+triggerAbsorptionEffect(obj);
+safeRemove(obj); objects.splice(i, 1);
+const eIdx = enemyBlackHoles.indexOf(obj);
+if (eIdx !== -1) enemyBlackHoles.splice(eIdx, 1);
+score += obj.userData.points || 0;
+playerRadius += obj.userData.radius * 0.2;
+if (blackHoleMesh) blackHoleMesh.scale.setScalar(playerRadius / START_RADIUS);
+growthCounter++;
+if (growthCounter >= 5) { worldHalf += 500; worldSize = worldHalf * 2; growthCounter = 0; }
+document.getElementById('score').textContent = score;
+document.getElementById('size').textContent = playerRadius.toFixed(1);
+document.getElementById('universe').textContent = `${Math.round(worldSize)}³`;
+if (Math.random() < 0.8) spawnObjectGroup(false);
+if (soundEnabled) sounds.grow.play();
+} else if (obj.userData.isBlackHole) { showGameOver(); return; }
+}
+}
+if (objects.length < MAX_OBJECTS && now - lastSpawn > (SPAWN_INTERVAL_BASE - Math.min(50, playerRadius * 2))) {
+if (Math.random() < 0.6) spawnObjectGroup(false);
+lastSpawn = now;
+}
+maintainEnemyCount();
+renderer.render(scene, camera);
+}
+function showJoystick(x, y, type) {
+const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
+if (el) { el.style.left = (x - 42) + 'px'; el.style.top = (y - 42) + 'px'; el.style.display = 'block'; }
+}
+function updateJoystick(x, y, baseX, baseY, type) {
+const dx = x - baseX; const dy = y - baseY; const maxDist = 42; const dist = Math.hypot(dx, dy);
+let ix = 0, iy = 0;
+if (dist > maxDist) { const angle = Math.atan2(dy, dx); ix = Math.cos(angle); iy = Math.sin(angle); }
+else { ix = dx / maxDist; iy = dy / maxDist; }
+const inner = document.getElementById(type === 'move' ? 'joystick-inner' : 'lookJoystick-inner');
+if (inner) { inner.style.left = (42 + ix * maxDist - 16) + 'px'; inner.style.top = (42 + iy * maxDist - 16) + 'px'; }
+if (type === 'move') { moveInputX = ix; moveInputY = iy; } else { lookInputX = ix; lookInputY = iy; }
+}
+function hideJoystick(type) {
+const el = document.getElementById(type === 'move' ? 'joystick' : 'lookJoystick');
+if (el) el.style.display = 'none';
+if (type === 'move') { moveInputX = 0; moveInputY = 0; } else { lookInputX = 0; lookInputY = 0; }
+}
+function pauseGame() {
+if (gameState !== 'playing') return;
+gameState = 'paused';
+document.getElementById('pauseMenu').classList.add('visible');
+if (rafId) cancelAnimationFrame(rafId);
+}
+function resumeGame() {
+if (gameState !== 'paused') return;
+gameState = 'playing';
+document.getElementById('pauseMenu').classList.remove('visible');
+gameLoop();
+}
+function startGame() {
+if (musicEnabled) sounds.ambient.play();
+cleanupScene();
+playerRadius = START_RADIUS; worldHalf = INITIAL_WORLD_HALF; worldSize = worldHalf * 2; score = 0; growthCounter = 0; playerYaw = 0; playerPitch = 0;
+document.getElementById('score').textContent = '0';
+document.getElementById('size').textContent = START_RADIUS.toFixed(1);
+document.getElementById('universe').textContent = `${worldSize}³`;
+document.getElementById('ui').classList.remove('visible');
+document.getElementById('coordinates').textContent = 'X: 0  Y: 0  Z: 0';
+document.getElementById('pauseBtn').style.display = 'block';
+initThreeJS();
+spawnObjectGroup(true);
+while (objects.length < Math.min(200, MAX_OBJECTS)) {
+if (!spawnObjectGroup(false)) break;
+}
+spawnEnemyBlackHoles(2 + Math.floor(Math.random() * 2));
+const canvas = renderer.domElement;
+let lookTouchId = null; let moveTouchId = null;
+canvas.addEventListener('touchstart', (e) => {
+if (gameState !== 'playing') return;
+for (let i = 0; i < e.touches.length; i++) {
+const touch = e.touches[i];
+if (touch.clientY < window.innerHeight / 2) {
+if (lookTouchId === null) { lookTouchId = touch.identifier; showJoystick(touch.clientX, touch.clientY, 'look'); }
+} else {
+if (moveTouchId === null) { moveTouchId = touch.identifier; showJoystick(touch.clientX, touch.clientY, 'move'); }
+}
+}
+e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+if (gameState !== 'playing') return;
+for (let i = 0; i < e.touches.length; i++) {
+const touch = e.touches[i];
+if (touch.identifier === lookTouchId) {
+const el = document.getElementById('lookJoystick');
+if (el) { const rect = el.getBoundingClientRect(); updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'look'); }
+} else if (touch.identifier === moveTouchId) {
+const el = document.getElementById('joystick');
+if (el) { const rect = el.getBoundingClientRect(); updateJoystick(touch.clientX, touch.clientY, rect.left + 42, rect.top + 42, 'move'); }
+}
+}
+e.preventDefault();
+}, { passive: false });
+const onTouchEnd = (e) => {
+for (let i = 0; i < e.changedTouches.length; i++) {
+const touch = e.changedTouches[i];
+if (touch.identifier === lookTouchId) { lookTouchId = null; hideJoystick('look'); }
+else if (touch.identifier === moveTouchId) { moveTouchId = null; hideJoystick('move'); }
+}
+};
+canvas.addEventListener('touchend', onTouchEnd);
+canvas.addEventListener('touchcancel', onTouchEnd);
+gameState = 'playing';
+document.getElementById('menu').classList.remove('visible');
+document.getElementById('gameOver').classList.remove('visible');
+document.getElementById('infoPanel').classList.remove('visible');
+document.getElementById('settingsPanel').classList.remove('visible');
+setTimeout(() => { document.getElementById('ui').classList.add('visible'); document.getElementById('coordinates').classList.add('visible'); }, 300);
+if (rafId) cancelAnimationFrame(rafId);
+gameLoop();
+}
+function showGameOver() {
+gameState = 'gameOver';
+document.getElementById('pauseBtn').style.display = 'none';
+if (musicEnabled) sounds.ambient.stop();
+document.getElementById('finalScore').textContent = score;
+document.getElementById('gameOver').classList.add('visible');
+}
+function backToMenu() {
+gameState = 'menu';
+document.getElementById('pauseBtn').style.display = 'none';
+if (rafId) cancelAnimationFrame(rafId);
+cleanupScene();
+if (renderer) { renderer.domElement.remove(); renderer.dispose(); renderer = null; }
+scene = null; camera = null;
+document.getElementById('gameOver').classList.remove('visible');
+document.getElementById('pauseMenu').classList.remove('visible');
+document.getElementById('menu').classList.add('visible');
+}
+document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+document.getElementById('pauseMenuBtn').addEventListener('click', backToMenu);
+document.getElementById('sensitivitySlider').addEventListener('input', (e) => {
+LOOK_SENSITIVITY = parseFloat(e.target.value) / 1000;
+});
+document.getElementById('musicToggle').addEventListener('change', (e) => {
+musicEnabled = e.target.value === 'on';
+if (gameState === 'playing') {
+if (musicEnabled) sounds.ambient.play();
+else sounds.ambient.stop();
+}
+});
+document.getElementById('sfxToggle').addEventListener('change', (e) => {
+soundEnabled = e.target.value === 'on';
+});
+document.getElementById('qualitySelect').addEventListener('change', (e) => {
+qualityMode = e.target.value;
+if (qualityMode === 'low') MAX_OBJECTS = MAX_OBJECTS_LOW;
+else if (qualityMode === 'high') MAX_OBJECTS = MAX_OBJECTS_HIGH;
+});
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', backToMenu);
+document.getElementById('infoBtn').addEventListener('click', () => {
+document.getElementById('menu').classList.remove('visible');
+document.getElementById('infoPanel').classList.add('visible');
+});
+document.getElementById('closeInfo').addEventListener('click', () => {
+document.getElementById('infoPanel').classList.remove('visible');
+document.getElementById('menu').classList.add('visible');
+});
+document.getElementById('settingsBtn').addEventListener('click', () => {
+document.getElementById('menu').classList.remove('visible');
+document.getElementById('settingsPanel').classList.add('visible');
+});
+document.getElementById('closeSettings').addEventListener('click', () => {
+document.getElementById('settingsPanel').classList.remove('visible');
+document.getElementById('menu').classList.add('visible');
+});
+document.getElementById('langBtn').addEventListener('click', () => {
+lang = lang === 'ru' ? 'en' : 'ru';
+updateTexts();
+});
+window.addEventListener('resize', () => {
+if (camera && renderer) {
+camera.aspect = window.innerWidth / window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth, window.innerHeight);
+}
+});
+updateTexts();
+</script>
 </body>
-</html>
+  </html>
