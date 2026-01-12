@@ -9,23 +9,24 @@
   </style>
 </head>
 <body>
-  <div class="holiday-title">С Новым Годом!</div>
+  <div class="holiday-title" data-key="holidayTitle">С Новым Годом!</div>
   <div class="corner-decoration top-left-bell">🌲</div>
   <div class="corner-decoration top-right-corner">🎀<span class="top-right-bell">🔔</span></div>
-  <h1>Меню</h1>
+  <h1 data-key="menuTitle">Меню</h1>
 
   
-  <button id="show-games-btn" class="game-link default">Игры</button>
+  <button id="show-games-btn" class="game-link default" data-key="gamesBtn">Игры</button>
 
   
   <div id="games-container" style="display:none;"></div>
 
   
-  <a href="support/index.html" class="game-link support">На кофе</a>
-  <a href="qr-from-screen/index.html" class="game-link qr">QR с экрана</a>
-  <button id="share-btn" class="game-link share">Поделиться</button>
+  <a href="support/index.html" class="game-link support" data-key="coffeeLink">На кофе</a>
+  <a href="qr-from-screen/index.html" class="game-link qr" data-key="qrLink">QR с экрана</a>
+  <button id="share-btn" class="game-link share" data-key="shareBtn">Поделиться</button>
+  <button id="lang-toggle" class="game-link default" style="margin-top:10px;">🇷🇺/🇬🇧</button>
 
-  <div class="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
+  <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
 
   <script>
     const games = [
@@ -39,7 +40,7 @@
       {name: "Шарики", path: "balls/index.html"},
       {name: "3 в ряд", path: "Match-Three/index.html"},
       {name: "Чёрная дыра", path: "BleckHoll/index.html"},
-      {name: "glass garden",path: "boxgame/index.html"} // ← теперь с запятой!
+      {name: "glass garden",path: "boxgame/index.html"}
     ];
 
     const container = document.getElementById('games-container');
@@ -58,22 +59,82 @@
     btn.addEventListener('click', () => {
       const isVisible = container.style.display === 'block';
       container.style.display = isVisible ? 'none' : 'block';
-      btn.textContent = isVisible ? 'Игры' : 'Скрыть игры';
+      updateText(); // Обновляем текст кнопки при переключении
     });
 
     // Кнопка "Поделиться"
     document.getElementById('share-btn').addEventListener('click', async () => {
       const url = window.location.href;
       if (navigator.share) {
-        try { await navigator.share({ title: ' игры', text: 'Попробуй  игры!', url }); } catch (e) {}
+        try { await navigator.share({ title: getTranslation('shareTitle'), text: getTranslation('shareText'), url }); } catch (e) {}
       } else {
         try {
           await navigator.clipboard.writeText(url);
-          alert('Ссылка скопирована! Отправь её кому хочешь.');
+          alert(getTranslation('linkCopied'));
         } catch (e) {
-          alert('Не удалось скопировать ссылку. Скопируй вручную:\n\n' + url);
+          alert(getTranslation('copyFailed') + '\n\n' + url);
         }
       }
+    });
+
+    // Локализация
+    const translations = {
+      ru: {
+        holidayTitle: "С Новым Годом!",
+        menuTitle: "Меню",
+        gamesBtn: "Игры",
+        coffeeLink: "На кофе",
+        qrLink: "QR с экрана",
+        shareBtn: "Поделиться",
+        footer: "© 2025 • Спасибо за интерес к моим работам! ❤️",
+        hideGamesBtn: "Скрыть игры",
+        shareTitle: " игры",
+        shareText: "Попробуй  игры!",
+        linkCopied: "Ссылка скопирована! Отправь её кому хочешь.",
+        copyFailed: "Не удалось скопировать ссылку. Скопируй вручную:"
+      },
+      en: {
+        holidayTitle: "Happy New Year!",
+        menuTitle: "Menu",
+        gamesBtn: "Games",
+        coffeeLink: "Buy me coffee",
+        qrLink: "QR from screen",
+        shareBtn: "Share",
+        footer: "© 2025 • Thank you for your interest in my work! ❤️",
+        hideGamesBtn: "Hide games",
+        shareTitle: " Games",
+        shareText: "Try these games!",
+        linkCopied: "Link copied! Send it to anyone.",
+        copyFailed: "Failed to copy link. Copy manually:"
+      }
+    };
+
+    let currentLang = 'ru';
+
+    function getTranslation(key) {
+      return translations[currentLang][key] || key;
+    }
+
+    function updateText() {
+      document.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.getAttribute('data-key');
+        if (key === 'gamesBtn') {
+          const isVisible = container.style.display === 'block';
+          el.textContent = isVisible ? getTranslation('hideGamesBtn') : getTranslation('gamesBtn');
+        } else {
+          el.textContent = getTranslation(key);
+        }
+      });
+
+      // Обновляем заголовок страницы
+      document.title = getTranslation('gamesBtn');
+    }
+
+    // Переключение языка
+    document.getElementById('lang-toggle').addEventListener('click', () => {
+      currentLang = currentLang === 'ru' ? 'en' : 'ru';
+      document.documentElement.lang = currentLang;
+      updateText();
     });
   </script>
 </body>
