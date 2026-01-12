@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>3D Комната — 100×25×100</title>
+<style>
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  touch-action: none;
+  font-family: Arial, sans-serif;
+}
+
+/* Отладка */
+#debug {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-family: monospace;
+  font-size: 14px;
+  z-index: 10;
+  background: rgba(0,0,0,0.6);
+  padding: 6px;
+  border-radius: 4px;
+}
+
+/* Джойстик */
+#joystick {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  border: 2px solid white;
+  border-radius: 50%;
+  display: none;
+  touch-action: none;
+}
+#stick {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  top: 40px;
+  left: 40px;
+}
+
+/* Главное меню */
+#mainMenu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 100;
+  color: white;
+}
+#mainMenu button {
+  display: block;
+  width: 200px;
+  margin: 16px auto;
+  padding: 16px;
+  font-size: 20px;
+  background: #333;
+  color: white;
+  border: 2px solid #666;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Пауза */
+#pauseBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 90;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  display: none;
+}
+#pauseMenu {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  color: white;
+}
+#pauseMenu button {
+  width: 180px;
+  padding: 14px;
+  margin: 12px;
+  font-size: 18px;
+  background: #444;
+  color: white;
+  border: 1px solid #777;
+  border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<!-- Главное меню -->
+<div id="mainMenu">
+  <button id="playBtn">Играть</button>
+  <button id="exitBtn">Выйти</button>
+</div>
+
+<!-- Кнопка паузы -->
+<button id="pauseBtn">Пауза</button>
+
+<!-- Меню паузы -->
+<div id="pauseMenu">
+  <button id="resumeBtn">Продолжить</button>
+  <button id="backToMenuBtn">В главное меню</button>
+</div>
+
+<!-- Отладка и джойстик -->
+<div id="debug">Загрузка...</div>
+<div id="joystick"><div id="stick"></div></div>
+
+<script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
+<script>
+// === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
+let isGameActive = false;
+let gameInitialized = false;
+
+const mainMenu = document.getElementById('mainMenu');
+const pauseBtn = document.getElementById('pauseBtn');
+const pauseMenu = document.getElementById('pauseMenu');
+
+// === ОСНОВНАЯ ИГРОВАЯ ЛОГИКА (из boxgame.txt) ===
+function initGame() {
+  if (gameInitialized) return;
+
+  const WORLD_SIZE_X = 100;
+  const WORLD_SIZE_Y = 25;
+  const WORLD_SIZE_Z = 100;
+  const PLAYER_HEIGHT = 3.2;
+  const START_POS = { x: -40, y: PLAYER_HEIGHT, z: 40 };
+  const MOVE_SPEED = 0.0125;
+  const LOOK_SENSITIVITY = 0.002;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x111111);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
+  camera.position.set(START_POS.x, START_POS.y, START_POS.z);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  directionalLight.position.set(100, 50, 100);
+  scene.add(directionalLight);
+
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0x444466,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.95
+  });
+
+  const walls = [
+    { pos: [0, WORLD_SIZE_Y/2, -WORLD_SIZE_Z/2], size: [WORLD_SIZE_X, WORLD_SIZE_Y, 1] },
+    { pos: [0, WORLD_SIZE_Y/2,  WORLD_SIZE_Z/2], size: [WORLD_SIZE_X, WORLD_SIZE_Y, 1] },
+    { pos: [-WORLD_SIZE_X/2, WORLD_SIZE_Y/2, 0], size: [1, WORLD_SIZE_Y, WORLD_SIZE_Z] },
+    { pos: [ WORLD_SIZE_X/2, WORLD_SIZE_Y/2, 0], size: [1, WORLD_SIZE_Y, WORLD_SIZE_Z] },
+    { pos: [0, 0, 0], size: [WORLD_SIZE_X, 1, WORLD_SIZE_Z] },
+    { pos: [0, WORLD_SIZE_Y, 0], size: [WORLD_SIZE_X, 1, WORLD_SIZE_Z] }
+  ];
+
+  walls.forEach(w => {
+    const geo = new THREE.BoxGeometry(...w.size);
+    const mesh = new THREE.Mesh(geo, wallMaterial);
+    mesh.position.set(...w.pos);
+    scene.add(mesh);
+  });
+
+  const tileSize = 1;
+  const darkColor = 0x5D4037;
+  const lightColor = 0x8D6E63;
+  for (let x = 0; x < WORLD_SIZE_X; x++) {
+    for (let z = 0; z < WORLD_SIZE_Z; z++) {
+      const isDark = (x + z) % 2 === 0;
+      const tileMat = new THREE.MeshBasicMaterial({ color: isDark ? darkColor : lightColor });
+      const tileGeo = new THREE.PlaneGeometry(tileSize, tileSize);
+      const tile = new THREE.Mesh(tileGeo, tileMat);
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set(
+        -WORLD_SIZE_X/2 + x * tileSize + tileSize/2,
+        0.01,
+        -WORLD_SIZE_Z/2 + z * tileSize + tileSize/2
+      );
+      scene.add(tile);
+    }
+  }
+
+  const gridHelper = new THREE.GridHelper(WORLD_SIZE_X, WORLD_SIZE_X, 0x888888, 0x444444);
+  gridHelper.position.y = 0;
+  gridHelper.material.transparent = true;
+  gridHelper.material.opacity = 0.3;
+  scene.add(gridHelper);
+
+  const createWallGrid = (normal) => {
+    const helper = new THREE.GridHelper(WORLD_SIZE_X, WORLD_SIZE_X, 0x666666, 0x333333);
+    if (normal === 'x') {
+      helper.rotation.z = Math.PI / 2;
+      helper.position.x = -WORLD_SIZE_X/2;
+      helper.scale.y = WORLD_SIZE_Y / WORLD_SIZE_X;
+    } else if (normal === 'z') {
+      helper.rotation.x = Math.PI / 2;
+      helper.position.z = -WORLD_SIZE_Z/2;
+      helper.scale.y = WORLD_SIZE_Y / WORLD_SIZE_Z;
+    }
+    helper.material.transparent = true;
+    helper.material.opacity = 0.2;
+    scene.add(helper);
+  };
+  createWallGrid('x');
+  createWallGrid('z');
+
+  const axesHelper = new THREE.AxesHelper(10);
+  scene.add(axesHelper);
+
+  const cornerGeo = new THREE.SphereGeometry(0.5, 8, 8);
+  const cornerMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+  const corners = [
+    [-50, 0, -50], [-50, 0, 50],
+    [50, 0, -50], [50, 0, 50]
+  ];
+  corners.forEach(corner => {
+    const marker = new THREE.Mesh(cornerGeo, cornerMat);
+    marker.position.set(...corner);
+    scene.add(marker);
+  });
+
+  const bulbGeo = new THREE.SphereGeometry(3, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+  bulb.position.set(0, WORLD_SIZE_Y, 0);
+  bulb.rotation.x = Math.PI;
+  scene.add(bulb);
+
+  const keys = { w: false, a: false, s: false, d: false };
+  let joyDir = { x: 0, y: 0 };
+  let lookX = 0, lookY = 0;
+  let isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    document.getElementById('joystick').style.display = 'block';
+  }
+
+  window.addEventListener('keydown', e => {
+    if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+  });
+  window.addEventListener('keyup', e => {
+    if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
+  });
+
+  const joyEl = document.getElementById('joystick');
+  const stickEl = document.getElementById('stick');
+  let joyActive = false;
+  let joyStart = { x: 0, y: 0 };
+
+  joyEl.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    joyStart = { x: t.clientX, y: t.clientY };
+    joyActive = true;
+    joyEl.style.borderColor = 'lime';
+  });
+
+  window.addEventListener('touchmove', e => {
+    if (!joyActive) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - joyStart.x;
+    const dy = t.clientY - joyStart.y;
+    const maxR = 40;
+    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), maxR);
+    const angle = Math.atan2(dy, dx);
+    joyDir.x = Math.cos(angle) * (dist / maxR);
+    joyDir.y = Math.sin(angle) * (dist / maxR);
+    stickEl.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+
+  window.addEventListener('touchend', () => {
+    joyActive = false;
+    joyDir = { x: 0, y: 0 };
+    stickEl.style.transform = 'translate(0,0)';
+    joyEl.style.borderColor = 'white';
+  });
+
+  let mouseDown = false;
+  renderer.domElement.addEventListener('mousedown', e => {
+    if (!isMobile) {
+      mouseDown = true;
+      renderer.domElement.requestPointerLock();
+    }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (mouseDown || document.pointerLockElement === renderer.domElement) {
+      lookX -= e.movementX * LOOK_SENSITIVITY;
+      lookY -= e.movementY * LOOK_SENSITIVITY;
+      lookY = Math.max(-Math.PI/2, Math.min(Math.PI/2, lookY));
+    }
+  });
+
+  document.addEventListener('mouseup', () => { mouseDown = false; });
+
+  let touchStart = { x: 0, y: 0 };
+  renderer.domElement.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      touchStart.x = e.touches[0].clientX;
+      touchStart.y = e.touches[0].clientY;
+    }
+  });
+
+  renderer.domElement.addEventListener('touchmove', e => {
+    if (e.touches.length === 1 && !joyActive) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - touchStart.x;
+      const dy = e.touches[0].clientY - touchStart.y;
+      // ИСПРАВЛЕНО: свайп влево = поворот влево, свайп вниз = поворот вниз
+      lookX -= dx * 0.005; // ← Убрана инверсия
+      lookY -= dy * 0.005; // ← Убрана инверсия
+      lookY = Math.max(-Math.PI/2, Math.min(Math.PI/2, lookY));
+      touchStart.x = e.touches[0].clientX;
+      touchStart.y = e.touches[0].clientY;
+    }
+  });
+
+  function updatePlayer(delta) {
+    let moveForward = 0, moveRight = 0;
+    if (!isMobile) {
+      if (keys.w) moveForward += 1;
+      if (keys.s) moveForward -= 1;
+      if (keys.a) moveRight -= 1;
+      if (keys.d) moveRight += 1;
+    } else {
+      moveForward = -joyDir.y;
+      moveRight = joyDir.x;
+    }
+    const len = Math.hypot(moveForward, moveRight);
+    if (len > 0) {
+      moveForward /= len;
+      moveRight /= len;
+    }
+    const dir = new THREE.Vector3();
+    dir.z = -Math.cos(lookX);
+    dir.x = -Math.sin(lookX);
+    dir.y = 0;
+    dir.normalize();
+    const right = new THREE.Vector3();
+    right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+    const speed = MOVE_SPEED * delta;
+    camera.position.x += (dir.x * moveForward + right.x * moveRight) * speed;
+    camera.position.z += (dir.z * moveForward + right.z * moveRight) * speed;
+    camera.position.y = PLAYER_HEIGHT;
+    camera.position.x = Math.max(-WORLD_SIZE_X/2, Math.min(WORLD_SIZE_X/2, camera.position.x));
+    camera.position.z = Math.max(-WORLD_SIZE_Z/2, Math.min(WORLD_SIZE_Z/2, camera.position.z));
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = lookX;
+    camera.rotation.x = lookY;
+  }
+
+  const debugEl = document.getElementById('debug');
+  function updateDebug() {
+    const pos = camera.position;
+    const degX = (lookX * 180 / Math.PI).toFixed(1);
+    const degY = (lookY * 180 / Math.PI).toFixed(1);
+    debugEl.textContent =
+      `POS: X=${pos.x.toFixed(1)}, Y=${pos.y.toFixed(1)}, Z=${pos.z.toFixed(1)}
+` +
+      `LOOK: Yaw=${degX}°, Pitch=${degY}°
+` +
+      `MOBILE: ${isMobile ? 'Да' : 'Нет'} | FPS: ${Math.round(1000/deltaTime)}`;
+  }
+
+  // === ОПТИМИЗАЦИЯ FPS ===
+  let lastTime = 0;
+  let deltaTime = 16;
+  let frameCount = 0;
+  let fpsTimer = 0;
+  let targetFPS = 60;
+  let minFPS = 50;
+
+  function animate(time) {
+    if (!isGameActive) return requestAnimationFrame(animate);
+
+    deltaTime = time - lastTime;
+    lastTime = time;
+
+    // Ограничение FPS до 60
+    if (deltaTime < 1000 / targetFPS) {
+      requestAnimationFrame(animate);
+      return;
+    }
+
+    // Подсчёт FPS
+    frameCount++;
+    if (time - fpsTimer >= 1000) {
+      fpsTimer = time;
+      frameCount = 0;
+    }
+
+    updatePlayer(deltaTime);
+    updateDebug();
+    renderer.render(scene, camera);
+
+    requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Запуск игрового цикла
+  animate(0);
+  gameInitialized = true;
+}
+
+// === УПРАВЛЕНИЕ МЕНЮ ===
+document.getElementById('playBtn').onclick = () => {
+  mainMenu.style.display = 'none';
+  pauseBtn.style.display = 'block';
+  isGameActive = true;
+  initGame();
+};
+
+document.getElementById('exitBtn').onclick = () => {
+  if (confirm('Выйти из игры?')) {
+    // В браузере — просто остаёмся в меню
+  }
+};
+
+pauseBtn.onclick = () => {
+  isGameActive = false;
+  pauseMenu.style.display = 'flex';
+};
+
+document.getElementById('resumeBtn').onclick = () => {
+  pauseMenu.style.display = 'none';
+  isGameActive = true;
+};
+
+document.getElementById('backToMenuBtn').onclick = () => {
+  pauseMenu.style.display = 'none';
+  mainMenu.style.display = 'block';
+  pauseBtn.style.display = 'none';
+  isGameActive = false;
+  // Сброс сцены: удаляем WebGL-контекст
+  const canvas = document.querySelector('canvas');
+  if (canvas) canvas.remove();
+  gameInitialized = false;
+  document.getElementById('joystick').style.display = 'none';
+};
+</script>
+</body>
+</html>
