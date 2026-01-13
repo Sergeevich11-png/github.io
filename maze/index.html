@@ -58,6 +58,19 @@
     }
     #playBtn { background: #8aa67d; }
     #backBtn { background: #7c6a5d; }
+    #langBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 10px;
+      font-size: 14px;
+      background: #5a504b;
+      color: #e0d7d1;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      z-index: 30;
+    }
     .hidden {
       display: none !important;
     }
@@ -80,22 +93,66 @@
   </style>
 </head>
 <body>
+  <button id="langBtn">🇷🇺 / 🇬🇧</button>
+
   <div id="menuScreen">
-    <h2>Лабиринт</h2>
-    <button id="playBtn" class="btn">Играть</button>
+    <h2 data-key="title">Лабиринт</h2>
+    <button id="playBtn" class="btn" data-key="playBtn">Играть</button>
     <br>
-    <button id="backBtn" class="btn">Назад</button>
+    <button id="backBtn" class="btn" data-key="backBtn">Назад</button>
   </div>
 
   <div id="gameScreen" class="hidden">
     <div id="ui">
-      <div id="message">Наклоняй телефон, чтобы катать шарик!</div>
-      <button id="menuBtn" class="btn" style="pointer-events: auto;">Меню</button>
+      <div id="message" data-key="instructions">Наклоняй телефон, чтобы катать шарик!</div>
+      <button id="menuBtn" class="btn" style="pointer-events: auto;" data-key="menuBtn">Меню</button>
     </div>
     <canvas id="gameCanvas"></canvas>
   </div>
 
   <script>
+    // === ЛОКАЛИЗАЦИЯ ===
+    const translations = {
+      ru: {
+        title: "Лабиринт",
+        playBtn: "Играть",
+        backBtn: "Назад",
+        instructions: "Наклоняй телефон, чтобы катать шарик!",
+        menuBtn: "Меню",
+        victory: "🏆 Победа! Ты вышел из лабиринта!"
+      },
+      en: {
+        title: "Maze",
+        playBtn: "Play",
+        backBtn: "Back",
+        instructions: "Tilt your phone to roll the ball!",
+        menuBtn: "Menu",
+        victory: "🏆 Victory! You escaped the maze!"
+      }
+    };
+
+    let currentLang = 'ru';
+
+    function getTranslation(key) {
+      return translations[currentLang][key] || key;
+    }
+
+    function updateText() {
+      document.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.getAttribute('data-key');
+        el.textContent = getTranslation(key);
+      });
+      document.title = getTranslation('title');
+    }
+
+    // Переключение языка
+    document.getElementById('langBtn').addEventListener('click', () => {
+      currentLang = currentLang === 'ru' ? 'en' : 'ru';
+      document.documentElement.lang = currentLang;
+      updateText();
+    });
+
+    // === ИГРОВОЙ КОД (БЕЗ ИЗМЕНЕНИЙ, КРОМЕ ОБНОВЛЕНИЯ ТЕКСТОВ) ===
     const RADI = [40, 80, 120, 160, 200];
     const MAX_RADIUS = 200;
     const PASSAGE_RADIUS = 12;
@@ -136,6 +193,7 @@
       ball.vx = 0;
       ball.vy = 0;
       lastTime = 0;
+      updateText(); // Обновляем текст при возврате в меню
     }
 
     function generatePassages() {
@@ -276,8 +334,8 @@
     function victory() {
       gameActive = false;
       gameOver = true;
-      messageEl.textContent = '🏆 Победа! Ты вышел из лабиринта!';
-      menuBtn.textContent = 'Меню';
+      messageEl.textContent = getTranslation('victory');
+      menuBtn.textContent = getTranslation('menuBtn');
     }
 
     function draw() {
@@ -310,8 +368,7 @@
         ctx.stroke();
       }
 
-      // 🔒 ПРОХОДЫ СТАЛИ НЕВИДИМЫМИ!
-      ctx.fillStyle = '#322c27'; // ← ЦВЕТ ФОНА КАНВАСА
+      ctx.fillStyle = '#322c27';
       for (const p of passagePoints) {
         const px = cx + p.x * scale;
         const py = cy + p.y * scale;
@@ -368,8 +425,8 @@
       gameActive = false;
       gameOver = false;
       lastTime = 0;
-      messageEl.textContent = 'Наклоняй телефон, чтобы катать шарик!';
-      menuBtn.textContent = 'Меню';
+      messageEl.textContent = getTranslation('instructions');
+      menuBtn.textContent = getTranslation('menuBtn');
 
       const canvasSize = Math.min(window.innerWidth, window.innerHeight) * 0.94;
       canvas.width = canvas.height = canvasSize;
@@ -386,11 +443,15 @@
                 window.addEventListener('devicemotion', handleMotion);
                 animFrameId = requestAnimationFrame(gameLoop);
               } else {
-                messageEl.textContent = 'Разреши доступ к сенсорам в настройках.';
+                messageEl.textContent = currentLang === 'ru'
+                  ? 'Разреши доступ к сенсорам в настройках.'
+                  : 'Please allow sensor access in settings.';
               }
             })
             .catch(() => {
-              messageEl.textContent = 'Не удалось получить доступ к сенсорам.';
+              messageEl.textContent = currentLang === 'ru'
+                ? 'Не удалось получить доступ к сенсорам.'
+                : 'Failed to access motion sensors.';
             });
         } else {
           gameActive = true;
@@ -401,6 +462,9 @@
 
       requestPermission();
     }
+
+    // Инициализация
+    updateText();
   </script>
 </body>
 </html>
