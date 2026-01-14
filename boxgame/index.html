@@ -189,14 +189,20 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
 scene.add(ambientLight);
 
-const bulbLight = new THREE.PointLight(0xffffcc, 1.5, 150);
-bulbLight.position.set(0, WORLD_SIZE_Y, 0);
-scene.add(bulbLight);
+const spotLight = new THREE.SpotLight(0xfff0b3, 9.5);
+spotLight.position.set(0, WORLD_SIZE_Y, 0);
+spotLight.angle = Math.atan(28.6 / WORLD_SIZE_Y);
+spotLight.penumbra = 0.3;
+spotLight.decay = 1;
+spotLight.distance = 60;
+scene.add(spotLight);
 
-const wallColor = 0xE6E6E6;
+let isLampOn = true;
+
+const wallColor = 0xC8C8C8;
 const ceilingColor = 0xF5F0E6;
 const floorDark = 0x5D4037;
 const floorLight = 0x8D6E63;
@@ -206,16 +212,16 @@ function createConcreteTexture(size = 128) {
 	canvas.width = size;
 	canvas.height = size;
 	const ctx = canvas.getContext('2d');
-	ctx.fillStyle = '#E6E6E6';
+	ctx.fillStyle = '#C8C8C8';
 	ctx.fillRect(0, 0, size, size);
 	const imageData = ctx.getImageData(0, 0, size, size);
 	const data = imageData.data;
 	for (let i = 0; i < data.length; i += 4) {
 		let noise = (Math.random() - 0.5) * 15;
 		if (Math.random() > 0.8) noise *= 2;
-		data[i]     = Math.min(255, Math.max(0, 0xE6 + noise));
-		data[i + 1] = Math.min(255, Math.max(0, 0xE6 + noise));
-		data[i + 2] = Math.min(255, Math.max(0, 0xE6 + noise));
+		data[i]     = Math.min(255, Math.max(0, 0xC8 + noise));
+		data[i + 1] = Math.min(255, Math.max(0, 0xC8 + noise));
+		data[i + 2] = Math.min(255, Math.max(0, 0xC8 + noise));
 		data[i + 3] = 255;
 	}
 	ctx.putImageData(imageData, 0, 0);
@@ -265,7 +271,12 @@ const tileSize = 1;
 for (let x = 0; x < WORLD_SIZE_X; x++) {
 	for (let z = 0; z < WORLD_SIZE_Z; z++) {
 		const isDark = (x + z) % 2 === 0;
-		const tileMat = new THREE.MeshBasicMaterial({ color: isDark ? floorDark : floorLight });
+		const tileColor = isDark ? floorDark : floorLight;
+		const tileMat = new THREE.MeshStandardMaterial({
+			color: tileColor,
+			roughness: 0.95,
+			metalness: 0.0
+		});
 		const tileGeo = new THREE.PlaneGeometry(tileSize, tileSize);
 		const tile = new THREE.Mesh(tileGeo, tileMat);
 		tile.rotation.x = -Math.PI / 2;
@@ -279,7 +290,7 @@ for (let x = 0; x < WORLD_SIZE_X; x++) {
 }
 
 const bulbGeo = new THREE.SphereGeometry(2, 16, 16);
-const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
 const bulb = new THREE.Mesh(bulbGeo, bulbMat);
 bulb.position.set(0, WORLD_SIZE_Y, 0);
 scene.add(bulb);
@@ -290,6 +301,14 @@ const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff9800 });
 const interactiveCube = new THREE.Mesh(cubeGeo, cubeMat);
 interactiveCube.position.set(0, cubeSize/2, 0);
 scene.add(interactiveCube);
+
+const plateSize = 0.25;
+const plateGeo = new THREE.PlaneGeometry(plateSize, plateSize);
+const plateMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x333300, side: THREE.DoubleSide });
+const switchPlate = new THREE.Mesh(plateGeo, plateMat);
+switchPlate.position.set(0, PLAYER_HEIGHT, -WORLD_SIZE_Z/2 + 0.05);
+switchPlate.rotation.y = Math.PI;
+scene.add(switchPlate);
 
 let heldObject = null;
 let lastTapTime = 0;
@@ -319,9 +338,19 @@ function handleInteraction() {
 		const direction = new THREE.Vector3();
 		camera.getWorldDirection(direction);
 		const raycaster = new THREE.Raycaster(camera.position, direction);
-		const intersects = raycaster.intersectObject(interactiveCube);
-		if (intersects.length > 0) {
-			const distance = intersects[0].distance;
+		const intersectsCube = raycaster.intersectObject(interactiveCube);
+		const intersectsPlate = raycaster.intersectObject(switchPlate);
+		const distToPlate = switchPlate.position.distanceTo(camera.position);
+		if (intersectsPlate.length > 0 && distToPlate <= 10) {
+			showConfirm('Свет: Вкл / Выкл', () => {
+				isLampOn = true;
+				spotLight.intensity = 9.5;
+			}, () => {
+				isLampOn = false;
+				spotLight.intensity = 0;
+			});
+		} else if (intersectsCube.length > 0) {
+			const distance = intersectsCube[0].distance;
 			if (heldObject === null && distance <= 3) {
 				showConfirm('Взять?', () => {
 					heldObject = interactiveCube;
@@ -330,7 +359,7 @@ function handleInteraction() {
 				}, () => {});
 			} else if (heldObject === interactiveCube) {
 				showConfirm('Выложить?', () => {
-					const offset = new THREE.Vector3(0, 0, -0.1);
+					const offset = new THREE.Vector3(0, 0, -2);
 					offset.applyQuaternion(camera.quaternion);
 					const dropPos = camera.position.clone().add(offset);
 					dropPos.y = cubeSize / 2;
