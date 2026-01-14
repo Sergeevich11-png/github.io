@@ -47,8 +47,7 @@ border-radius: 50%;
 top: 40px;
 left: 40px;
 }
-#mainMenu {
-position: absolute;
+#mainMenu {position: absolute;
 top: 50%;
 left: 50%;
 transform: translate(-50%, -50%);
@@ -97,8 +96,7 @@ padding: 14px;
 margin: 12px;
 font-size: 18px;
 background: #444;
-color: white;
-border: 1px solid #777;
+color: white;border: 1px solid #777;
 border-radius: 8px;
 }
 #cubeUI {
@@ -108,6 +106,18 @@ left: 20px;
 width: 40px;
 height: 40px;
 background: #ff9800;
+border: 2px solid white;
+border-radius: 4px;
+display: none;
+z-index: 95;
+}
+#wateringCanUI {
+position: absolute;
+bottom: 210px;
+left: 20px;
+width: 40px;
+height: 40px;
+background: #4CAF50;
 border: 2px solid white;
 border-radius: 4px;
 display: none;
@@ -135,8 +145,7 @@ border-radius: 6px;
 cursor: pointer;
 }
 </style>
-</head>
-<body>
+</head><body>
 <div id="mainMenu">
 <button id="playBtn">Играть</button>
 <button id="exitBtn">Выйти</button>
@@ -149,6 +158,7 @@ cursor: pointer;
 <div id="debug">Загрузка...</div>
 <div id="joystick"><div id="stick"></div></div>
 <div id="cubeUI"></div>
+<div id="wateringCanUI"></div>
 <div id="confirmBox">
 <p id="confirmText">Взять?</p>
 <button id="confirmYes">Да</button>
@@ -162,6 +172,7 @@ const mainMenu = document.getElementById('mainMenu');
 const pauseBtn = document.getElementById('pauseBtn');
 const pauseMenu = document.getElementById('pauseMenu');
 const cubeUI = document.getElementById('cubeUI');
+const wateringCanUI = document.getElementById('wateringCanUI');
 const confirmBox = document.getElementById('confirmBox');
 const confirmText = document.getElementById('confirmText');
 const confirmYes = document.getElementById('confirmYes');
@@ -184,7 +195,6 @@ scene.background = new THREE.Color(0x111111);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
 camera.position.set(START_POS.x, START_POS.y, START_POS.z);
-
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -233,7 +243,6 @@ function createConcreteTexture(size = 128) {
 }
 
 const concreteTexture = createConcreteTexture();
-
 const walls = [
 { pos: [0, WORLD_SIZE_Y/2, -WORLD_SIZE_Z/2], size: [WORLD_SIZE_X, WORLD_SIZE_Y, 1], color: wallColor },
 { pos: [0, WORLD_SIZE_Y/2,  WORLD_SIZE_Z/2], size: [WORLD_SIZE_X, WORLD_SIZE_Y, 1], color: wallColor },
@@ -283,8 +292,7 @@ for (let x = 0; x < WORLD_SIZE_X; x++) {
 		tile.position.set(
 			-WORLD_SIZE_X/2 + x * tileSize + tileSize/2,
 			0.01,
-			-WORLD_SIZE_Z/2 + z * tileSize + tileSize/2
-		);
+			-WORLD_SIZE_Z/2 + z * tileSize + tileSize/2		);
 		scene.add(tile);
 	}
 }
@@ -295,13 +303,55 @@ const bulb = new THREE.Mesh(bulbGeo, bulbMat);
 bulb.position.set(0, WORLD_SIZE_Y, 0);
 scene.add(bulb);
 
+// === КУБ ===
 const cubeSize = 1.5;
 const cubeGeo = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
 const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff9800 });
 const interactiveCube = new THREE.Mesh(cubeGeo, cubeMat);
 interactiveCube.position.set(0, cubeSize/2, 0);
+interactiveCube.userData.wet = false;
 scene.add(interactiveCube);
 
+// === ЛЕЙКА ===
+function createWateringCan() {
+	const group = new THREE.Group();
+
+	// Тело лейки — цилиндр
+	const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
+	const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
+	const body = new THREE.Mesh(bodyGeo, bodyMat);
+	body.position.y = 0.4;
+	group.add(body);
+
+	// Ручка — дуга
+	const handleCurve = new THREE.EllipseCurve(
+		0, 0.8, // центр
+		0.6, 0.3, // радиусы x, y
+		0, Math.PI, // углы
+		false, // часовая стрелка
+		0 // вращение
+	);
+	const points = handleCurve.getPoints(20).map(p => new THREE.Vector3(p.x, p.y, 0));
+	const handleGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 20, 0.05, 8, false);
+	const handle = new THREE.Mesh(handleGeo, bodyMat.clone());
+	handle.rotation.z = Math.PI / 2;
+	handle.position.y = 0.4;
+	group.add(handle);
+
+	// Носик — конус
+	const spoutGeo = new THREE.ConeGeometry(0.15, 0.6, 8);
+	const spout = new THREE.Mesh(spoutGeo, bodyMat.clone());
+	spout.rotation.x = Math.PI / 2;	spout.position.set(0.4, 0.4, 0);
+	group.add(spout);
+
+	return group;
+}
+
+const wateringCan = createWateringCan();
+wateringCan.position.set(5, 0.5, 0); // чуть выше пола
+scene.add(wateringCan);
+
+// === ВЫКЛЮЧАТЕЛЬ СВЕТА ===
 const plateSize = 0.25;
 const plateGeo = new THREE.PlaneGeometry(plateSize, plateSize);
 const plateMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x333300, side: THREE.DoubleSide });
@@ -339,8 +389,9 @@ function handleInteraction() {
 		camera.getWorldDirection(direction);
 		const raycaster = new THREE.Raycaster(camera.position, direction);
 		const intersectsCube = raycaster.intersectObject(interactiveCube);
-		const intersectsPlate = raycaster.intersectObject(switchPlate);
-		const distToPlate = switchPlate.position.distanceTo(camera.position);
+		const intersectsCan = raycaster.intersectObject(wateringCan, true); // true — рекурсивно для группы
+		const intersectsPlate = raycaster.intersectObject(switchPlate);		const distToPlate = switchPlate.position.distanceTo(camera.position);
+
 		if (intersectsPlate.length > 0 && distToPlate <= 10) {
 			showConfirm('Свет: Вкл / Выкл', () => {
 				isLampOn = true;
@@ -349,26 +400,51 @@ function handleInteraction() {
 				isLampOn = false;
 				spotLight.intensity = 0;
 			});
-		} else if (intersectsCube.length > 0) {
+		} else if (heldObject === wateringCan && intersectsCube.length > 0 && intersectsCube[0].distance <= 5) {
+			// Поливаем куб
+			showConfirm('Полить куб?', () => {
+				interactiveCube.material.color.set(0x8B4513); // тёмно-коричневый
+				interactiveCube.userData.wet = true;
+			}, () => {});
+		} else if (intersectsCan.length > 0 && heldObject !== wateringCan) {
+			const distance = intersectsCan[0].distance;
+			if (distance <= 3) {
+				showConfirm('Взять лейку?', () => {
+					heldObject = wateringCan;
+					wateringCanUI.style.display = 'block';
+					wateringCan.visible = false;
+				}, () => {});
+			}
+		} else if (intersectsCube.length > 0 && heldObject !== interactiveCube) {
 			const distance = intersectsCube[0].distance;
 			if (heldObject === null && distance <= 3) {
-				showConfirm('Взять?', () => {
+				showConfirm('Взять куб?', () => {
 					heldObject = interactiveCube;
 					cubeUI.style.display = 'block';
 					interactiveCube.visible = false;
 				}, () => {});
-			} else if (heldObject === interactiveCube) {
-				showConfirm('Выложить?', () => {
-					const offset = new THREE.Vector3(0, 0, -2);
-					offset.applyQuaternion(camera.quaternion);
-					const dropPos = camera.position.clone().add(offset);
-					dropPos.y = cubeSize / 2;
-					interactiveCube.position.copy(dropPos);
-					interactiveCube.visible = true;
-					heldObject = null;
-					cubeUI.style.display = 'none';
-				}, () => {});
 			}
+		} else if (heldObject === interactiveCube) {
+			showConfirm('Выложить куб?', () => {
+				const offset = new THREE.Vector3(0, 0, -2);
+				offset.applyQuaternion(camera.quaternion);
+				const dropPos = camera.position.clone().add(offset);
+				dropPos.y = cubeSize / 2;
+				interactiveCube.position.copy(dropPos);
+				interactiveCube.visible = true;
+				heldObject = null;
+				cubeUI.style.display = 'none';
+			}, () => {});
+		} else if (heldObject === wateringCan) {
+			showConfirm('Выложить лейку?', () => {
+				const offset = new THREE.Vector3(0, 0, -2);
+				offset.applyQuaternion(camera.quaternion);
+				const dropPos = camera.position.clone().add(offset);				dropPos.y = 0.5;
+				wateringCan.position.copy(dropPos);
+				wateringCan.visible = true;
+				heldObject = null;
+				wateringCanUI.style.display = 'none';
+			}, () => {});
 		}
 	}
 	lastTapTime = currentTime;
@@ -412,8 +488,7 @@ window.addEventListener('touchstart', e => {
 	for (let touch of e.changedTouches) {
 		const x = touch.clientX;
 		const y = touch.clientY;
-		if (x >= joyRect.left && x <= joyRect.right && y >= joyRect.top && y <= joyRect.bottom) {
-			if (joyTouchId === null) {
+		if (x >= joyRect.left && x <= joyRect.right && y >= joyRect.top && y <= joyRect.bottom) {			if (joyTouchId === null) {
 				joyTouchId = touch.identifier;
 				joyStart = { x, y };
 				joyEl.style.borderColor = 'lime';
@@ -462,8 +537,7 @@ window.addEventListener('touchend', e => {
 		if (touch.identifier === joyTouchId) {
 			joyTouchId = null;
 			joyDir.x = 0;
-			joyDir.y = 0;
-			stickEl.style.transform = 'translate(0,0)';
+			joyDir.y = 0;			stickEl.style.transform = 'translate(0,0)';
 			joyEl.style.borderColor = 'white';
 		}
 		if (touch.identifier === swipeTouchId) {
@@ -512,8 +586,7 @@ function updatePlayer(delta) {
 	if (len > 0) {
 		moveForward /= len;
 		moveRight /= len;
-	}
-	const dir = new THREE.Vector3();
+	}	const dir = new THREE.Vector3();
 	dir.z = -Math.cos(lookX);
 	dir.x = -Math.sin(lookX);
 	dir.y = 0;
@@ -543,6 +616,9 @@ function updatePlayer(delta) {
 	if (interactiveCube.visible && interactiveCube.position.y !== cubeSize / 2) {
 		interactiveCube.position.y = cubeSize / 2;
 	}
+	if (wateringCan.visible && wateringCan.position.y !== 0.5) {
+		wateringCan.position.y = 0.5;
+	}
 }
 
 const debugEl = document.getElementById('debug');
@@ -559,8 +635,7 @@ function animate(time) {
 	const degY = (lookY * 180 / Math.PI).toFixed(1);
 	debugEl.textContent =
 `POS: X=${pos.x.toFixed(1)}, Y=${pos.y.toFixed(1)}, Z=${pos.z.toFixed(1)}
-` +
-`LOOK: Yaw=${degX}°, Pitch=${degY}°
+` +`LOOK: Yaw=${degX}°, Pitch=${degY}°
 ` +
 `MOBILE: ${isMobile ? 'Да' : 'Нет'} | FPS: ${Math.round(1000/deltaTime)}`;
 	renderer.render(scene, camera);
@@ -604,6 +679,7 @@ document.getElementById('backToMenuBtn').onclick = () => {
 	gameInitialized = false;
 	document.getElementById('joystick').style.display = 'none';
 	cubeUI.style.display = 'none';
+	wateringCanUI.style.display = 'none';
 };
 </script>
 </body>
