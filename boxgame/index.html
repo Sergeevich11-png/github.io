@@ -3,207 +3,239 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>3D Комната — 50×25×50</title>
+<title>3D Комната — Бета</title>
 <style>
-body, html {
-	margin: 0;
-	padding: 0;
-	overflow: hidden;
-	width: 100%;
-	height: 100%;
-	background: #000;
-	touch-action: none;
-	font-family: Arial, sans-serif;
-}
-#debug {
-	position: absolute;
-	top: 10px;
-	left: 10px;
-	color: white;
-	font-family: monospace;
-	font-size: 14px;
-	z-index: 10;
-	background: rgba(0,0,0,0.6);
-	padding: 6px;
-	border-radius: 4px;
-}
-#joystick {
-	position: absolute;
-	bottom: 20px;
-	left: 20px;
-	width: 120px;
-	height: 120px;
-	border: 2px solid white;
-	border-radius: 50%;
-	display: none;
-	touch-action: none;
-}
-#stick {
-	position: absolute;
-	width: 40px;
-	height: 40px;
-	background: white;
-	border-radius: 50%;
-	top: 40px;
-	left: 40px;
-}
-#mainMenu {	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	text-align: center;
-	z-index: 100;
-	color: white;
-}
-#mainMenu button {
-	display: block;
-	width: 200px;
-	margin: 16px auto;
-	padding: 16px;
-	font-size: 20px;
-	background: #333;
-	color: white;
-	border: 2px solid #666;
-	border-radius: 10px;
-	cursor: pointer;
-}
-#pauseBtn {
-	position: absolute;
-	top: 15px;
-	right: 15px;
-	z-index: 90;
-	padding: 8px 16px;
-	background: rgba(0,0,0,0.6);
-	color: white;
-	border: none;
-	border-radius: 6px;
-	display: none;
-}
-#pauseMenu {
-	position: absolute;
-	top: 0; left: 0; right: 0; bottom: 0;
-	background: rgba(0,0,0,0.85);
-	display: none;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	z-index: 200;
-	color: white;
-}
-#pauseMenu button {
-	width: 180px;
-	padding: 14px;
-	margin: 12px;
-	font-size: 18px;
-	background: #444;
-	color: white;	border: 1px solid #777;
-	border-radius: 8px;
-}
-#cubeUI {
-	position: absolute;
-	bottom: 160px;
-	left: 20px;
-	width: 40px;
-	height: 40px;
-	background: #ff9800;
-	border: 2px solid white;
-	border-radius: 4px;
-	display: none;
-	z-index: 95;
-}
-#wateringCanUI {
-	position: absolute;
-	bottom: 210px;
-	left: 20px;
-	width: 40px;
-	height: 40px;
-	background: #4CAF50;
-	border: 2px solid white;
-	border-radius: 4px;
-	display: none;
-	z-index: 95;
-}
-#confirmBox {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	background: rgba(0,0,0,0.8);
-	padding: 20px;
-	border-radius: 10px;
-	text-align: center;
-	z-index: 300;
-	color: white;
-	display: none;
-}
-#confirmBox button {
-	margin: 8px;
-	padding: 8px 16px;
-	background: #444;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-}
-#colorPickerUI {
-	position: absolute;	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	background: rgba(0,0,0,0.85);
-	padding: 20px;
-	border-radius: 10px;
-	text-align: center;
-	color: white;
-	z-index: 310;
-	display: none;
-}
-#colorPickerUI div {
-	width: 40px;
-	height: 40px;
-	display: inline-block;
-	margin: 5px;
-	cursor: pointer;
-	border: 2px solid white;
-}
+body, html { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:#000; font-family:Arial,sans-serif; }
+#debug { position:absolute; top:10px; left:10px; color:white; font-family:monospace; font-size:14px; z-index:10; background:rgba(0,0,0,0.6); padding:6px; border-radius:4px; }
+#joystick { position:absolute; bottom:20px; left:20px; width:120px; height:120px; border:2px solid white; border-radius:50%; display:none; touch-action:none; }
+#stick { position:absolute; width:40px; height:40px; background:white; border-radius:50%; top:40px; left:40px; }
+#mainMenu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:100; color:white; }
+#mainMenu button { display:block; width:200px; margin:16px auto; padding:16px; font-size:20px; background:#333; color:white; border:2px solid #666; border-radius:10px; cursor:pointer; }
+#pauseBtn, #shopBtn { position:absolute; top:15px; padding:8px 16px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:6px; display:none; z-index:90; }
+#pauseBtn { right:15px; }
+#shopBtn { left:15px; }
+#pauseMenu, #shopMenu { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); display:none; flex-direction:column; align-items:center; z-index:200; color:white; }
+#pauseMenu { justify-content:center; }
+#shopMenu { justify-content:flex-start; padding-top:60px; }
+#pauseMenu button, #shopMenu button { width:180px; padding:14px; margin:12px; font-size:18px; background:#444; color:white; border:1px solid #777; border-radius:8px; }
+#shopTopBar { display:flex; width:100%; justify-content:space-between; padding:0 20px; box-sizing:border-box; margin-bottom:20px; }
+#shopContent { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; max-width:300px; }
+.shopItem { width:80px; height:100px; background:#333; border:1px solid #666; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
+.shopItem.locked { opacity:0.5; }
+.itemIcon { font-size:24px; margin-bottom:6px; }
+.itemName { font-size:12px; text-align:center; }
+#cubeUI, #wateringCanUI, #seedUI { position:absolute; bottom:160px; left:20px; width:40px; height:40px; border:2px solid white; border-radius:4px; display:none; z-index:95; }
+#wateringCanUI { bottom:210px; background:#2196F3; }
+#cubeUI { background:#ff9800; }
+#seedUI { bottom:110px; background:#000000; }
+#confirmBox { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:20px; border-radius:10px; text-align:center; z-index:300; color:white; display:none; }
+#confirmBox button { margin:8px; padding:8px 16px; background:#444; border:none; border-radius:6px; cursor:pointer; }
+#colorPickerUI { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); padding:20px; border-radius:10px; text-align:center; color:white; z-index:310; display:none; }
+#colorPickerUI div { width:40px; height:40px; display:inline-block; margin:5px; cursor:pointer; border:2px solid white; }
 </style>
 </head>
 <body>
 <div id="mainMenu">
+	<button id="continueBtn">Продолжить с сохранения</button>
 	<button id="playBtn">Играть</button>
 	<button id="exitBtn">Выйти</button>
 </div>
 <button id="pauseBtn">Пауза</button>
+<button id="shopBtn">Шоп</button>
 <div id="pauseMenu">
 	<button id="resumeBtn">Продолжить</button>
+	<button id="saveAndExitBtn">В главное меню с сохранением</button>
 	<button id="backToMenuBtn">В главное меню</button>
+</div>
+<div id="shopMenu">	<div id="shopTopBar">
+		<span>Монет: <span id="coinCount">100</span></span>
+		<div>
+			<button id="shopBuyBtn">Купить</button>
+			<button id="shopSellBtn">Продать</button>
+		</div>
+		<button id="shopCloseBtn">Назад</button>
+	</div>
+	<div id="shopContent"></div>
 </div>
 <div id="debug">Загрузка...</div>
 <div id="joystick"><div id="stick"></div></div>
 <div id="cubeUI"></div>
 <div id="wateringCanUI"></div>
+<div id="seedUI"></div>
 <div id="confirmBox">
-	<p id="confirmText">Взять?</p>
+	<p id="confirmText">Действие?</p>
 	<button id="confirmYes">Да</button>
 	<button id="confirmNo">Нет</button>
 </div>
-<div id="colorPickerUI">
-	<p>Выберите цвет</p>
-</div>
+<div id="colorPickerUI"><p>Выберите цвет</p></div>
 
 <script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
 <script>
 let isGameActive = false;
 let gameInitialized = false;
+let currentGameState = null;
+
+const DRYING_COLORS = [0x8B4513, 0xA16B3F, 0xB8855A, 0xff9800];
+
 const mainMenu = document.getElementById('mainMenu');
-const pauseBtn = document.getElementById('pauseBtn');const pauseMenu = document.getElementById('pauseMenu');
+const continueBtn = document.getElementById('continueBtn');
+const playBtn = document.getElementById('playBtn');
+const exitBtn = document.getElementById('exitBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const shopBtn = document.getElementById('shopBtn');
+const pauseMenu = document.getElementById('pauseMenu');
+const shopMenu = document.getElementById('shopMenu');
+const resumeBtn = document.getElementById('resumeBtn');
+const saveAndExitBtn = document.getElementById('saveAndExitBtn');
+const backToMenuBtn = document.getElementById('backToMenuBtn');
+const shopBuyBtn = document.getElementById('shopBuyBtn');
+const shopSellBtn = document.getElementById('shopSellBtn');
+const shopCloseBtn = document.getElementById('shopCloseBtn');
+const shopContent = document.getElementById('shopContent');
+const coinCountEl = document.getElementById('coinCount');
 const cubeUI = document.getElementById('cubeUI');
 const wateringCanUI = document.getElementById('wateringCanUI');
-const confirmBox = document.getElementById('confirmBox');
-const confirmText = document.getElementById('confirmText');
+const seedUI = document.getElementById('seedUI');
+const confirmBox = document.getElementById('confirmBox');const confirmText = document.getElementById('confirmText');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
 const colorPickerUI = document.getElementById('colorPickerUI');
 
-function initGame() {
+continueBtn.style.display = 'none';
+
+function generateCloneId() {
+	return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function saveGameState(scene, camera, spotLight, bulb, wateringCan, originalCube, originalSeed, isLampOn, heldObject, cubeUIVisible, wateringCanUIVisible, seedUIVisible, playerCoins, clones) {
+	const cloneData = [];
+	clones.forEach(clone => {
+		if (clone.userData.type === 'cube') {
+			cloneData.push({
+				type: 'cube',
+				position: clone.position.clone(),
+				wet: clone.userData.wet,
+				dryStage: clone.userData.dryStage,
+				color: clone.material.color.getHex(),
+				cloneId: clone.userData.cloneId
+			});
+		} else if (clone.userData.type === 'seed') {
+			cloneData.push({
+				type: 'seed',
+				position: clone.position.clone(),
+				cloneId: clone.userData.cloneId
+			});
+		}
+	});
+
+	let heldObjectId = null;
+	if (heldObject) {
+		if (heldObject === wateringCan) {
+			heldObjectId = 'wateringCan';
+		} else if (clones.has(heldObject)) {
+			heldObjectId = heldObject.userData.cloneId;
+		}
+	}
+
+	return {
+		cameraPosition: camera.position.clone(),
+		cameraRotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+		isLampOn,
+		spotLightColor: spotLight.color.getHex(),
+		bulbColor: bulb.material.color.getHex(),
+		wateringCan: {
+			position: wateringCan.position.clone(),
+			visible: wateringCan.visible		},
+		clones: cloneData,
+		heldObjectId,
+		cubeUIVisible,
+		wateringCanUIVisible,
+		seedUIVisible,
+		coins: playerCoins
+	};
+}
+
+function loadGameState(gameState, scene, camera, spotLight, bulb, wateringCan, originalCube, originalSeed, clones) {
+	camera.position.copy(gameState.cameraPosition);
+	camera.rotation.set(gameState.cameraRotation.x, gameState.cameraRotation.y, gameState.cameraRotation.z);
+	spotLight.intensity = gameState.isLampOn ? 9.5 : 0;
+	spotLight.color.setHex(gameState.spotLightColor);
+	bulb.material.color.setHex(gameState.bulbColor);
+
+	wateringCan.position.copy(gameState.wateringCan.position);
+	wateringCan.visible = gameState.wateringCan.visible;
+
+	gameState.clones.forEach(data => {
+		let clone;
+		if (data.type === 'cube') {
+			clone = originalCube.clone();
+			clone.material = originalCube.material.clone();
+			clone.position.copy(data.position);
+			clone.userData = {
+				type: 'cube',
+				wet: data.wet,
+				dryStage: data.dryStage,
+				cloneId: data.cloneId,
+				isClone: true
+			};
+			clone.material.color.setHex(data.color);
+			scene.add(clone);
+			clones.add(clone);
+			if (data.wet && data.dryStage < 3) {
+				setTimeout(() => {
+					let stage = data.dryStage + 1;
+					const advance = () => {
+						if (stage >= DRYING_COLORS.length) {
+							clone.userData.wet = false;
+							clone.userData.dryStage = 3;
+							return;
+						}
+						clone.userData.dryStage = stage;
+						clone.material.color.set(DRYING_COLORS[stage]);
+						if (stage < DRYING_COLORS.length - 1) {
+							clone.userData.dryTimer = setTimeout(() => {
+								stage++;								advance();
+							}, 10000);
+						} else {
+							clone.userData.wet = false;
+						}
+					};
+					advance();
+				}, 100);
+			}
+		} else if (data.type === 'seed') {
+			clone = originalSeed.clone();
+			clone.material = originalSeed.material.clone();
+			clone.position.copy(data.position);
+			clone.userData = {
+				type: 'seed',
+				cloneId: data.cloneId,
+				isClone: true
+			};
+			scene.add(clone);
+			clones.add(clone);
+		}
+	});
+
+	cubeUI.style.display = gameState.cubeUIVisible ? 'block' : 'none';
+	wateringCanUI.style.display = gameState.wateringCanUIVisible ? 'block' : 'none';
+	seedUI.style.display = gameState.seedUIVisible ? 'block' : 'none';
+
+	let heldObject = null;
+	if (gameState.heldObjectId === 'wateringCan') {
+		heldObject = wateringCan;
+	} else if (gameState.heldObjectId) {
+		clones.forEach(clone => {
+			if (clone.userData.cloneId === gameState.heldObjectId) {
+				heldObject = clone;
+			}
+		});
+	}
+
+	return heldObject;
+}
+
+function initGame(loadState = null) {
 	if (gameInitialized) return;
 
 	const WORLD_SIZE_X = 50;
@@ -211,31 +243,40 @@ function initGame() {
 	const WORLD_SIZE_Z = 50;
 	const PLAYER_HEIGHT = 3.2;
 	const START_POS = { x: -20, y: PLAYER_HEIGHT, z: 20 };
-	const MOVE_SPEED = 0.0125;
-	const LOOK_SENSITIVITY = 0.002;
+	const BASE_MOVE_SPEED = 0.008;	const LOOK_SENSITIVITY = 0.002;
 	const WALL_MARGIN = 0.5;
+	const HOLD_THRESHOLD_MS = 200;
 
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x111111);
 
 	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
-	camera.position.set(START_POS.x, START_POS.y, START_POS.z);
+	if (loadState) {
+		camera.position.copy(loadState.cameraPosition);
+		camera.rotation.set(loadState.cameraRotation.x, loadState.cameraRotation.y, loadState.cameraRotation.z);
+	} else {
+		camera.position.set(START_POS.x, START_POS.y, START_POS.z);
+	}
 	const renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.domElement.style.touchAction = 'none';
 	document.body.appendChild(renderer.domElement);
 
 	const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
 	scene.add(ambientLight);
 
-	const spotLight = new THREE.SpotLight(0xfff0b3, 9.5);
+	const spotLight = new THREE.SpotLight(0xfff0b3, loadState && !loadState.isLampOn ? 0 : 9.5);
 	spotLight.position.set(0, WORLD_SIZE_Y, 0);
 	spotLight.angle = Math.atan(28.6 / WORLD_SIZE_Y);
 	spotLight.penumbra = 0.3;
 	spotLight.decay = 1;
 	spotLight.distance = 60;
+	if (loadState) {
+		spotLight.color.setHex(loadState.spotLightColor);
+	}
 	scene.add(spotLight);
 
-	let isLampOn = true;
+	let isLampOn = loadState ? loadState.isLampOn : true;
 
 	const wallColor = 0xC8C8C8;
 	const ceilingColor = 0xF5F0E6;
@@ -243,25 +284,20 @@ function initGame() {
 	const floorLight = 0x8D6E63;
 
 	function createConcreteTexture(size = 128) {
-		const canvas = document.createElement('canvas');		canvas.width = size;
-		canvas.height = size;
+		const canvas = document.createElement('canvas');
+		canvas.width = size; canvas.height = size;
 		const ctx = canvas.getContext('2d');
 		ctx.fillStyle = '#C8C8C8';
 		ctx.fillRect(0, 0, size, size);
-		const imageData = ctx.getImageData(0, 0, size, size);
-		const data = imageData.data;
+		const data = ctx.getImageData(0, 0, size, size).data;
 		for (let i = 0; i < data.length; i += 4) {
 			let noise = (Math.random() - 0.5) * 15;
-			if (Math.random() > 0.8) noise *= 2;
-			data[i]     = Math.min(255, Math.max(0, 0xC8 + noise));
-			data[i + 1] = Math.min(255, Math.max(0, 0xC8 + noise));
-			data[i + 2] = Math.min(255, Math.max(0, 0xC8 + noise));
-			data[i + 3] = 255;
+			if (Math.random() > 0.8) noise *= 2;			data[i] = data[i+1] = data[i+2] = Math.min(255, Math.max(0, 0xC8 + noise));
+			data[i+3] = 255;
 		}
-		ctx.putImageData(imageData, 0, 0);
+		ctx.putImageData(new ImageData(data, size, size), 0, 0);
 		const texture = new THREE.CanvasTexture(canvas);
-		texture.wrapS = THREE.RepeatWrapping;
-		texture.wrapT = THREE.RepeatWrapping;
+		texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 		texture.repeat.set(6, 6);
 		return texture;
 	}
@@ -278,22 +314,9 @@ function initGame() {
 
 	walls.forEach((w, idx) => {
 		const geo = new THREE.BoxGeometry(...w.size);
-		let mat;
-		if (idx < 4) {
-			mat = new THREE.MeshStandardMaterial({
-				color: wallColor,
-				map: concreteTexture,
-				roughness: 0.95,
-				metalness: 0.0,
-				side: THREE.BackSide
-			});
-		} else {
-			mat = new THREE.MeshStandardMaterial({
-				color: w.color,
-				roughness: 0.9,
-				metalness: 0.0,
-				side: THREE.BackSide			});
-		}
+		const mat = idx < 4
+			? new THREE.MeshStandardMaterial({ color: wallColor, map: concreteTexture, roughness: 0.95, metalness: 0, side: THREE.BackSide })
+			: new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.9, metalness: 0, side: THREE.BackSide });
 		const mesh = new THREE.Mesh(geo, mat);
 		mesh.position.set(...w.pos);
 		scene.add(mesh);
@@ -302,242 +325,339 @@ function initGame() {
 	const tileSize = 1;
 	for (let x = 0; x < WORLD_SIZE_X; x++) {
 		for (let z = 0; z < WORLD_SIZE_Z; z++) {
-			const isDark = (x + z) % 2 === 0;
-			const tileColor = isDark ? floorDark : floorLight;
 			const tileMat = new THREE.MeshStandardMaterial({
-				color: tileColor,
+				color: ((x + z) % 2 === 0 ? floorDark : floorLight),
 				roughness: 0.95,
-				metalness: 0.0
+				metalness: 0
 			});
-			const tileGeo = new THREE.PlaneGeometry(tileSize, tileSize);
-			const tile = new THREE.Mesh(tileGeo, tileMat);
+			const tile = new THREE.Mesh(new THREE.PlaneGeometry(tileSize, tileSize), tileMat);
 			tile.rotation.x = -Math.PI / 2;
-			tile.position.set(
-				-WORLD_SIZE_X/2 + x * tileSize + tileSize/2,
-				0.01,
-				-WORLD_SIZE_Z/2 + z * tileSize + tileSize/2
-			);
+			tile.position.set(-WORLD_SIZE_X/2 + x + 0.5, 0.01, -WORLD_SIZE_Z/2 + z + 0.5);
 			scene.add(tile);
 		}
 	}
 
-	const bulbGeo = new THREE.SphereGeometry(2, 16, 16);
-	const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-	const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+	const bulb = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffcc }));
 	bulb.position.set(0, WORLD_SIZE_Y, 0);
+	if (loadState) bulb.material.color.setHex(loadState.bulbColor);
 	scene.add(bulb);
-
-	// === КУБ ===
-	const cubeSize = 1.5;
-	const cubeGeo = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-	const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff9800 });
-	const interactiveCube = new THREE.Mesh(cubeGeo, cubeMat);
-	interactiveCube.position.set(0, cubeSize/2, 0);
-	interactiveCube.userData.wet = false;
-	scene.add(interactiveCube);
-
-	// === ЛЕЙКА ===
-	function createWateringCan() {
-		const group = new THREE.Group();
-
-		const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
-		const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });		const body = new THREE.Mesh(bodyGeo, bodyMat);
-		body.position.y = 0.4;
-		group.add(body);
-
-		const handleCurve = new THREE.EllipseCurve(0, 0.8, 0.6, 0.3, 0, Math.PI, false, 0);
-		const points = handleCurve.getPoints(20).map(p => new THREE.Vector3(p.x, p.y, 0));
-		const handleGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 20, 0.05, 8, false);
-		const handle = new THREE.Mesh(handleGeo, bodyMat.clone());
-		handle.rotation.z = Math.PI / 2;
-		handle.position.y = 0.4;
-		group.add(handle);
-
-		const spoutGeo = new THREE.ConeGeometry(0.15, 0.6, 8);
-		const spout = new THREE.Mesh(spoutGeo, bodyMat.clone());
-		spout.rotation.x = Math.PI / 2;
-		spout.position.set(0.4, 0.4, 0);
-		group.add(spout);
-
-		return group;
+	const wateringCan = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16), new THREE.MeshStandardMaterial({ color: 0x2196F3 }));
+	if (loadState) {
+		wateringCan.position.copy(loadState.wateringCan.position);
+		wateringCan.visible = loadState.wateringCan.visible;
+	} else {
+		wateringCan.position.set(5, 0.5, 0);
 	}
-
-	const wateringCan = createWateringCan();
-	wateringCan.position.set(5, 0.5, 0);
 	scene.add(wateringCan);
 
-	// === ПЕРЕКЛЮЧАТЕЛЬ СВЕТА ===
-	const plateSize = 0.25;
-	const plateGeo = new THREE.PlaneGeometry(plateSize, plateSize);
+	const originalCube = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0xff9800 }));
+	originalCube.position.set(1000, 0, 0);
+	originalCube.visible = false;
+	originalCube.userData = { type: 'cube', wet: false, dryStage: 3 };
+	scene.add(originalCube);
+
+	const originalSeed = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+	originalSeed.position.set(1000, 0, 0);
+	originalSeed.visible = false;
+	originalSeed.userData = { type: 'seed' };
+	scene.add(originalSeed);
+
 	const plateMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x333300, side: THREE.DoubleSide });
-	const switchPlate = new THREE.Mesh(plateGeo, plateMat);
+	const switchPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.25), plateMat);
 	switchPlate.position.set(0, PLAYER_HEIGHT, -WORLD_SIZE_Z/2 + 0.51);
 	switchPlate.rotation.y = Math.PI;
 	scene.add(switchPlate);
 
-	// === ПЛИТКА ВЫБОРА ЦВЕТА СВЕТА ===
-	const colorTileGeo = new THREE.BoxGeometry(1, 0.5, 1);
-	const colorTileMat = new THREE.MeshStandardMaterial({ 
-		color: 0xffff00, // такой же жёлтый, как у переключателя
-		emissive: 0x333300,
-		roughness: 0.8,
-		metalness: 0.2
-	});
-	const colorTile = new THREE.Mesh(colorTileGeo, colorTileMat);
-	// Расположим рядом с переключателем: смещение по X на 0.5
-	colorTile.position.set(0.5, PLAYER_HEIGHT, -WORLD_SIZE_Z/2 + 0.51);
+	const colorTile = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1), plateMat);
+	colorTile.position.set(0, PLAYER_HEIGHT, WORLD_SIZE_Z/2 - 0.51);
 	scene.add(colorTile);
 
-	// === ЦВЕТОВЫЕ ОПЦИИ ===
 	const colorOptions = [
-		{ name: 'Холодный белый', hex: 0xffffff, lightColor: 0xffffff },		{ name: 'Тёплый жёлтый', hex: 0xffffb3, lightColor: 0xfff0b3 },
-		{ name: 'Розовый ультрафиолет', hex: 0xffb3ff, lightColor: 0xff66ff },
-		{ name: 'Зелёный', hex: 0xb3ffb3, lightColor: 0x66ff66 }
+		{ hex: 0xffffff, light: 0xffffff },
+		{ hex: 0xffffb3, light: 0xfff0b3 },
+		{ hex: 0xffb3ff, light: 0xff66ff },
+		{ hex: 0xb3ffb3, light: 0x66ff66 }
 	];
 
-	// === ПОСТРОЕНИЕ UI ВЫБОРА ЦВЕТА ===
+	let isColorPickerOpen = false;
+
 	function buildColorPickerUI() {
 		colorPickerUI.innerHTML = '<p>Выберите цвет</p>';
 		colorOptions.forEach(opt => {
 			const btn = document.createElement('div');
 			btn.style.backgroundColor = '#' + opt.hex.toString(16).padStart(6, '0');
 			btn.onclick = () => {
-				// Меняем цвет сразу
-				spotLight.color.set(opt.lightColor);
+				spotLight.color.set(opt.light);
 				bulb.material.color.set(opt.hex);
 				colorPickerUI.style.display = 'none';
-			};
+				isColorPickerOpen = false;			};
 			colorPickerUI.appendChild(btn);
 		});
+		colorPickerUI.style.display = 'block';
+		isColorPickerOpen = true;
 	}
 
-	// === ЗАКРЫТИЕ UI ПРИ ТАПЕ ВНЕ ===
-	function handleClickOutsideColorPicker(e) {
-		if (colorPickerUI.style.display === 'block') {
-			const rect = colorPickerUI.getBoundingClientRect();
-			const x = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-			const y = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-			if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-				colorPickerUI.style.display = 'none';
-			}
-		}
-	}
+	let playerCoins = loadState ? loadState.coins : 100;
+	coinCountEl.textContent = playerCoins;
 
-	window.addEventListener('click', handleClickOutsideColorPicker);
-	window.addEventListener('touchend', handleClickOutsideColorPicker);
+	const clones = new Set();
 
 	let heldObject = null;
-	let lastTapTime = 0;
-	let doubleTapThreshold = 300;
-	let isConfirming = false;
+	if (loadState) {
+		heldObject = loadState.heldObjectId === 'wateringCan' ? wateringCan : null;
+		cubeUI.style.display = loadState.cubeUIVisible ? 'block' : 'none';
+		wateringCanUI.style.display = loadState.wateringCanUIVisible ? 'block' : 'none';
+		seedUI.style.display = loadState.seedUIVisible ? 'block' : 'none';
+	}
 
-	function showConfirm(text, onYes, onNo) {
+	function updateCoinDisplay() {
+		coinCountEl.textContent = playerCoins;
+	}
+
+	function showConfirm(text, yesText, noText, onYes, onNo) {
+		if (isConfirming) return;
 		confirmText.textContent = text;
-		confirmYes.onclick = () => {
-			onYes();
-			confirmBox.style.display = 'none';
-			isConfirming = false;
-		};
-		confirmNo.onclick = () => {
-			onNo();			confirmBox.style.display = 'none';
-			isConfirming = false;
-		};
+		confirmYes.textContent = yesText;
+		confirmNo.textContent = noText;
+		confirmYes.onclick = () => { onYes(); confirmBox.style.display = 'none'; isConfirming = false; };
+		confirmNo.onclick = () => { onNo(); confirmBox.style.display = 'none'; isConfirming = false; };
 		confirmBox.style.display = 'block';
 		isConfirming = true;
 	}
 
-	function handleInteraction() {
-		if (!isGameActive || isConfirming) return;
-		const currentTime = performance.now();
-		if (currentTime - lastTapTime < doubleTapThreshold) {
-			const direction = new THREE.Vector3();
-			camera.getWorldDirection(direction);
-			const raycaster = new THREE.Raycaster(camera.position, direction);
-			const intersectsCube = raycaster.intersectObject(interactiveCube);
-			const intersectsCan = raycaster.intersectObject(wateringCan, true);
-			const intersectsPlate = raycaster.intersectObject(switchPlate);
-			const intersectsColorTile = raycaster.intersectObject(colorTile);
+	let isConfirming = false;
+	let holdTimer = null;
+	let lastHoldTarget = null;
+	let holdStartPos = null;
 
-			const distToPlate = switchPlate.position.distanceTo(camera.position);
-			const distToColorTile = colorTile.position.distanceTo(camera.position);
-
-			if (intersectsColorTile.length > 0 && distToColorTile <= 10) {
-				buildColorPickerUI();
-				colorPickerUI.style.display = 'block';
-			} else if (intersectsPlate.length > 0 && distToPlate <= 10) {
-				showConfirm('Свет: Вкл / Выкл', () => {
-					isLampOn = true;
-					spotLight.intensity = 9.5;
-				}, () => {
-					isLampOn = false;
-					spotLight.intensity = 0;
-				});
-			} else if (heldObject === wateringCan && intersectsCube.length > 0 && intersectsCube[0].distance <= 5) {
-				showConfirm('Полить куб?', () => {
-					interactiveCube.material.color.set(0x8B4513);
-					interactiveCube.userData.wet = true;
-				}, () => {});
-			} else if (intersectsCan.length > 0 && heldObject !== wateringCan) {
-				const distance = intersectsCan[0].distance;
-				if (distance <= 3) {
-					showConfirm('Взять лейку?', () => {
-						heldObject = wateringCan;
-						wateringCanUI.style.display = 'block';
-						wateringCan.visible = false;
-					}, () => {});
-				}
-			} else if (intersectsCube.length > 0 && heldObject !== interactiveCube) {
-				const distance = intersectsCube[0].distance;
-				if (heldObject === null && distance <= 3) {					showConfirm('Взять куб?', () => {
-						heldObject = interactiveCube;
-						cubeUI.style.display = 'block';
-						interactiveCube.visible = false;
-					}, () => {});
-				}
-			} else if (heldObject === interactiveCube) {
-				showConfirm('Выложить куб?', () => {
-					const offset = new THREE.Vector3(0, 0, -2);
-					offset.applyQuaternion(camera.quaternion);
-					const dropPos = camera.position.clone().add(offset);
-					dropPos.y = cubeSize / 2;
-					interactiveCube.position.copy(dropPos);
-					interactiveCube.visible = true;
-					heldObject = null;
-					cubeUI.style.display = 'none';
-				}, () => {});
-			} else if (heldObject === wateringCan) {
-				showConfirm('Выложить лейку?', () => {
-					const offset = new THREE.Vector3(0, 0, -2);
-					offset.applyQuaternion(camera.quaternion);
-					const dropPos = camera.position.clone().add(offset);
-					dropPos.y = 0.5;
-					wateringCan.position.copy(dropPos);
-					wateringCan.visible = true;
-					heldObject = null;
-					wateringCanUI.style.display = 'none';
-				}, () => {});
-			}
-		}
-		lastTapTime = currentTime;
+	function setupHoldOnUI(element, targetObject, action) {
+		let holdTimeout = null;
+		const cancel = () => { if (holdTimeout) clearTimeout(holdTimeout); holdTimeout = null; };
+		element.addEventListener('pointerdown', e => {
+			e.stopPropagation();
+			cancel();
+			holdTimeout = setTimeout(() => {
+				action(targetObject);
+			}, HOLD_THRESHOLD_MS);
+		});		element.addEventListener('pointerup', cancel);
+		element.addEventListener('pointerleave', cancel);
+		element.addEventListener('pointercancel', cancel);
 	}
 
-	window.addEventListener('click', handleInteraction);
-	window.addEventListener('touchend', handleInteraction);
+	setupHoldOnUI(cubeUI, null, () => {
+		if (!heldObject || !clones.has(heldObject) || heldObject.userData.type !== 'cube') return;
+		showConfirm('Выложить куб?', 'Да', 'Нет', () => {
+			const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+			let dropPos = camera.position.clone().add(offset);
+			dropPos.y = 1.5 / 2;
+			dropPos.x = Math.round(dropPos.x);
+			dropPos.z = Math.round(dropPos.z);
+			const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+			const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+			dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+			dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+			heldObject.position.copy(dropPos);
+			heldObject.visible = true;
+			heldObject = null;
+			cubeUI.style.display = 'none';
+		}, () => {});
+	});
+
+	setupHoldOnUI(wateringCanUI, wateringCan, (obj) => {
+		const raycaster = new THREE.Raycaster();
+		const direction = new THREE.Vector3();
+		camera.getWorldDirection(direction);
+		raycaster.set(camera.position, direction);
+		const intersectsCube = [];
+		clones.forEach(clone => {
+			if (clone.userData.type === 'cube' && clone.visible) {
+				const ic = raycaster.intersectObject(clone);
+				if (ic.length && ic[0].distance <= 5) {
+					intersectsCube.push({ obj: clone, dist: ic[0].distance });
+				}
+			}
+		});
+		const canSeeCube = intersectsCube.length > 0;
+		if (canSeeCube) {
+			const closestCube = intersectsCube.sort((a, b) => a.dist - b.dist)[0].obj;
+			showConfirm('Полить куб или выложить лейку?', 'Полить', 'Выложить', () => {
+				closestCube.userData.wet = true;
+				closestCube.userData.dryStage = 0;
+				closestCube.material.color.set(DRYING_COLORS[0]);
+				if (closestCube.userData.dryTimer) clearTimeout(closestCube.userData.dryTimer);
+				closestCube.userData.dryTimer = setTimeout(() => {
+					let stage = 1;
+					const advance = () => {
+						if (stage >= DRYING_COLORS.length) {							closestCube.userData.wet = false;
+							closestCube.userData.dryStage = 3;
+							return;
+						}
+						closestCube.userData.dryStage = stage;
+						closestCube.material.color.set(DRYING_COLORS[stage]);
+						if (stage < DRYING_COLORS.length - 1) {
+							closestCube.userData.dryTimer = setTimeout(() => {
+								stage++;
+								advance();
+							}, 10000);
+						} else {
+							closestCube.userData.wet = false;
+						}
+					};
+					advance();
+				}, 10000);
+				confirmBox.style.display = 'none';
+				isConfirming = false;
+			}, () => {
+				const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+				let dropPos = camera.position.clone().add(offset);
+				dropPos.y = 0.5;
+				dropPos.x = Math.round(dropPos.x);
+				dropPos.z = Math.round(dropPos.z);
+				const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+				const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+				dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+				dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+				obj.position.copy(dropPos);
+				obj.visible = true;
+				if (heldObject === obj) heldObject = null;
+				wateringCanUI.style.display = 'none';
+				confirmBox.style.display = 'none';
+				isConfirming = false;
+			});
+		} else {
+			showConfirm('Выложить лейку?', 'Да', 'Нет', () => {
+				const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+				let dropPos = camera.position.clone().add(offset);
+				dropPos.y = 0.5;
+				dropPos.x = Math.round(dropPos.x);
+				dropPos.z = Math.round(dropPos.z);
+				const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+				const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+				dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+				dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+				obj.position.copy(dropPos);
+				obj.visible = true;
+				if (heldObject === obj) heldObject = null;				wateringCanUI.style.display = 'none';
+			}, () => {});
+		}
+	});
+
+	setupHoldOnUI(seedUI, null, () => {
+		if (!heldObject || !clones.has(heldObject) || heldObject.userData.type !== 'seed') return;
+		showConfirm('Выложить семечко?', 'Да', 'Нет', () => {
+			const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+			let dropPos = camera.position.clone().add(offset);
+			dropPos.y = 0.5;
+			dropPos.x = Math.round(dropPos.x);
+			dropPos.z = Math.round(dropPos.z);
+			const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+			const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+			dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+			dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+			heldObject.position.copy(dropPos);
+			heldObject.visible = true;
+			heldObject = null;
+			seedUI.style.display = 'none';
+		}, () => {});
+	});
+
+	function startHold(target, action) {
+		if (holdTimer) clearTimeout(holdTimer);
+		lastHoldTarget = target;
+		holdTimer = setTimeout(() => {
+			action();
+			holdTimer = null;
+			lastHoldTarget = null;
+			holdStartPos = null;
+		}, HOLD_THRESHOLD_MS);
+	}
+
+	function cancelHold(e) {
+		if (holdTimer && e) {
+			const dx = e.clientX - holdStartPos.x;
+			const dy = e.clientY - holdStartPos.y;
+			const distance = Math.sqrt(dx * dx + dy * dy);
+			if (distance <= 10) {
+				return;
+			}
+		}
+		if (holdTimer) clearTimeout(holdTimer);
+		holdTimer = null;
+		lastHoldTarget = null;
+		holdStartPos = null;
+	}
+	function handleRaycastInteraction(e) {
+		if (!isGameActive || isConfirming || isColorPickerOpen) return;
+		holdStartPos = { x: e.clientX, y: e.clientY };
+		const raycaster = new THREE.Raycaster();
+		const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+		raycaster.set(camera.position, direction);
+		const maxDist = 5;
+		const intersects = [];
+		clones.forEach(clone => {
+			if (clone.visible) {
+				const ic = raycaster.intersectObject(clone);
+				if (ic.length && ic[0].distance <= maxDist) {
+					intersects.push({ obj: clone, dist: ic[0].distance });
+				}
+			}
+		});
+		const wc = raycaster.intersectObject(wateringCan);
+		const sp = raycaster.intersectObject(switchPlate);
+		const ct = raycaster.intersectObject(colorTile);
+		if (wc.length && wc[0].distance <= maxDist) intersects.push({ obj: wateringCan, dist: wc[0].distance });
+		if (sp.length && sp[0].distance <= maxDist) intersects.push({ obj: switchPlate, dist: sp[0].distance });
+		if (ct.length && ct[0].distance <= maxDist) intersects.push({ obj: colorTile, dist: ct[0].distance });
+		if (intersects.length === 0) {
+			cancelHold(e);
+			return;
+		}
+		intersects.sort((a, b) => a.dist - b.dist);
+		const closest = intersects[0].obj;
+		if (lastHoldTarget !== closest) {
+			cancelHold(e);
+		}
+		if (closest === colorTile) {
+			buildColorPickerUI();
+		} else if (closest === switchPlate) {
+			isLampOn = !isLampOn;
+			spotLight.intensity = isLampOn ? 9.5 : 0;
+		} else if (closest === wateringCan && heldObject !== wateringCan && heldObject === null) {
+			startHold(closest, () => {
+				heldObject = wateringCan;
+				wateringCanUI.style.display = 'block';
+				wateringCan.visible = false;
+			});
+		} else if (clones.has(closest) && heldObject !== closest && heldObject === null) {
+			startHold(closest, () => {
+				heldObject = closest;
+				if (closest.userData.type === 'cube') {
+					cubeUI.style.display = 'block';
+				} else if (closest.userData.type === 'seed') {
+					seedUI.style.display = 'block';
+				}				closest.visible = false;
+			});
+		} else {
+			cancelHold(e);
+		}
+	}
+
+	const canvas = renderer.domElement;
+	canvas.addEventListener('pointerdown', handleRaycastInteraction);
+	canvas.addEventListener('pointermove', cancelHold);
+	canvas.addEventListener('pointerup', cancelHold);
+	canvas.addEventListener('pointercancel', cancelHold);
 
 	const keys = { w: false, a: false, s: false, d: false };
 	let joyDir = { x: 0, y: 0 };
-	let lookX = 0, lookY = 0;
+	let lookX = camera.rotation.y;
+	let lookY = camera.rotation.x;
 	let isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-	if (isMobile) {
-		document.getElementById('joystick').style.display = 'block';
-	}
+	if (isMobile) document.getElementById('joystick').style.display = 'block';
 
-	window.addEventListener('keydown', e => {
-		if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
-	});
-	window.addEventListener('keyup', e => {
-		if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
-	});
+	window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = ['w','a','s','d'].includes(e.key.toLowerCase()); });
+	window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
 	const joyEl = document.getElementById('joystick');
 	const stickEl = document.getElementById('stick');
 	let joyTouchId = null;
@@ -546,18 +666,14 @@ function initGame() {
 	let touchStart = { x: 0, y: 0 };
 
 	function getTouchById(touches, id) {
-		for (let i = 0; i < touches.length; i++) {
-			if (touches[i].identifier === id) return touches[i];
-		}
+		for (let t of touches) if (t.identifier === id) return t;
 		return null;
 	}
-
 	window.addEventListener('touchstart', e => {
 		e.preventDefault();
 		const joyRect = joyEl.getBoundingClientRect();
 		for (let touch of e.changedTouches) {
-			const x = touch.clientX;
-			const y = touch.clientY;
+			const x = touch.clientX, y = touch.clientY;
 			if (x >= joyRect.left && x <= joyRect.right && y >= joyRect.top && y <= joyRect.bottom) {
 				if (joyTouchId === null) {
 					joyTouchId = touch.identifier;
@@ -568,8 +684,7 @@ function initGame() {
 				if (swipeTouchId === null) {
 					swipeTouchId = touch.identifier;
 					touchStart = { x, y };
-				}
-			}
+				}			}
 		}
 	});
 
@@ -586,7 +701,8 @@ function initGame() {
 				const angle = Math.atan2(dy, dx);
 				joyDir.x = Math.cos(angle) * (dist / maxR);
 				joyDir.y = Math.sin(angle) * (dist / maxR);
-				stickEl.style.transform = `translate(${dx}px, ${dy}px)`;			}
+				stickEl.style.transform = `translate(${dx}px, ${dy}px)`;
+			}
 		}
 		if (swipeTouchId !== null) {
 			const swipeTouch = getTouchById(touches, swipeTouchId);
@@ -601,41 +717,30 @@ function initGame() {
 			}
 		}
 	});
-
 	window.addEventListener('touchend', e => {
 		for (let touch of e.changedTouches) {
 			if (touch.identifier === joyTouchId) {
-				joyTouchId = null;
-				joyDir.x = 0;
-				joyDir.y = 0;
+				joyTouchId = null; joyDir.x = joyDir.y = 0;
 				stickEl.style.transform = 'translate(0,0)';
 				joyEl.style.borderColor = 'white';
 			}
-			if (touch.identifier === swipeTouchId) {
-				swipeTouchId = null;
-			}
+			if (touch.identifier === swipeTouchId) swipeTouchId = null;
 		}
 	});
 
 	window.addEventListener('touchcancel', () => {
-		joyTouchId = null;
-		swipeTouchId = null;
-		joyDir.x = 0;
-		joyDir.y = 0;
+		joyTouchId = null; swipeTouchId = null; joyDir.x = joyDir.y = 0;
 		stickEl.style.transform = 'translate(0,0)';
 		joyEl.style.borderColor = 'white';
 	});
-
 	let mouseDown = false;
-	renderer.domElement.addEventListener('mousedown', e => {
-		if (!isMobile) {
-			mouseDown = true;
-			renderer.domElement.requestPointerLock();
-		}
+	renderer.domElement.addEventListener('mousedown', () => {
+		if (!isMobile) { mouseDown = true; renderer.domElement.requestPointerLock(); }
 	});
 	document.addEventListener('mousemove', e => {
 		if (mouseDown || document.pointerLockElement === renderer.domElement) {
-			lookX -= e.movementX * LOOK_SENSITIVITY;			lookY -= e.movementY * LOOK_SENSITIVITY;
+			lookX -= e.movementX * LOOK_SENSITIVITY;
+			lookY -= e.movementY * LOOK_SENSITIVITY;
 			lookY = Math.max(-Math.PI/2, Math.min(Math.PI/2, lookY));
 		}
 	});
@@ -652,21 +757,17 @@ function initGame() {
 			moveForward = -joyDir.y;
 			moveRight = joyDir.x;
 		}
-		const len = Math.hypot(moveForward, moveRight);
-		if (len > 0) {
-			moveForward /= len;
-			moveRight /= len;
+		const inputStrength = Math.hypot(moveForward, moveRight);
+		if (inputStrength > 0) {
+			moveForward /= inputStrength;
+			moveRight /= inputStrength;
+			const responsiveness = 0.4;
+			const speed = BASE_MOVE_SPEED * Math.pow(inputStrength, responsiveness) * delta;
+			const dir = new THREE.Vector3(-Math.sin(lookX), 0, -Math.cos(lookX)).normalize();
+			const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+			camera.position.x += (dir.x * moveForward + right.x * moveRight) * speed;
+			camera.position.z += (dir.z * moveForward + right.z * moveRight) * speed;
 		}
-		const dir = new THREE.Vector3();
-		dir.z = -Math.cos(lookX);
-		dir.x = -Math.sin(lookX);
-		dir.y = 0;
-		dir.normalize();
-		const right = new THREE.Vector3();
-		right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-		const speed = MOVE_SPEED * delta;
-		camera.position.x += (dir.x * moveForward + right.x * moveRight) * speed;
-		camera.position.z += (dir.z * moveForward + right.z * moveRight) * speed;
 		camera.position.y = PLAYER_HEIGHT;
 		const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
 		const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
@@ -675,38 +776,163 @@ function initGame() {
 		camera.rotation.order = 'YXZ';
 		camera.rotation.y = lookX;
 		camera.rotation.x = lookY;
-
 		if (heldObject) {
-			const offset = new THREE.Vector3(0, -0.3, -1.2);
-			offset.applyQuaternion(camera.quaternion);
+			const offset = new THREE.Vector3(0, -0.3, -1.2).applyQuaternion(camera.quaternion);
 			heldObject.position.copy(camera.position).add(offset);
 			heldObject.quaternion.copy(camera.quaternion);
 			heldObject.rotateY(Math.PI);
 		}
-
-		if (interactiveCube.visible && interactiveCube.position.y !== cubeSize / 2) {			interactiveCube.position.y = cubeSize / 2;
-		}
-		if (wateringCan.visible && wateringCan.position.y !== 0.5) {
-			wateringCan.position.y = 0.5;
-		}
+		clones.forEach(clone => {			if (clone.visible && clone.userData.type === 'cube') {
+				clone.position.y = 1.5 / 2;
+			} else if (clone.visible && clone.userData.type === 'seed') {
+				clone.position.y = 0.5;
+			}
+		});
+		if (wateringCan.visible) wateringCan.position.y = 0.5;
 	}
+
+	function renderShopBuy() {
+		shopContent.innerHTML = '';
+		const items = [
+			{ id: 'cube', name: 'Куб', icon: '🟧', price: 10 },
+			{ id: 'seed', name: 'Семечко', icon: '⚫', price: 10 }
+		];
+		items.forEach(item => {
+			const div = document.createElement('div');
+			div.className = 'shopItem';
+			div.innerHTML = `<div class="itemIcon">${item.icon}</div><div class="itemName">${item.name}<br/>${item.price} монет</div>`;
+			div.onclick = () => {
+				showConfirm(`Купить ${item.name} за ${item.price} монет?`, 'Да', 'Нет', () => {
+					if (playerCoins >= item.price) {
+						if (heldObject) {
+							if (heldObject === wateringCan) {
+								const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+								let dropPos = camera.position.clone().add(offset);
+								dropPos.y = 0.5;
+								dropPos.x = Math.round(dropPos.x);
+								dropPos.z = Math.round(dropPos.z);
+								const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+								const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+								dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+								dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+								heldObject.position.copy(dropPos);
+								heldObject.visible = true;
+								if (heldObject.userData.type === 'cube') cubeUI.style.display = 'none';
+								else if (heldObject.userData.type === 'seed') seedUI.style.display = 'none';
+							} else if (clones.has(heldObject)) {
+								const offset = new THREE.Vector3(0, 0, -2).applyQuaternion(camera.quaternion);
+								let dropPos = camera.position.clone().add(offset);
+								dropPos.y = heldObject.userData.type === 'cube' ? 1.5/2 : 0.5;
+								dropPos.x = Math.round(dropPos.x);
+								dropPos.z = Math.round(dropPos.z);
+								const halfX = WORLD_SIZE_X / 2 - WALL_MARGIN;
+								const halfZ = WORLD_SIZE_Z / 2 - WALL_MARGIN;
+								dropPos.x = Math.max(-halfX, Math.min(halfX, dropPos.x));
+								dropPos.z = Math.max(-halfZ, Math.min(halfZ, dropPos.z));
+								heldObject.position.copy(dropPos);
+								heldObject.visible = true;
+								if (heldObject.userData.type === 'cube') cubeUI.style.display = 'none';								else if (heldObject.userData.type === 'seed') seedUI.style.display = 'none';
+							}
+							heldObject = null;
+						}
+						let clone;
+						if (item.id === 'cube') {
+							clone = originalCube.clone();
+							clone.material = originalCube.material.clone();
+							clone.userData = { ...originalCube.userData, isClone: true, cloneId: generateCloneId() };
+						} else if (item.id === 'seed') {
+							clone = originalSeed.clone();
+							clone.material = originalSeed.material.clone();
+							clone.userData = { ...originalSeed.userData, isClone: true, cloneId: generateCloneId() };
+						}
+						const offset = new THREE.Vector3(0, -0.3, -1.2).applyQuaternion(camera.quaternion);
+						clone.position.copy(camera.position).add(offset);
+						clone.visible = true;
+						scene.add(clone);
+						clones.add(clone);
+						heldObject = clone;
+						if (item.id === 'cube') {
+							cubeUI.style.display = 'block';
+						} else if (item.id === 'seed') {
+							seedUI.style.display = 'block';
+						}
+						playerCoins -= item.price;
+						updateCoinDisplay();
+					} else {
+						showConfirm('Недостаточно монет!', 'OK', '', () => {}, () => {});
+					}
+					confirmBox.style.display = 'none';
+					isConfirming = false;
+				}, () => {
+					confirmBox.style.display = 'none';
+					isConfirming = false;
+				});
+			};
+			shopContent.appendChild(div);
+		});
+	}
+
+	function renderShopSell() {
+		shopContent.innerHTML = '';
+		if (!heldObject) {
+			shopContent.innerHTML = '<div style="color:#aaa;">Нет предметов для продажи</div>';
+			return;
+		}
+		if (heldObject === wateringCan) {
+			shopContent.innerHTML = '<div style="color:#aaa;">Лейку нельзя продать</div>';
+			return;		}
+		if (!clones.has(heldObject)) {
+			shopContent.innerHTML = '<div style="color:#aaa;">Нельзя продать этот предмет</div>';
+			return;
+		}
+		const name = heldObject.userData.type === 'cube' ? 'Куб' : 'Семечко';
+		const div = document.createElement('div');
+		div.className = 'shopItem';
+		div.innerHTML = `<div class="itemIcon">${heldObject.userData.type === 'cube' ? '🟧' : '⚫'}</div><div class="itemName">${name}<br/>10 монет</div>`;
+		div.onclick = () => {
+			showConfirm(`Продать ${name} за 10 монет?`, 'Да', 'Нет', () => {
+				scene.remove(heldObject);
+				clones.delete(heldObject);
+				heldObject = null;
+				if (name === 'Куб') cubeUI.style.display = 'none';
+				else if (name === 'Семечко') seedUI.style.display = 'none';
+				playerCoins += 10;
+				updateCoinDisplay();
+				confirmBox.style.display = 'none';
+				isConfirming = false;
+			}, () => {
+				confirmBox.style.display = 'none';
+				isConfirming = false;
+			});
+		};
+		shopContent.appendChild(div);
+	}
+
+	shopBuyBtn.onclick = renderShopBuy;
+	shopSellBtn.onclick = renderShopSell;
+	shopCloseBtn.onclick = () => {
+		shopMenu.style.display = 'none';
+		isGameActive = true;
+	};
+	shopBtn.onclick = () => {
+		isGameActive = false;
+		shopMenu.style.display = 'flex';
+		renderShopBuy();
+	};
 
 	const debugEl = document.getElementById('debug');
 	let lastTime = 0;
-	let deltaTime = 16;
-
 	function animate(time) {
 		if (!isGameActive) return requestAnimationFrame(animate);
-		deltaTime = time - lastTime;
+		const delta = time - lastTime;
 		lastTime = time;
-		updatePlayer(deltaTime);
+		updatePlayer(delta);
 		const pos = camera.position;
 		const degX = (lookX * 180 / Math.PI).toFixed(1);
-		const degY = (lookY * 180 / Math.PI).toFixed(1);
-		debugEl.textContent =
+		const degY = (lookY * 180 / Math.PI).toFixed(1);		debugEl.textContent =
 `POS: X=${pos.x.toFixed(1)}, Y=${pos.y.toFixed(1)}, Z=${pos.z.toFixed(1)}
 LOOK: Yaw=${degX}°, Pitch=${degY}°
-MOBILE: ${isMobile ? 'Да' : 'Нет'} | FPS: ${Math.round(1000/deltaTime)}`;
+MOBILE: ${isMobile ? 'Да' : 'Нет'} | FPS: ${Math.round(1000/delta)}`;
 		renderer.render(scene, camera);
 		requestAnimationFrame(animate);
 	}
@@ -719,37 +945,85 @@ MOBILE: ${isMobile ? 'Да' : 'Нет'} | FPS: ${Math.round(1000/deltaTime)}`;
 
 	animate(0);
 	gameInitialized = true;
+	currentGameState = () => saveGameState(
+		scene, camera, spotLight, bulb, wateringCan, originalCube, originalSeed,
+		isLampOn, heldObject, cubeUI.style.display === 'block', wateringCanUI.style.display === 'block', seedUI.style.display === 'block',
+		playerCoins, clones
+	);
 }
 
-document.getElementById('playBtn').onclick = () => {
+playBtn.onclick = () => {
 	mainMenu.style.display = 'none';
 	pauseBtn.style.display = 'block';
+	shopBtn.style.display = 'block';
 	isGameActive = true;
-	initGame();
+	initGame(null);
 };
-document.getElementById('exitBtn').onclick = () => {
-	if (confirm('Выйти из игры?')) {}
+
+continueBtn.onclick = () => {
+	if (localStorage.getItem('savedGameState')) {
+		const saved = JSON.parse(localStorage.getItem('savedGameState'));
+		mainMenu.style.display = 'none';
+		pauseBtn.style.display = 'block';
+		shopBtn.style.display = 'block';
+		isGameActive = true;
+		initGame(saved);
+	}
 };
+
+exitBtn.onclick = () => { if (confirm('Выйти?')) location.reload(); };
+
 pauseBtn.onclick = () => {
 	isGameActive = false;
 	pauseMenu.style.display = 'flex';
-};document.getElementById('resumeBtn').onclick = () => {
-	pauseMenu.style.display = 'none';
+};
+
+resumeBtn.onclick = () => {	pauseMenu.style.display = 'none';
 	isGameActive = true;
 };
-document.getElementById('backToMenuBtn').onclick = () => {
+
+saveAndExitBtn.onclick = () => {
+	if (gameInitialized && currentGameState) {
+		const state = currentGameState();
+		localStorage.setItem('savedGameState', JSON.stringify(state));
+		continueBtn.style.display = 'block';
+	}
 	pauseMenu.style.display = 'none';
 	mainMenu.style.display = 'block';
 	pauseBtn.style.display = 'none';
+	shopBtn.style.display = 'none';
 	isGameActive = false;
-	const canvas = document.querySelector('canvas');
-	if (canvas) canvas.remove();
+	document.querySelector('canvas')?.remove();
 	gameInitialized = false;
-	document.getElementById('joystick').style.display = 'none';
 	cubeUI.style.display = 'none';
 	wateringCanUI.style.display = 'none';
+	seedUI.style.display = 'none';
 	colorPickerUI.style.display = 'none';
+	confirmBox.style.display = 'none';
+	shopMenu.style.display = 'none';
 };
+
+backToMenuBtn.onclick = () => {
+	localStorage.removeItem('savedGameState');
+	continueBtn.style.display = 'none';
+	pauseMenu.style.display = 'none';
+	mainMenu.style.display = 'block';
+	pauseBtn.style.display = 'none';
+	shopBtn.style.display = 'none';
+	isGameActive = false;
+	document.querySelector('canvas')?.remove();
+	gameInitialized = false;
+	cubeUI.style.display = 'none';
+	wateringCanUI.style.display = 'none';
+	seedUI.style.display = 'none';
+	colorPickerUI.style.display = 'none';
+	confirmBox.style.display = 'none';
+	shopMenu.style.display = 'none';
+};
+
+if (localStorage.getItem('savedGameState')) {
+	continueBtn.style.display = 'block';
+}
 </script>
 </body>
 </html>
