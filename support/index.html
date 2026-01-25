@@ -38,22 +38,16 @@
       margin: 12px 0;
       max-width: 500px;
     }
-    .card-link {
-      display: inline-block;
-      margin: 16px 0;
-      padding: 12px 24px;
-      background: #e3f2fd;
-      border-radius: 8px;
+    .phone-number {
       font-weight: bold;
-      text-decoration: none;
       color: #1976d2;
-      border: 2px solid #bbdefb;
-      transition: background 0.2s;
-    }
-    .card-link:hover {
-      background: #bbdefb;
-    }
-    .back-btn {
+      background: #e3f2fd;
+      padding: 8px 16px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 8px 0;
+      word-break: break-all;
+    }    .back-btn {
       display: inline-block;
       margin-top: 24px;
       padding: 10px 20px;
@@ -102,17 +96,21 @@
     #lang-toggle:hover {
       background: #e0e0e0;
     }
-  </style>
-</head>
+  </style></head>
 <body>
   <div class="container">
     <div class="donate-header" data-key="donateHeader">Добровольные донаты</div>
 
-    <p data-key="introText">Если вам понравились мои работы, вы можете выразить свою поддержку, отправив любой взнос на мою карту Сбербанка:</p>
+    <p data-key="introText">Если вам понравились мои работы, вы можете поддержать меня добровольным взносом через Систему быстрых платежей (СПБ). Перевод можно совершить:</p>
 
-    <a href="https://qr.nspk.ru/_____ _ВАША_ССЫЛКА______" class="card-link" target="_blank" data-key="cardLink">
-      Перевести на карту Сбербанка
-    </a>
+    <ul style="text-align: left; max-width: 500px; margin: 12px auto; padding-left: 20px;">
+      <li data-key="spbOption1">По номеру телефона (см. ниже)</li>
+      <li data-key="spbOption2">Через приложение «Озон»</li>
+      <li data-key="spbOption3">Любым банком, поддерживающим СПБ (Тинькофф, Сбер, ВТБ, Альфа и др.)</li>
+      <li data-key="spbOption4">Прямо с банковской карты, если ваш банк поддерживает СПБ</li>
+    </ul>
+
+    <div class="phone-number" id="phone-number">+7 (900)9303827</div>
 
     <p data-key="voluntaryNote">Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!</p>
 
@@ -140,12 +138,14 @@
     const translations = {
       ru: {
         donateHeader: "Добровольные донаты",
-        introText: "Если вам понравились мои работы, вы можете выразить свою поддержку, отправив любой взнос на мою карту Сбербанка:",
-        cardLink: "Перевести на карту Сбербанка",
+        introText: "Если вам понравились мои работы, вы можете поддержать меня добровольным взносом через Систему быстрых платежей (СПБ). Перевод можно совершить:",
+        spbOption1: "По номеру телефона (см. ниже)",
+        spbOption2: "Через приложение «Озон»",
+        spbOption3: "Любым банком, поддерживающим СПБ (Тинькофф, Сбер, ВТБ, Альфа и др.)",
+        spbOption4: "Прямо с банковской карты, если ваш банк поддерживает СПБ",
         voluntaryNote: "Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!",
         legalToggle: "Правовая информация и важные нюансы ▼",
-        noObligation: "Безвозмездность:",
-        noObligationDesc: "Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.",
+        noObligation: "Безвозмездность:",        noObligationDesc: "Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.",
         purpose: "Назначение платежа:",
         purposeDesc: "Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.",
         dataUse: "Использование банковских реквизитов:",
@@ -158,8 +158,11 @@
       },
       en: {
         donateHeader: "Voluntary Donations",
-        introText: "If you enjoyed my work, you can show your support by sending any amount to my Sberbank card:",
-        cardLink: "Transfer to Sberbank Card",
+        introText: "If you enjoyed my work, you can support me with a voluntary donation via the Fast Payment System (FPS). You can send funds:",
+        spbOption1: "By phone number (see below)",
+        spbOption2: "Through the Ozon app",
+        spbOption3: "Via any bank that supports FPS (Tinkoff, Sber, VTB, Alfa, etc.)",
+        spbOption4: "Directly from your bank card if your bank supports FPS",
         voluntaryNote: "Donations are entirely voluntary and create no obligations for either you or me. Thank you so much!",
         legalToggle: "Legal Information and Important Notes ▼",
         noObligation: "Gratuitous Nature:",
@@ -185,30 +188,25 @@
     function updateText() {
       document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.getAttribute('data-key');
-        if (el.tagName === 'A' && el.classList.contains('card-link')) {
-          // Только текст ссылки, не атрибут href
+        if (el.tagName === 'LI') {
           el.textContent = getTranslation(key);
         } else if (el.tagName === 'STRONG') {
-          // Обновляем текст внутри <strong>
           el.textContent = getTranslation(key);
         } else if (el.previousElementSibling && el.previousElementSibling.tagName === 'STRONG') {
-          // Это описание после <strong>
           el.textContent = getTranslation(key);
+        } else if (el.classList.contains('phone-number')) {          // Не меняем содержимое номера — только стиль
         } else {
           el.textContent = getTranslation(key);
         }
       });
 
-      // Обновляем заголовок страницы
       document.title = getTranslation('donateHeader');
     }
 
-    // Инициализация
     document.addEventListener('DOMContentLoaded', () => {
       updateText();
     });
 
-    // Переключение языка
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
