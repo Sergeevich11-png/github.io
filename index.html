@@ -6,48 +6,35 @@
   <title>Игры</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#ffcce6;color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden;height:100vh}
-
-    /* Фоновые слои */
     .heart-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
     .heart-layer:nth-child(1){opacity:0.15;animation:parallaxUp 50s linear infinite}
     .heart-layer:nth-child(2){opacity:0.3;animation:parallaxUp 35s linear infinite}
     .heart-layer:nth-child(3){opacity:0.5;animation:parallaxUp 25s linear infinite}
     .heart-layer:nth-child(4){opacity:0.7;animation:parallaxUp 18s linear infinite}
-
-    /* Основная анимация сердца — линейное движение вверх */
     .heart{
       position:absolute;
       font-size:1.5rem;
       color:#e74c3c;
-      /* Начинаем ниже экрана */
       transform:translateY(100vh);
-      /* Движение вверх — линейное, без рывков */
       animation: floatHeart linear infinite;
     }
-
-    /* Покачивание и масштаб — через отдельную анимацию */
     .heart::after{
       content:'❤️';
       display:block;
       animation: swayAndScale 6s ease-in-out infinite alternate;
     }
-
     @keyframes floatHeart{
       0%{transform:translateY(100vh)}
-      100%{transform:translateY(-10vh)} /* уходим чуть выше экрана */
+      100%{transform:translateY(-10vh)}
     }
-
     @keyframes swayAndScale{
       0%{transform:translateX(0) scale(0.9)}
       100%{transform:translateX(8px) scale(1.05)}
     }
-
     @keyframes parallaxUp{
       0%{transform:translateY(0)}
       100%{transform:translateY(-100vh)}
     }
-
-    /* Заголовок */
     .holiday-title{
       font-family:'Brush Script MT','Lucida Handwriting',cursive,sans-serif;
       font-size:2.8rem;
@@ -78,7 +65,6 @@
       opacity:0.2;
       z-index:-1;
     }
-
     h1{
       font-size:2.2rem;
       margin-bottom:30px;
@@ -88,7 +74,6 @@
       position:relative;
       z-index:5;
     }
-
     .game-link{
       display:block;
       margin:14px auto;
@@ -116,7 +101,6 @@
     .game-link.qr:hover{background:linear-gradient(to bottom,#2980b9,#1f618d)}
     .game-link.share{background:linear-gradient(to bottom,#f1c40f,#d4ac0d);color:#2c3e50}
     .game-link.share:hover{background:linear-gradient(to bottom,#d4ac0d,#b7950b)}
-
     .footer{
       margin-top:40px;
       color:#ecf0f1;
@@ -125,12 +109,10 @@
       position:relative;
       z-index:5;
     }
-
     .game-link::after{content:"❤️";margin-left:8px;font-size:.9em}
     .game-link.support::after{content:"☕"}
     .game-link.qr::after{content:"📱"}
     .game-link.share::after{content:"🎁"}
-
     .corner-decoration{
       position:absolute;
       font-size:2.5rem;
@@ -144,28 +126,20 @@
   </style>
 </head>
 <body>
-
-  <!-- Фоновые слои -->
   <div class="heart-layer" id="layer1"></div>
   <div class="heart-layer" id="layer2"></div>
   <div class="heart-layer" id="layer3"></div>
   <div class="heart-layer" id="layer4"></div>
-
   <div class="holiday-title" data-key="holidayTitle">С Днём Святого Валентина ❤️</div>
   <div class="corner-decoration top-left-bell">💌</div>
   <div class="corner-decoration top-right-corner">💖<span class="top-right-bell">💘</span></div>
   <h1 data-key="menuTitle">Меню</h1>
-
   <button id="show-games-btn" class="game-link default" data-key="gamesBtn">Игры</button>
-
   <div id="games-container" style="display:none;"></div>
-
   <a href="support/index.html" class="game-link support" data-key="coffeeLink">На кофе</a>
   <button id="share-btn" class="game-link share" data-key="shareBtn">Поделиться</button>
   <button id="lang-toggle" class="game-link default" style="margin-top:10px;">🇷🇺/🌎</button>
-
   <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
-
   <script>
     const layers = [
       {el: document.getElementById('layer1'), count: 20, duration: 50},
@@ -178,21 +152,14 @@
       for (let i = 0; i < count; i++) {
         const heart = document.createElement('div');
         heart.className = 'heart';
-
-        // Равномерное распределение по горизонтали
         heart.style.left = (i / count * 100) + '%';
-
-        // Каждое сердце начинает движение в разное время,
-        // чтобы создать непрерывный поток с самого начала
-        const delay = -(Math.random() * duration); // отрицательная задержка = уже в движении
+        const delay = -(Math.random() * duration);
         heart.style.animationDuration = duration + 's';
         heart.style.animationDelay = delay + 's';
-
         el.appendChild(heart);
       }
     });
 
-    // === остальной JS без изменений ===
     const games = [
       {name: "Maze", path: "maze/index.html"},
       {name: "Guess the number", path: "ugaday-chislo/index.html"},
