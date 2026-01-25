@@ -201,12 +201,12 @@
   
   <div id="input"></div>
   
-  <div id="attempts">Осталось попыток: <span id="count">5</span></div>
+  <div id="attempts">Осталось попыток: <span id="count">10</span></div>
   
   <div id="message"></div>
   
   <button id="next-btn">Следующий уровень</button>
-  <button id="retry-btn">Повторить уровень</button>
+  <button id="retry-btn">Начать заново</button>
 
   <div id="keyboard"></div>
 
@@ -219,7 +219,7 @@
         lose: "Проигрыш! Загадано:",
         allLevels: "🏆 Все уровни пройдены!",
         nextBtn: "Следующий уровень",
-        retryBtn: "Повторить уровень",
+        retryBtn: "Начать заново",
         menuBtn: "Вернуться в меню"
       },
       en: {
@@ -229,7 +229,7 @@
         lose: "Game over! The number was:",
         allLevels: "🏆 All levels completed!",
         nextBtn: "Next level",
-        retryBtn: "Retry level",
+        retryBtn: "Start over",
         menuBtn: "Back to menu"
       }
     };
@@ -248,19 +248,21 @@
     function updateTexts() {
       const t = translations[currentLang];
       document.getElementById('title').textContent = t.title;
-      document.getElementById('attempts').innerHTML = `${t.attempts} <span id="count">${attemptsLeft}</span>`;
+      const countEl = document.getElementById('count');
+      document.getElementById('attempts').innerHTML = `${t.attempts} <span id="count">${countEl.textContent}</span>`;
       document.getElementById('next-btn').textContent = t.nextBtn;
       document.getElementById('retry-btn').textContent = t.retryBtn;
       menuBtn.textContent = t.menuBtn;
 
-      // Если есть сообщение — обновим его тоже
-      const msg = document.getElementById('message').textContent.trim();
+      // Обновление текущего сообщения при смене языка
+      const msgDiv = document.getElementById('message');
+      const msg = msgDiv.textContent.trim();
       if (msg.includes('🎉')) {
-        document.getElementById('message').textContent = t.win;
+        msgDiv.textContent = t.win;
       } else if (msg.includes('🏆')) {
-        document.getElementById('message').textContent = t.allLevels;
+        msgDiv.textContent = t.allLevels;
       } else if (msg.includes('Загадано:') || msg.includes('The number was:')) {
-        document.getElementById('message').textContent = `${t.lose} ${secretNumber}`;
+        msgDiv.textContent = `${t.lose} ${secretNumber}`;
       }
     }
 
@@ -272,35 +274,37 @@
       window.location.href = '../index.html';
     };
 
-    const LEVELS = [
-      { digits: 2, attempts: 5 },
-      { digits: 3, attempts: 6 },
-      { digits: 4, attempts: 7 },
-      { digits: 5, attempts: 8 }
-    ];
+    // Уровни: количество цифр на каждом уровне
+    const LEVELS = [2, 3, 4, 5];
 
     let currentLevel = 0;
     let secretNumber = '';
-    let attemptsLeft = 0;
+    const TOTAL_ATTEMPTS = 10;
+    let attemptsLeft = TOTAL_ATTEMPTS;
     let input = [];
     let disabledDigits = new Set();
     let confirmedDigits = new Set();
     let revealed = [];
 
+    function resetGame() {
+      currentLevel = 0;
+      attemptsLeft = TOTAL_ATTEMPTS;
+      initLevel();
+    }
+
     function initLevel() {
-      const level = LEVELS[currentLevel];
-      attemptsLeft = level.attempts;
-      document.getElementById('count').textContent = attemptsLeft;
+      const digits = LEVELS[currentLevel];
       
+      // Генерация числа: первая цифра от 1 до 9, остальные — от 0 до 9
       let firstDigit = Math.floor(Math.random() * 9) + 1;
       let rest = '';
-      for (let i = 1; i < level.digits; i++) {
+      for (let i = 1; i < digits; i++) {
         rest += Math.floor(Math.random() * 10);
       }
       secretNumber = firstDigit + rest;
       
-      revealed = Array(level.digits).fill(null);
-      input = Array(level.digits).fill(null);
+      revealed = Array(digits).fill(null);
+      input = Array(digits).fill(null);
       disabledDigits.clear();
       confirmedDigits.clear();
       
@@ -308,7 +312,8 @@
       document.getElementById('message').textContent = '';
       document.getElementById('next-btn').style.display = 'none';
       document.getElementById('retry-btn').style.display = 'none';
-      updateTexts(); // Обновляем тексты после сброса уровня
+      document.getElementById('count').textContent = attemptsLeft;
+      updateTexts();
     }
 
     function renderAll() {
@@ -386,9 +391,11 @@
     function processGuess() {
       const guess = input.join('');
 
+      // Анализируем каждую уникальную цифру в попытке
       for (const d of new Set(guess)) {
         if (secretNumber.includes(d)) {
           confirmedDigits.add(d);
+          // Раскрываем все позиции этой цифры
           for (let i = 0; i < secretNumber.length; i++) {
             if (secretNumber[i] === d) {
               revealed[i] = d;
@@ -399,6 +406,7 @@
         }
       }
 
+      // Очищаем нераскрытые позиции для следующей попытки
       for (let i = 0; i < input.length; i++) {
         if (revealed[i] === null) {
           input[i] = null;
@@ -407,39 +415,42 @@
 
       renderAll();
 
-      // Победа
+      // Проверка победы
       if (revealed.every(d => d !== null)) {
         const t = translations[currentLang];
         document.getElementById('message').textContent = t.win;
-        document.getElementById('next-btn').style.display = 'inline-block';
-
-        document.getElementById('next-btn').onclick = () => {
-          if (currentLevel < LEVELS.length - 1) {
+        
+        if (currentLevel < LEVELS.length - 1) {
+          document.getElementById('next-btn').style.display = 'inline-block';
+          document.getElementById('next-btn').onclick = () => {
             currentLevel++;
             initLevel();
-          } else {
-            document.getElementById('message').textContent = t.allLevels;
-            document.getElementById('next-btn').style.display = 'none';
-          }
-        };
+          };
+        } else {
+          // Все уровни пройдены
+          document.getElementById('message').textContent = t.allLevels;
+          document.getElementById('retry-btn').style.display = 'inline-block';
+          document.getElementById('retry-btn').onclick = resetGame;
+        }
         return;
       }
 
+      // Использована одна попытка
       attemptsLeft--;
       document.getElementById('count').textContent = attemptsLeft;
 
-      // Проигрыш
+      // Проигрыш — кончились попытки
       if (attemptsLeft <= 0) {
         const t = translations[currentLang];
         document.getElementById('message').textContent = `${t.lose} ${secretNumber}`;
         document.getElementById('retry-btn').style.display = 'inline-block';
-        document.getElementById('retry-btn').onclick = () => initLevel();
+        document.getElementById('retry-btn').onclick = resetGame;
       }
     }
 
-    // Старт
-    setLanguage(currentLang); // Применяем сохранённый язык
-    initLevel();
+    // Инициализация игры
+    setLanguage(currentLang);
+    resetGame();
   </script>
 </body>
 </html>
