@@ -454,7 +454,7 @@ if (obj.geometry) obj.geometry.dispose();
 if (obj.material) {
 (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m?.dispose?.());
 }
-} catch (e) { console.warn('Cleanup:', e); }
+} catch (e) {}
 }
 function isPositionTooClose(pos, minDist = 800, excludePlayer = false) {
 if (!excludePlayer && player) {
@@ -513,10 +513,7 @@ return group;
 }
 function createRichStarLayer(count, depthFactor = 1.0) {
 const actualCount = qualityMode === 'low' ? Math.max(10, Math.floor(count * 0.4)) : count;
-const geometry = new THREE.BufferGeometry();
-const positions = new Float32Array(actualCount * 3);
-const colors = new Float32Array(actualCount * 3);
-const sizes = new Float32Array(actualCount);
+const group = new THREE.Group();
 const starColors = [
 { temp: 30000, color: new THREE.Color(0x8abfff) },
 { temp: 20000, color: new THREE.Color(0xa0d1ff) },
@@ -528,46 +525,95 @@ const starColors = [
 ];
 const weights = [0.5, 1, 2, 5, 8, 12, 20];
 for (let i = 0; i < actualCount; i++) {
-const radius = Math.random() * worldSize * depthFactor;
+const radiusWorld = Math.random() * worldSize * depthFactor;
 const theta = Math.random() * Math.PI * 2;
 const phi = Math.acos(2 * Math.random() - 1);
-positions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
-positions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
-positions[i*3+2] = radius * Math.cos(phi);
-let r = Math.random() * weights.reduce((a, b) => a + b, 0);
-let idx = 0;
-for (let w of weights) {
-r -= w;
-if (r <= 0) break;
-idx++;
+const pos = new THREE.Vector3(
+	radiusWorld * Math.sin(phi) * Math.cos(theta),
+	radiusWorld * Math.sin(phi) * Math.sin(theta),
+	radiusWorld * Math.cos(phi)
+);
+	let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+	let idx = 0;
+	for (let w of weights) {
+		r -= w;
+		if (r <= 0) break;
+		idx++;
+	}
+	const starClass = starColors[Math.min(idx, starColors.length - 1)];
+	const baseSize = 0.4 + (starClass.temp / 30000) * 5.0;
+	const sizeVariation = 0.7 + Math.random() * 0.6;
+	const visualSize = baseSize * sizeVariation * (1.0 / depthFactor);
+	const spriteMat = new THREE.SpriteMaterial({
+		color: starClass.color,
+		transparent: true,
+		blending: THREE.AdditiveBlending,
+		sizeAttenuation: true
+	});
+	const sprite = new THREE.Sprite(spriteMat);
+	sprite.position.copy(pos);
+	sprite.scale.set(visualSize, visualSize, 1);
+	group.add(sprite);
+	const trigger = new THREE.Mesh(
+		new THREE.SphereGeometry(visualSize * 2, 6, 6),
+		new THREE.MeshBasicMaterial({ visible: false })
+	);
+	trigger.position.copy(pos);
+	trigger.userData = {
+		radius: visualSize * 2,
+		points: 0,
+		isBackgroundObject: true,
+		linkedObject: sprite
+	};
+	scene.add(trigger);
+	objects.push(trigger);
 }
-const starClass = starColors[Math.min(idx, starColors.length - 1)];
-colors[i*3] = starClass.color.r;
-colors[i*3+1] = starClass.color.g;
-colors[i*3+2] = starClass.color.b;
-const baseSize = 0.4 + (starClass.temp / 30000) * 5.0;
-const sizeVariation = 0.7 + Math.random() * 0.6;
-sizes[i] = baseSize * sizeVariation * (1.0 / depthFactor);
-}
-geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 3));
-const material = new THREE.PointsMaterial({ size: 1, vertexColors: true, sizeAttenuation: true, transparent: true, alphaTest: 0.1, blending: THREE.AdditiveBlending });
-const points = new THREE.Points(geometry, material);
-points.frustumCulled = false;
-return points;
+return group;
 }
 function createStarClusterLayer(count, maxDist) {
 const actualCount = qualityMode === 'low' ? Math.max(1, Math.floor(count * 0.3)) : count;
 const group = new THREE.Group();
-const clusters = [];
 for (let i = 0; i < actualCount; i++) {
-const cluster = createRichStarLayer(80, 0.005);
-cluster.position.set((Math.random() - 0.5) * maxDist, (Math.random() - 0.5) * maxDist * 0.3, (Math.random() - 0.5) * maxDist);
-const rotSpeed = (Math.random() - 0.5) * 0.00005;
-clusters.push({ obj: cluster, rotSpeed }); group.add(cluster);
+	const clusterGroup = new THREE.Group();
+	const clusterPos = new THREE.Vector3(
+		(Math.random() - 0.5) * maxDist,
+		(Math.random() - 0.5) * maxDist * 0.3,
+		(Math.random() - 0.5) * maxDist
+	);
+	const subStars = 80;
+	for (let j = 0; j < subStars; j++) {
+		const offset = new THREE.Vector3(
+			(Math.random() - 0.5) * 300,
+			(Math.random() - 0.5) * 300,
+			(Math.random() - 0.5) * 300
+		);
+		const starPos = clusterPos.clone().add(offset);
+		const visualSize = 0.5 + Math.random() * 1.5;
+		const mat = new THREE.SpriteMaterial({
+			color: 0xffffff,
+			transparent: true,
+			blending: THREE.AdditiveBlending
+		});
+		const sprite = new THREE.Sprite(mat);
+		sprite.position.copy(starPos);
+		sprite.scale.set(visualSize, visualSize, 1);
+		clusterGroup.add(sprite);
+		const trigger = new THREE.Mesh(
+			new THREE.SphereGeometry(visualSize * 2, 6, 6),
+			new THREE.MeshBasicMaterial({ visible: false })
+		);
+		trigger.position.copy(starPos);
+		trigger.userData = {
+			radius: visualSize * 2,
+			points: 0,
+			isBackgroundObject: true,
+			linkedObject: sprite
+		};
+		scene.add(trigger);
+		objects.push(trigger);
+	}
+	group.add(clusterGroup);
 }
-(window.animatedClusters ??= []).push(...clusters);
 return group;
 }
 function createGalaxyLayer(count) {
@@ -575,50 +621,59 @@ const actualCount = qualityMode === 'low' ? Math.max(1, Math.floor(count * 0.4))
 const group = new THREE.Group();
 const loader = new THREE.TextureLoader();
 const texture = loader.load("https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/galaxy.png");
-const galaxies = [];
 for (let i = 0; i < actualCount; i++) {
-const d = 10000 + Math.random() * 30000;
-const a = Math.random() * Math.PI * 2;
-const pos = new THREE.Vector3(Math.cos(a) * d, (Math.random() - 0.5) * 3000, Math.sin(a) * d);
-const scale = 800 + Math.random() * 1200;
-const radius = scale * 0.5;
-const trigger = new THREE.Mesh(
-	new THREE.SphereGeometry(radius, 8, 8),
-	new THREE.MeshBasicMaterial({ visible: false })
-);
-trigger.position.copy(pos);
-trigger.userData = {
-	radius: radius,
-	points: 10,
-	type: 'galaxy',
-	isBlackHole: false,
-	linkedObject: null
-};
-const mat = new THREE.SpriteMaterial({
-	map: texture, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 + Math.random() * 0.3
-});
-const sprite = new THREE.Sprite(mat);
-sprite.position.copy(pos);
-sprite.scale.set(scale, scale, 1);
-trigger.userData.linkedObject = sprite;
-group.add(sprite);
-scene.add(trigger);
+	const d = 10000 + Math.random() * 30000;
+	const a = Math.random() * Math.PI * 2;
+	const pos = new THREE.Vector3(Math.cos(a) * d, (Math.random() - 0.5) * 3000, Math.sin(a) * d);
+	const scale = 800 + Math.random() * 1200;
+	const radius = scale * 0.5;
+	const mat = new THREE.SpriteMaterial({
+		map: texture, color: 0xffffff, transparent: true,
+		blending: THREE.AdditiveBlending, depthWrite: false,
+		opacity: 0.6 + Math.random() * 0.3
+	});
+	const sprite = new THREE.Sprite(mat);
+	sprite.position.copy(pos);
+	sprite.scale.set(scale, scale, 1);
+	group.add(sprite);
+	const trigger = new THREE.Mesh(
+		new THREE.SphereGeometry(radius, 8, 8),
+		new THREE.MeshBasicMaterial({ visible: false })
+	);
+	trigger.position.copy(pos);
+	trigger.userData = {
+		radius: radius,
+		points: 0,
+		isBackgroundObject: true,
+		linkedObject: sprite
+	};
+	scene.add(trigger);
 	objects.push(trigger);
-	const rotationSpeed = (0.8 + Math.random() * 0.7) * 0.0001;
-	galaxies.push({ sprite, rotationSpeed });
 }
-(window.animatedGalaxies ??= []).push(...galaxies);
 return group;
 }
 function createDustLayer(count) {
 if (qualityMode === 'low') return new THREE.Group();
 const group = new THREE.Group();
 for (let i = 0; i < count; i++) {
-const geo = new THREE.SphereGeometry(20000, 32, 32);
-const mat = new THREE.MeshBasicMaterial({ color: 0x1a0a2a, transparent: true, opacity: 0.03 });
-const mesh = new THREE.Mesh(geo, mat);
-mesh.position.set((Math.random() - 0.5) * worldSize, (Math.random() - 0.5) * 5000, (Math.random() - 0.5) * worldSize);
-group.add(mesh);
+	const geo = new THREE.SphereGeometry(20000, 32, 32);
+	const mat = new THREE.MeshBasicMaterial({ color: 0x1a0a2a, transparent: true, opacity: 0.03 });
+	const mesh = new THREE.Mesh(geo, mat);
+	mesh.position.set((Math.random() - 0.5) * worldSize, (Math.random() - 0.5) * 5000, (Math.random() - 0.5) * worldSize);
+	group.add(mesh);
+	const trigger = new THREE.Mesh(
+		new THREE.SphereGeometry(20000, 16, 16),
+		new THREE.MeshBasicMaterial({ visible: false })
+	);
+	trigger.position.copy(mesh.position);
+	trigger.userData = {
+		radius: 20000,
+		points: 0,
+		isBackgroundObject: true,
+		linkedObject: mesh
+	};
+	scene.add(trigger);
+	objects.push(trigger);
 }
 return group;
 }
@@ -628,6 +683,19 @@ const geo = new THREE.RingGeometry(15000, 35000, 256);
 const mat = new THREE.MeshBasicMaterial({ color: 0xd0b0ff, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
 const disk = new THREE.Mesh(geo, mat);
 disk.rotation.x = Math.PI / 2;
+const trigger = new THREE.Mesh(
+	new THREE.SphereGeometry(35000, 20, 20),
+	new THREE.MeshBasicMaterial({ visible: false })
+);
+trigger.position.copy(disk.position);
+trigger.userData = {
+	radius: 35000,
+	points: 0,
+	isBackgroundObject: true,
+	linkedObject: disk
+};
+scene.add(trigger);
+objects.push(trigger);
 return disk;
 }
 function createCosmicBackground() {
@@ -907,27 +975,30 @@ window.absorptionParticles.splice(i, 1);
 }
 }
 function triggerAbsorptionEffect(obj) {
-if (!obj) return;
+if (!obj || !obj.userData) return;
 const pos = obj.position.clone();
 if (obj.userData.linkedObject) {
-safeRemove(obj.userData.linkedObject);
+	safeRemove(obj.userData.linkedObject);
 }
-const particles = createAbsorptionParticles(pos);
-window.absorptionParticles ??= [];
-window.absorptionParticles.push({ ...particles, maxAge: 2.0 });
-screenShake = 8;
-screenShakeTime = 0.8;
-if (obj.material) {
-obj.material.emissiveIntensity = 5;
-obj.material.emissive = new THREE.Color(0xffffff);
-setTimeout(() => {
-if (obj.material) {
-obj.material.emissiveIntensity = obj.userData.type === 'black-hole' ? 0.1 : 1;
-obj.material.emissive = new THREE.Color(obj.userData.type === 'black-hole' ? 0x050515 : objectTypes.find(t => t.name === obj.userData.type).emissive);
+if (!obj.userData.isBackgroundObject) {
+	const particles = createAbsorptionParticles(pos);
+	window.absorptionParticles ??= [];
+	window.absorptionParticles.push({ ...particles, maxAge: 2.0 });
+	screenShake = 8;
+	screenShakeTime = 0.8;
+	if (obj.material) {
+		obj.material.emissiveIntensity = 5;
+		obj.material.emissive = new THREE.Color(0xffffff);
+		setTimeout(() => {
+			if (obj.material) {
+				obj.material.emissiveIntensity = obj.userData.type === 'black-hole' ? 0.1 : 1;
+				const typeDef = objectTypes.find(t => t.name === obj.userData.type);
+				obj.material.emissive = new THREE.Color(typeDef?.emissive || 0x222222);
+			}
+		}, 400);
+	}
+	if (soundEnabled) sounds.absorb.play();
 }
-}, 400);
-}
-if (soundEnabled) sounds.absorb.play();
 }
 function updateEnemyBlackHole(bh) {
 if (!bh || !bh.userData?.isBlackHole || !player) return;
@@ -1100,21 +1171,25 @@ if (!obj || !obj.userData) continue;
 const d2 = dist3(player.position, obj.position);
 const radiusSum = playerRadius + obj.userData.radius;
 if (d2 < radiusSum * radiusSum) {
-if (playerRadius > obj.userData.radius) {
+if (playerRadius > obj.userData.radius || obj.userData.isBackgroundObject) {
 triggerAbsorptionEffect(obj);
 safeRemove(obj); objects.splice(i, 1);
 const eIdx = enemyBlackHoles.indexOf(obj);
 if (eIdx !== -1) enemyBlackHoles.splice(eIdx, 1);
-score += obj.userData.points || 0;
-playerRadius += obj.userData.radius * 0.2;
+if (obj.userData.isBackgroundObject) {
+	playerRadius += 0.0001;
+} else {
+	score += obj.userData.points || 0;
+	playerRadius += obj.userData.radius * 0.2;
+}
 if (blackHoleMesh) blackHoleMesh.scale.setScalar(playerRadius / START_RADIUS);
 growthCounter++;
 if (growthCounter >= 5) { worldHalf += 500; worldSize = worldHalf * 2; growthCounter = 0; }
 document.getElementById('score').textContent = score;
-document.getElementById('size').textContent = playerRadius.toFixed(1);
+document.getElementById('size').textContent = playerRadius.toFixed(4);
 document.getElementById('universe').textContent = `${Math.round(worldSize)}³`;
-if (Math.random() < 0.8) spawnObjectGroup(false);
-if (soundEnabled) sounds.grow.play();
+if (!obj.userData.isBackgroundObject && Math.random() < 0.8) spawnObjectGroup(false);
+if (!obj.userData.isBackgroundObject && soundEnabled) sounds.grow.play();
 } else if (obj.userData.isBlackHole) { showGameOver(); return; }
 }
 }
@@ -1283,7 +1358,6 @@ document.getElementById('settingsBtn').addEventListener('click', () => {
 document.getElementById('menu').classList.remove('visible');
 document.getElementById('settingsPanel').classList.add('visible');
 });
-document.getElementById('qualityLabel').textContent = "Качество графики";
 document.getElementById('closeSettings').addEventListener('click', () => {
 document.getElementById('settingsPanel').classList.remove('visible');
 document.getElementById('menu').classList.add('visible');
