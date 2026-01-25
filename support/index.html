@@ -105,7 +105,7 @@
 
     <p data-key="spbOption"><strong>По номеру телефона (см. ниже) "Озон Банк"</strong></p>
 
-    <div class="phone-number" id="phone-number">+7 (900) 930 38 27</div>
+    <div class="phone-number" id="phone-number">+7 (900) 930-38-27</div>
 
     <p data-key="voluntaryNote">Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!</p>
 
@@ -113,9 +113,6 @@
     <div class="legal-content" id="legal">
       <p><strong data-key="noObligation">Безвозмездность:</strong> <span data-key="noObligationDesc">Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.</span></p>
       <p><strong data-key="purpose">Назначение платежа:</strong> <span data-key="purposeDesc">Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.</span></p>
-      <p><strong data-key="dataUse">Использование банковских реквизитов:</strong> <span data-key="dataUseDesc">Ваши персональные данные и банковская информация используются исключительно для обработки денежного перевода и обеспечиваются защитой согласно законодательству Российской Федерации о защите персональных данных (№152-ФЗ).</span></p>
-      <p><strong data-key="taxResponsibility">Самостоятельная ответственность:</strong> <span data-key="taxResponsibilityDesc">Подтверждая перечисление средств, вы осознаете возможные налоговые последствия своего решения и несёте полную ответственность за уплату налогов самостоятельно, если применимы соответствующие требования закона.</span></p>
-      <p><strong data-key="refund">Возврат средств:</strong> <span data-key="refundDesc">Возможность возврата внесённых вами средств отсутствует, кроме случаев доказанного неправомерного списания средств банком или ошибочного зачисления платежа. Любые претензии о возврате сумм рассматриваются индивидуально и требуют предоставления документальных доказательств нарушения.</span></p>
     </div>
 
     <a href="../" class="back-btn" data-key="backBtn">← Назад в меню</a>
@@ -129,7 +126,7 @@
       content.style.display = content.style.display === 'block' ? 'none' : 'block';
     }
 
-    // Локализация
+    // Локализация — только оставшиеся пункты
     const translations = {
       ru: {
         donateHeader: "Добровольные донаты",
@@ -141,11 +138,6 @@
         noObligationDesc: "Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.",
         purpose: "Назначение платежа:",
         purposeDesc: "Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.",
-        dataUse: "Использование банковских реквизитов:",
-        dataUseDesc: "Ваши персональные данные и банковская информация используются исключительно для обработки денежного перевода и обеспечиваются защитой согласно законодательству Российской Федерации о защите персональных данных (№152-ФЗ).",
-        taxResponsibility: "Самостоятельная ответственность:",
-        taxResponsibilityDesc: "Подтверждая перечисление средств, вы осознаете возможные налоговые последствия своего решения и несёте полную ответственность за уплату налогов самостоятельно, если применимы соответствующие требования закона.",
-        refund: "Возврат средств:",        refundDesc: "Возможность возврата внесённых вами средств отсутствует, кроме случаев доказанного неправомерного списания средств банком или ошибочного зачисления платежа. Любые претензии о возврате сумм рассматриваются индивидуально и требуют предоставления документальных доказательств нарушения.",
         backBtn: "← Назад в меню"
       },
       en: {
@@ -153,17 +145,10 @@
         introText: "If you enjoyed my work, you can support me with a voluntary donation via the Fast Payment System (FPS). You can send funds:",
         spbOption: "By phone number (see below) \"Ozon Bank\"",
         voluntaryNote: "Donations are entirely voluntary and create no obligations for either you or me. Thank you so much!",
-        legalToggle: "Legal Information and Important Notes ▼",
-        noObligation: "Gratuitous Nature:",
+        legalToggle: "Legal Information and Important Notes ▼",        noObligation: "Gratuitous Nature:",
         noObligationDesc: "You contribute funds voluntarily and solely based on your own desire to support my work. No obligations—including refunds or provision of services—arise from either side.",
         purpose: "Purpose of Payment:",
         purposeDesc: "The funds are intended exclusively to support my creative work. I reserve the right to use them freely at my discretion, without storage time limits or reporting obligations.",
-        dataUse: "Use of Bank Details:",
-        dataUseDesc: "Your personal and banking information is used solely to process the transfer and is protected in accordance with the Russian Federal Law on Personal Data Protection (No. 152-FZ).",
-        taxResponsibility: "Your Responsibility:",
-        taxResponsibilityDesc: "By confirming the transfer, you acknowledge potential tax implications and accept full responsibility for any applicable tax payments yourself.",
-        refund: "Refunds:",
-        refundDesc: "Refunds are not possible except in cases of proven unauthorized bank withdrawals or mistaken transfers. Any refund requests will be reviewed individually and require documented evidence of error.",
         backBtn: "← Back to Menu"
       }
     };
@@ -194,7 +179,8 @@
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
-      updateText();    });
+      updateText();
+    });
   </script>
 </body>
 </html>
