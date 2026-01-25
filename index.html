@@ -5,15 +5,131 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Игры</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#ffcce6 0%,#ff99cc 100%) fixed;color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden}body::before,body::after{content:"";position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;opacity:.35;background-image:radial-gradient(circle,red 1px,transparent 1px),radial-gradient(circle,red .8px,transparent .8px),radial-gradient(circle,red .6px,transparent .6px);background-size:100px 150px,80px 120px,60px 100px;background-position:0 0,30px 40px,60px 20px;animation:heartsUp 20s linear infinite}body::after{opacity:.25;background-image:radial-gradient(circle,red 1.4px,transparent 1.4px),radial-gradient(circle,red 1px,transparent 1px);background-size:120px 180px,90px 140px;background-position:0 0,50px 30px;animation:heartsUp 12s linear infinite}@keyframes heartsUp{0%{background-position:0 0,50px 30px,60px 20px}100%{background-position:0 -180px,50px -170px,60px -200px}}.holiday-title{font-family:'Brush Script MT','Lucida Handwriting',cursive,sans-serif;font-size:2.8rem;font-weight:bold;background:linear-gradient(to right,#e74c3c,#ff6b6b,#e74c3c);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 4px 8px rgba(0,0,0,.3);margin-bottom:12px;letter-spacing:2px;position:relative;z-index:5;padding:10px 20px;background-color:#ffcce6;border-radius:20px;display:inline-block}.holiday-title::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(to right,#ffd700,#ffaa00,#ffd700);border-radius:20px;opacity:0.2;z-index:-1}h1{font-size:2.2rem;margin-bottom:30px;color:#e74c3c;text-shadow:0 2px 6px rgba(0,0,0,.4);font-weight:bold;position:relative;z-index:5}.game-link{display:block;margin:14px auto;padding:14px 0;width:240px;color:white;text-decoration:none;border-radius:12px;font-size:1.1rem;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 8px rgba(0,0,0,.3);font-weight:600;position:relative;z-index:5}.game-link:hover{transform:translateY(-2px);box-shadow:0 6px 12px rgba(0,0,0,.4)}.game-link.default{background:linear-gradient(to bottom,#e74c3c,#c0392b)}.game-link.default:hover{background:linear-gradient(to bottom,#c0392b,#a93226)}.game-link.support{background:linear-gradient(to bottom,#2ecc71,#27ae60)}.game-link.support:hover{background:linear-gradient(to bottom,#27ae60,#219653)}.game-link.qr{background:linear-gradient(to bottom,#3498db,#2980b9)}.game-link.qr:hover{background:linear-gradient(to bottom,#2980b9,#1f618d)}.game-link.share{background:linear-gradient(to bottom,#f1c40f,#d4ac0d);color:#2c3e50}.game-link.share:hover{background:linear-gradient(to bottom,#d4ac0d,#b7950b)}.footer{margin-top:40px;color:#ecf0f1;font-size:.95rem;text-shadow:0 1px 2px rgba(0,0,0,.5);position:relative;z-index:5}.game-link::after{content:"❤️";margin-left:8px;font-size:.9em}.game-link.support::after{content:"☕"}.game-link.qr::after{content:"📱"}.game-link.share::after{content:"🎁"}.corner-decoration{position:absolute;font-size:2.5rem;line-height:1;pointer-events:none;z-index:10}.top-right-corner{top:10px;right:10px;color:#e74c3c}.top-left-bell{top:10px;left:10px;color:#27ae60}.top-right-bell{color:#ffd700;font-size:3rem;margin-left:5px}
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#ffcce6;color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden;height:100vh}
 
-    /* Анимированные сердечки внизу */
-    .floating-hearts{position:absolute;bottom:0;left:0;width:100%;height:100px;pointer-events:none;z-index:10;overflow:hidden}
-    .heart{position:absolute;font-size:2rem;color:#e74c3c;animation:floatHeart 4s ease-in-out infinite}
-    @keyframes floatHeart{0%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-20px) rotate(10deg)}100%{transform:translateY(0) rotate(0deg)}}
+    /* Фоновые слои с летящими сердечками */
+    .heart-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
+    .heart-layer:nth-child(1){opacity:0.2;animation:parallaxUp 30s linear infinite}
+    .heart-layer:nth-child(2){opacity:0.4;animation:parallaxUp 20s linear infinite}
+    .heart-layer:nth-child(3){opacity:0.6;animation:parallaxUp 15s linear infinite}
+    .heart-layer:nth-child(4){opacity:0.8;animation:parallaxUp 10s linear infinite}
+
+    .heart{position:absolute;font-size:1.5rem;color:#e74c3c;transform:translateY(100vh);animation:floatHeart 4s ease-in-out infinite}
+    @keyframes floatHeart{
+      0%{transform:translateY(100vh) scale(0.8) rotate(0deg)}
+      50%{transform:translateY(-20px) scale(1.1) rotate(10deg)}
+      100%{transform:translateY(-100vh) scale(0.8) rotate(0deg)}
+    }
+
+    @keyframes parallaxUp{
+      0%{transform:translateY(0)}
+      100%{transform:translateY(-100vh)}
+    }
+
+    /* Заголовок */
+    .holiday-title{
+      font-family:'Brush Script MT','Lucida Handwriting',cursive,sans-serif;
+      font-size:2.8rem;
+      font-weight:bold;
+      background:linear-gradient(to right,#e74c3c,#ff6b6b,#e74c3c);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:0 4px 8px rgba(0,0,0,.3);
+      margin-bottom:12px;
+      letter-spacing:2px;
+      position:relative;
+      z-index:5;
+      padding:10px 20px;
+      background-color:#ffcce6;
+      border-radius:20px;
+      display:inline-block;
+    }
+    .holiday-title::before{
+      content:"";
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:linear-gradient(to right,#ffd700,#ffaa00,#ffd700);
+      border-radius:20px;
+      opacity:0.2;
+      z-index:-1;
+    }
+
+    h1{
+      font-size:2.2rem;
+      margin-bottom:30px;
+      color:#e74c3c;
+      text-shadow:0 2px 6px rgba(0,0,0,.4);
+      font-weight:bold;
+      position:relative;
+      z-index:5;
+    }
+
+    .game-link{
+      display:block;
+      margin:14px auto;
+      padding:14px 0;
+      width:240px;
+      color:white;
+      text-decoration:none;
+      border-radius:12px;
+      font-size:1.1rem;
+      transition:transform .2s,box-shadow .2s;
+      box-shadow:0 4px 8px rgba(0,0,0,.3);
+      font-weight:600;
+      position:relative;
+      z-index:5;
+    }
+    .game-link:hover{
+      transform:translateY(-2px);
+      box-shadow:0 6px 12px rgba(0,0,0,.4);
+    }
+    .game-link.default{background:linear-gradient(to bottom,#e74c3c,#c0392b)}
+    .game-link.default:hover{background:linear-gradient(to bottom,#c0392b,#a93226)}
+    .game-link.support{background:linear-gradient(to bottom,#2ecc71,#27ae60)}
+    .game-link.support:hover{background:linear-gradient(to bottom,#27ae60,#219653)}
+    .game-link.qr{background:linear-gradient(to bottom,#3498db,#2980b9)}
+    .game-link.qr:hover{background:linear-gradient(to bottom,#2980b9,#1f618d)}
+    .game-link.share{background:linear-gradient(to bottom,#f1c40f,#d4ac0d);color:#2c3e50}
+    .game-link.share:hover{background:linear-gradient(to bottom,#d4ac0d,#b7950b)}
+
+    .footer{
+      margin-top:40px;
+      color:#ecf0f1;
+      font-size:.95rem;
+      text-shadow:0 1px 2px rgba(0,0,0,.5);
+      position:relative;
+      z-index:5;
+    }
+
+    .game-link::after{content:"❤️";margin-left:8px;font-size:.9em}
+    .game-link.support::after{content:"☕"}
+    .game-link.qr::after{content:"📱"}
+    .game-link.share::after{content:"🎁"}
+
+    .corner-decoration{
+      position:absolute;
+      font-size:2.5rem;
+      line-height:1;
+      pointer-events:none;
+      z-index:10;
+    }
+    .top-right-corner{top:10px;right:10px;color:#e74c3c}
+    .top-left-bell{top:10px;left:10px;color:#27ae60}
+    .top-right-bell{color:#ffd700;font-size:3rem;margin-left:5px}
   </style>
 </head>
 <body>
+
+  <!-- Фоновые слои с сердечками -->
+  <div class="heart-layer" id="layer1"></div>
+  <div class="heart-layer" id="layer2"></div>
+  <div class="heart-layer" id="layer3"></div>
+  <div class="heart-layer" id="layer4"></div>
+
   <div class="holiday-title" data-key="holidayTitle">С Днём Святого Валентина ❤️</div>
   <div class="corner-decoration top-left-bell">💌</div>
   <div class="corner-decoration top-right-corner">💖<span class="top-right-bell">💘</span></div>
@@ -29,20 +145,31 @@
 
   <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
 
-  <!-- Анимированные сердечки внизу -->
-  <div class="floating-hearts" id="floatingHearts"></div>
-
   <script>
-    // Создаём анимированные сердечки внизу
-    const heartContainer = document.getElementById('floatingHearts');
-    for (let i = 0; i < 15; i++) {
-      const heart = document.createElement('div');
-      heart.className = 'heart';
-      heart.textContent = '❤️';
-      heart.style.left = Math.random() * 100 + '%';
-      heart.style.animationDelay = Math.random() * 4 + 's';
-      heartContainer.appendChild(heart);
-    }
+    // Генерируем сердечки для каждого слоя
+    const layers = [
+      document.getElementById('layer1'),
+      document.getElementById('layer2'),
+      document.getElementById('layer3'),
+      document.getElementById('layer4')
+    ];
+
+    layers.forEach((layer, index) => {
+      for (let i = 0; i < 15 + index * 5; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.textContent = '❤️';
+
+        // Рандомное положение по X
+        heart.style.left = Math.random() * 100 + '%';
+
+        // Разная скорость анимации для разных слоёв
+        heart.style.animationDuration = (4 - index * 0.5) + 's';
+        heart.style.animationDelay = Math.random() * 4 + 's';
+
+        layer.appendChild(heart);
+      }
+    });
 
     const games = [
       {name: "Maze", path: "maze/index.html"},
