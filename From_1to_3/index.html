@@ -116,7 +116,7 @@
   <div id="rulesModal">
     <div id="rulesContent">
       <h2 id="rulesTitle">Правила игры</h2>
-      <p id="rulesText">Игрок и ИИ по очереди выбирают от 1 до 3 связанных клеток (по сторонам). На поле скрыта мина. Тот, кто выберет клетку с миной — проигрывает. Цель — заставить противника попасть на мину.</p>
+      <p id="rulesText">Игрок и ИИ по очереди выбирают от 1 до 3 связанных клеток (по сторонам, НЕ ПО ДИАГОНАЛИ!). На поле есть мина. Тот, кто выберет клетку с миной — проигрывает. Цель — вынудить противника попасть на мину.</p>
       <button id="closeRules" onclick="hideRules()">Закрыть</button>
     </div>
   </div>
@@ -138,7 +138,7 @@
         win: "ИИ попал на мину! Победа!",
         lose: "Вы попали на мину! Поражение.",
         rulesTitle: "Правила игры",
-        rulesText: "Игрок и ИИ по очереди выбирают от 1 до 3 связанных клеток (по сторонам). На поле скрыта мина. Тот, кто выберет клетку с миной — проигрывает. Цель — заставить противника попасть на мину."
+        rulesText: "Игрок и ИИ по очереди выбирают от 1 до 3 связанных клеток (по сторонам, НЕ ПО ДИАГОНАЛИ!). На поле есть мина. Тот, кто выберет клетку с миной — проигрывает. Цель — вынудить противника попасть на мину."
       },
       en: {
         title: "Move 1 to 3",
@@ -149,13 +149,13 @@
         lang: "EN/🌎",
         exit: "Exit",
         backToMenu: "Back to Menu",
-        statusSelect: "Select 1–3 connected cells (by sides)",
+        statusSelect: "Select 1–3 connected cells (by sides only, NOT diagonally!)",
         passTurn: "Pass Turn",
         aiTurn: "AI's Turn...",
         win: "AI hit the mine! You win!",
         lose: "You hit the mine! Game over.",
         rulesTitle: "Game Rules",
-        rulesText: "Player and AI take turns selecting 1 to 3 connected cells (adjacent by sides). A hidden mine is placed on the board. Whoever selects the mine loses. Goal: force your opponent to hit the mine."
+        rulesText: "Player and AI take turns selecting 1 to 3 connected cells (by sides only, NOT diagonally!). There is a mine on the board. Whoever selects the mine loses. Goal: force your opponent to hit the mine."
       }
     };
 
