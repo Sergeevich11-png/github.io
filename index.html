@@ -7,18 +7,39 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#ffcce6;color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden;height:100vh}
 
-    /* Фоновые слои с летящими сердечками */
+    /* Фоновые слои */
     .heart-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
-    .heart-layer:nth-child(1){opacity:0.15;animation:parallaxUp 40s linear infinite}
-    .heart-layer:nth-child(2){opacity:0.3;animation:parallaxUp 30s linear infinite}
-    .heart-layer:nth-child(3){opacity:0.5;animation:parallaxUp 20s linear infinite}
-    .heart-layer:nth-child(4){opacity:0.7;animation:parallaxUp 15s linear infinite}
+    .heart-layer:nth-child(1){opacity:0.15;animation:parallaxUp 50s linear infinite}
+    .heart-layer:nth-child(2){opacity:0.3;animation:parallaxUp 35s linear infinite}
+    .heart-layer:nth-child(3){opacity:0.5;animation:parallaxUp 25s linear infinite}
+    .heart-layer:nth-child(4){opacity:0.7;animation:parallaxUp 18s linear infinite}
 
-    .heart{position:absolute;font-size:1.5rem;color:#e74c3c;transform:translateY(100vh);animation:floatHeart 15s ease-in-out infinite}
+    /* Основная анимация сердца — линейное движение вверх */
+    .heart{
+      position:absolute;
+      font-size:1.5rem;
+      color:#e74c3c;
+      /* Начинаем ниже экрана */
+      transform:translateY(100vh);
+      /* Движение вверх — линейное, без рывков */
+      animation: floatHeart linear infinite;
+    }
+
+    /* Покачивание и масштаб — через отдельную анимацию */
+    .heart::after{
+      content:'❤️';
+      display:block;
+      animation: swayAndScale 6s ease-in-out infinite alternate;
+    }
+
     @keyframes floatHeart{
-      0%{transform:translateY(100vh) scale(0.9) rotate(0deg)}
-      50%{transform:translateY(-10px) scale(1.0) rotate(3deg)}
-      100%{transform:translateY(-100vh) scale(0.9) rotate(0deg)}
+      0%{transform:translateY(100vh)}
+      100%{transform:translateY(-10vh)} /* уходим чуть выше экрана */
+    }
+
+    @keyframes swayAndScale{
+      0%{transform:translateX(0) scale(0.9)}
+      100%{transform:translateX(8px) scale(1.05)}
     }
 
     @keyframes parallaxUp{
@@ -124,7 +145,7 @@
 </head>
 <body>
 
-  <!-- Фоновые слои с сердечками -->
+  <!-- Фоновые слои -->
   <div class="heart-layer" id="layer1"></div>
   <div class="heart-layer" id="layer2"></div>
   <div class="heart-layer" id="layer3"></div>
@@ -146,31 +167,32 @@
   <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
 
   <script>
-    // Генерируем сердечки для каждого слоя
     const layers = [
-      document.getElementById('layer1'),
-      document.getElementById('layer2'),
-      document.getElementById('layer3'),
-      document.getElementById('layer4')
+      {el: document.getElementById('layer1'), count: 20, duration: 50},
+      {el: document.getElementById('layer2'), count: 25, duration: 35},
+      {el: document.getElementById('layer3'), count: 30, duration: 25},
+      {el: document.getElementById('layer4'), count: 35, duration: 18}
     ];
 
-    layers.forEach((layer, index) => {
-      for (let i = 0; i < 15 + index * 5; i++) {
+    layers.forEach(({el, count, duration}) => {
+      for (let i = 0; i < count; i++) {
         const heart = document.createElement('div');
         heart.className = 'heart';
-        heart.textContent = '❤️';
 
-        // Рандомное положение по X
-        heart.style.left = Math.random() * 100 + '%';
+        // Равномерное распределение по горизонтали
+        heart.style.left = (i / count * 100) + '%';
 
-        // Разная скорость анимации для разных слоёв (медленнее!)
-        heart.style.animationDuration = (15 + index * 5) + 's'; // от 15 до 30 сек
-        heart.style.animationDelay = Math.random() * 10 + 's'; // задержка до 10 сек
+        // Каждое сердце начинает движение в разное время,
+        // чтобы создать непрерывный поток с самого начала
+        const delay = -(Math.random() * duration); // отрицательная задержка = уже в движении
+        heart.style.animationDuration = duration + 's';
+        heart.style.animationDelay = delay + 's';
 
-        layer.appendChild(heart);
+        el.appendChild(heart);
       }
     });
 
+    // === остальной JS без изменений ===
     const games = [
       {name: "Maze", path: "maze/index.html"},
       {name: "Угадай число", path: "ugaday-chislo/index.html"},
@@ -183,7 +205,6 @@
     const container = document.getElementById('games-container');
     const btn = document.getElementById('show-games-btn');
 
-    // Заполняем контейнер (но не показываем сразу)
     games.forEach(game => {
       const link = document.createElement('a');
       link.href = game.path;
@@ -192,14 +213,12 @@
       container.appendChild(link);
     });
 
-    // Переключаем отображение списка при клике
     btn.addEventListener('click', () => {
       const isVisible = container.style.display === 'block';
       container.style.display = isVisible ? 'none' : 'block';
-      updateText(); // Обновляем текст кнопки при переключении
+      updateText();
     });
 
-    // Кнопка "Поделиться"
     document.getElementById('share-btn').addEventListener('click', async () => {
       const url = window.location.href;
       if (navigator.share) {
@@ -214,7 +233,6 @@
       }
     });
 
-    // Локализация
     const translations = {
       ru: {
         holidayTitle: "С Днём Святого Валентина ❤️",
@@ -260,12 +278,9 @@
           el.textContent = getTranslation(key);
         }
       });
-
-      // Обновляем заголовок страницы
       document.title = getTranslation('gamesBtn');
     }
 
-    // Переключение языка
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
