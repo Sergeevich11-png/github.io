@@ -38,36 +38,40 @@
       margin: 12px 0;
       max-width: 500px;
     }
-    .phone-number {
+
+    /* Стиль для "Показать номер" */
+    .show-number-btn {
       font-weight: bold;
       color: #1976d2;
       background: #e3f2fd;
       padding: 12px 20px;
       border-radius: 8px;
       display: inline-block;
-      margin: 12px 0;
-      word-break: break-all;
-      cursor: pointer;      user-select: none;
-      position: relative;
+      margin: 12px 0;      cursor: pointer;
+      user-select: none;
       transition: background 0.2s;
     }
-    .phone-number:hover {
+    .show-number-btn:hover {
       background: #bbdefb;
     }
+
+    /* Уведомление о копировании */
     .copy-feedback {
-      position: absolute;
-      top: -30px;
+      position: fixed;
+      top: 20px;
       left: 50%;
       transform: translateX(-50%);
       background: #2ecc71;
       color: white;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 0.85rem;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 1rem;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s;
+      z-index: 1000;
+      transition: opacity 0.3s;
     }
+
     .back-btn {
       display: inline-block;
       margin-top: 24px;
@@ -92,11 +96,11 @@
     .legal-content {
       margin-top: 16px;
       font-size: 0.85rem;
-      color: #555;
-      line-height: 1.5;
+      color: #555;      line-height: 1.5;
       display: none;
       padding: 16px;
-      background: #fff;      border-radius: 8px;
+      background: #fff;
+      border-radius: 8px;
       border-left: 4px solid #ccc;
       max-width: 500px;
     }
@@ -124,22 +128,24 @@
 
     <p data-key="introText">Если вам понравились мои работы, вы можете поддержать меня добровольным взносом через Систему быстрых платежей (СПБ). Перевод можно совершить:</p>
 
-    <p data-key="spbOption"><strong>По номеру телефона (см. ниже) "Озон Банк"</strong></p>
+    <p data-key="spbOption"><strong>По номеру телефона "Озон Банк"</strong></p>
 
+    <!-- Кнопка вместо отображаемого номера -->
     <div 
-      class="phone-number" 
-      id="phone-number" 
+      class="show-number-btn" 
+      id="show-number-btn"
+      title="Нажмите, чтобы скопировать номер телефона"
       data-phone="+79009303827"
-      title="Нажмите, чтобы скопировать номер"
     >
-      +7 (900) 930-38-27
-      <span class="copy-feedback" id="copy-feedback"></span>
+      <span data-key="showNumberBtn">Показать номер</span>
     </div>
+
+    <!-- Глобальное уведомление (вне элемента) -->
+    <div class="copy-feedback" id="copy-feedback"></div>
 
     <p data-key="voluntaryNote">Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!</p>
 
-    <div class="legal-toggle" onclick="toggleLegal()" data-key="legalToggle">Правовая информация и важные нюансы ▼</div>
-    <div class="legal-content" id="legal">
+    <div class="legal-toggle" onclick="toggleLegal()" data-key="legalToggle">Правовая информация и важные нюансы ▼</div>    <div class="legal-content" id="legal">
       <p><strong data-key="noObligation">Безвозмездность:</strong> <span data-key="noObligationDesc">Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.</span></p>
       <p><strong data-key="purpose">Назначение платежа:</strong> <span data-key="purposeDesc">Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.</span></p>
     </div>
@@ -156,23 +162,21 @@
 
     // Функция копирования номера
     function copyPhone() {
-      const phoneElement = document.getElementById('phone-number');
-      const cleanNumber = phoneElement.getAttribute('data-phone');
+      const btn = document.getElementById('show-number-btn');
+      const cleanNumber = btn.getAttribute('data-phone');
       const feedback = document.getElementById('copy-feedback');
 
       navigator.clipboard.writeText(cleanNumber).then(() => {
-        // Показываем уведомление
-        const msg = currentLang === 'ru' ? 'Скопировано!' : 'Copied!';
+        const msg = currentLang === 'ru' ? 'Номер скопирован!' : 'Number copied!';
         feedback.textContent = msg;
         feedback.style.opacity = '1';
 
-        // Скрываем через 1.5 секунды
         setTimeout(() => {
           feedback.style.opacity = '0';
         }, 1500);
       }).catch(err => {
         console.warn('Не удалось скопировать номер:', err);
-        // На старых браузерах можно показать alert, но лучше ничего не делать
+        // Опционально: можно показать alert, но лучше молча
       });
     }
 
@@ -181,27 +185,27 @@
       ru: {
         donateHeader: "Добровольные донаты",
         introText: "Если вам понравились мои работы, вы можете поддержать меня добровольным взносом через Систему быстрых платежей (СПБ). Перевод можно совершить:",
-        spbOption: "По номеру телефона (см. ниже) \"Озон Банк\"",
+        spbOption: "По номеру телефона \"Озон Банк\"",
+        showNumberBtn: "Показать номер",
         voluntaryNote: "Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!",
         legalToggle: "Правовая информация и важные нюансы ▼",
         noObligation: "Безвозмездность:",
         noObligationDesc: "Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.",
         purpose: "Назначение платежа:",
         purposeDesc: "Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.",
-        backBtn: "← Назад в меню",
-        copied: "Скопировано!"
-      },
-      en: {
+        backBtn: "← Назад в меню"
+      },      en: {
         donateHeader: "Voluntary Donations",
         introText: "If you enjoyed my work, you can support me with a voluntary donation via the Fast Payment System (FPS). You can send funds:",
-        spbOption: "By phone number (see below) \"Ozon Bank\"",        voluntaryNote: "Donations are entirely voluntary and create no obligations for either you or me. Thank you so much!",
+        spbOption: "By phone number \"Ozon Bank\"",
+        showNumberBtn: "Show number",
+        voluntaryNote: "Donations are entirely voluntary and create no obligations for either you or me. Thank you so much!",
         legalToggle: "Legal Information and Important Notes ▼",
         noObligation: "Gratuitous Nature:",
         noObligationDesc: "You contribute funds voluntarily and solely based on your own desire to support my work. No obligations—including refunds or provision of services—arise from either side.",
         purpose: "Purpose of Payment:",
         purposeDesc: "The funds are intended exclusively to support my creative work. I reserve the right to use them freely at my discretion, without storage time limits or reporting obligations.",
-        backBtn: "← Back to Menu",
-        copied: "Copied!"
+        backBtn: "← Back to Menu"
       }
     };
 
@@ -214,23 +218,14 @@
     function updateText() {
       document.querySelectorAll('[data-key]').forEach(el => {
         const key = el.getAttribute('data-key');
-        if (el.classList.contains('phone-number')) {
-          // Только текст номера (визуальный), не атрибут
-          el.childNodes[0].textContent = currentLang === 'ru' 
-            ? '+7 (900) 930-38-27' 
-            : '+7 (900) 930-38-27';
-        } else {
-          el.textContent = getTranslation(key);
-        }
+        el.textContent = getTranslation(key);
       });
-
       document.title = getTranslation('donateHeader');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       updateText();
-      // Назначаем обработчик клика
-      document.getElementById('phone-number').addEventListener('click', copyPhone);
+      document.getElementById('show-number-btn').addEventListener('click', copyPhone);
     });
 
     document.getElementById('lang-toggle').addEventListener('click', () => {
