@@ -661,42 +661,41 @@ let keys = {};
 let isPointerLocked = false;
 
 function setupPCControls() {
-const canvas = renderer.domElement;
+	const canvas = renderer.domElement;
 
-// Keyboard
-window.addEventListener('keydown', (e) => {
-	if (gameState !== 'playing') return;
-	keys[e.key.toLowerCase()] = true;
-});
+	// Keyboard
+	window.addEventListener('keydown', (e) => {
+		if (gameState !== 'playing') return;
+		keys[e.key.toLowerCase()] = true;
+	});
 
-window.addEventListener('keyup', (e) => {
-	keys[e.key.toLowerCase()] = false;
-});
+	window.addEventListener('keyup', (e) => {
+		keys[e.key.toLowerCase()] = false;
+	});
 
-// Mouse look
-canvas.addEventListener('click', () => {
-	if (gameState !== 'playing') return;
-	canvas.requestPointerLock();
-});
+	// Mouse look — only if clicked on canvas AND game is playing AND no UI is visible
+	canvas.addEventListener('click', (e) => {
+		if (gameState !== 'playing') return;
+		// Check if any UI panel is visible — if yes, DO NOT lock pointer
+		const panels = ['#menu', '#settingsPanel', '#infoPanel', '#gameOver', '#pauseMenu'];
+		for (const sel of panels) {
+			const el = document.querySelector(sel);
+			if (el && el.classList.contains('visible')) {
+				return;
+			}
+		}
+		canvas.requestPointerLock();
+	});
 
-document.addEventListener('pointerlockchange', () => {
-	isPointerLocked = document.pointerLockElement === canvas;
-});
+	document.addEventListener('pointerlockchange', () => {
+		isPointerLocked = document.pointerLockElement === canvas;
+	});
 
-document.addEventListener('mousemove', (e) => {
-	if (!isPointerLocked || gameState !== 'playing') return;
-	lookInputX = e.movementX * 0.002;
-	lookInputY = e.movementY * 0.002;
-});
-
-// Update move input from keys
-function updateKeyboardInput() {
-	moveInputX = 0;
-	moveInputY = 0;
-	if (keys['a'] || keys['ф']) moveInputX = -1;
-	if (keys['d'] || keys['в']) moveInputX = 1;
-	if (keys['w'] || keys['ц']) moveInputY = 1;
-	if (keys['s'] || keys['ы']) moveInputY = -1;
+	document.addEventListener('mousemove', (e) => {
+		if (!isPointerLocked || gameState !== 'playing') return;
+		lookInputX = e.movementX * 0.002;
+		lookInputY = e.movementY * 0.002;
+	});
 }
 // === END PC INPUT ===
 
