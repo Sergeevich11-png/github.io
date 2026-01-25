@@ -326,6 +326,21 @@ let lastFpsCheck = 0;
 let frameCount = 0;
 let qualityMode = 'low';
 let lang = 'ru';
+
+// === PC INPUT HANDLING ===
+let keys = {}; // <-- ДОБАВЛЕНО
+let isPointerLocked = false; // <-- ДОБАВЛЕНО
+
+// === ДОБАВЛЕНА ФУНКЦИЯ updateKeyboardInput ===
+function updateKeyboardInput() {
+	moveInputX = 0;
+	moveInputY = 0;
+	if (keys['a'] || keys['ф']) moveInputX = -1;
+	if (keys['d'] || keys['в']) moveInputX = 1;
+	if (keys['w'] || keys['ц']) moveInputY = 1;
+	if (keys['s'] || keys['ы']) moveInputY = -1;
+}
+
 const translations = {
 ru: {
 title: 'ЧЁРНАЯ ДЫРА',
@@ -655,50 +670,6 @@ if (canvas) canvas.remove();
 renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
 createCosmicBackground();
 }
-
-// === PC INPUT HANDLING ===
-let keys = {};
-let isPointerLocked = false;
-
-function setupPCControls() {
-	const canvas = renderer.domElement;
-
-	// Keyboard
-	window.addEventListener('keydown', (e) => {
-		if (gameState !== 'playing') return;
-		keys[e.key.toLowerCase()] = true;
-	});
-
-	window.addEventListener('keyup', (e) => {
-		keys[e.key.toLowerCase()] = false;
-	});
-
-	// Mouse look — only if clicked on canvas AND game is playing AND no UI is visible
-	canvas.addEventListener('click', (e) => {
-		if (gameState !== 'playing') return;
-		// Check if any UI panel is visible — if yes, DO NOT lock pointer
-		const panels = ['#menu', '#settingsPanel', '#infoPanel', '#gameOver', '#pauseMenu'];
-		for (const sel of panels) {
-			const el = document.querySelector(sel);
-			if (el && el.classList.contains('visible')) {
-				return;
-			}
-		}
-		canvas.requestPointerLock();
-	});
-
-	document.addEventListener('pointerlockchange', () => {
-		isPointerLocked = document.pointerLockElement === canvas;
-	});
-
-	document.addEventListener('mousemove', (e) => {
-		if (!isPointerLocked || gameState !== 'playing') return;
-		lookInputX = e.movementX * 0.002;
-		lookInputY = e.movementY * 0.002;
-	});
-}
-// === END PC INPUT ===
-
 function cleanupScene() {
 	if (player) { safeRemove(player); player = null; blackHoleMesh = null; accretionGlow = null; }
 	objects.forEach(safeRemove); objects = [];
@@ -1315,6 +1286,38 @@ window.addEventListener('resize', () => {
 		renderer.setSize(window.innerWidth, window.innerHeight);
 	}
 });
+
+// === УСТАНОВКА PC УПРАВЛЕНИЯ ===
+function setupPCControls() {
+	const canvas = renderer.domElement;
+
+	// Keyboard
+	window.addEventListener('keydown', (e) => {
+		if (gameState !== 'playing') return;
+		keys[e.key.toLowerCase()] = true;
+	});
+
+	window.addEventListener('keyup', (e) => {
+		keys[e.key.toLowerCase()] = false;
+	});
+
+	// Mouse look
+	canvas.addEventListener('click', () => {
+		if (gameState !== 'playing') return;
+		canvas.requestPointerLock();
+	});
+
+	document.addEventListener('pointerlockchange', () => {
+		isPointerLocked = document.pointerLockElement === canvas;
+	});
+
+	document.addEventListener('mousemove', (e) => {
+		if (!isPointerLocked || gameState !== 'playing') return;
+		lookInputX = e.movementX * 0.002;
+		lookInputY = e.movementY * 0.002;
+	});
+}
+
 updateTexts();
 </script>
 </body>
