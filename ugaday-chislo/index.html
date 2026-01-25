@@ -1,371 +1,239 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Угадай число</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+<script>
+  const translations = {
+    ru: {
+      title: "Угадай число",
+      attempts: "Осталось попыток:",
+      win: "🎉 Победа!",
+      lose: "Проигрыш! Загадано:",
+      allLevels: "🏆 Все уровни пройдены!",
+      nextBtn: "Следующий уровень",
+      retryBtn: "Начать заново",
+      menuBtn: "Вернуться в меню"
+    },
+    en: {
+      title: "Guess the Number",
+      attempts: "Attempts left:",
+      win: "🎉 Victory!",
+      lose: "Game over! The number was:",
+      allLevels: "🏆 All levels completed!",
+      nextBtn: "Next level",
+      retryBtn: "Start over",
+      menuBtn: "Back to menu"
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f7fa;
-      color: #2c3e50;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
-      text-align: center;
-    }
-    h1 {
-      font-size: 2.2rem;
-      margin: 16px 0;
-      font-weight: 700;
-    }
-    #secret {
-      display: flex;
-      gap: 14px;
-      margin: 24px 0;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .digit-box {
-      width: 64px;
-      height: 64px;
-      border: 3px solid #bdc3c7;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.1rem;
-      background: white;
-      font-weight: bold;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    }
-    .hidden { color: transparent; }
-    #input {
-      display: flex;
-      gap: 14px;
-      margin: 24px 0;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .input-digit {
-      width: 54px;
-      height: 54px;
-      border: 2px dashed #95a5a6;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.9rem;
-      background: #ecf0f1;
-      color: #2c3e50;
-    }
-    .input-digit.fixed {
-      background: #d5f0d5;
-      border-style: solid;
-      border-color: #2ecc71;
-      color: #27ae60;
-      font-weight: bold;
-    }
-    #attempts {
-      margin: 20px 0;
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    #message {
-      min-height: 28px;
-      margin: 18px 0;
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: #e74c3c;
-      padding: 0 10px;
-    }
-    #next-btn, #retry-btn, #menu-btn {
-      margin-top: 16px;
-      padding: 14px 32px;
-      font-size: 1.3rem;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 600;
-      display: none;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    #next-btn, #retry-btn {
-      background: #2ecc71;
-      color: white;
-    }
-    #next-btn:hover, #retry-btn:hover {
-      background: #27ae60;
-    }
-    #menu-btn {
-      background: #3498db;
-      color: white;
-    }
-    #menu-btn:hover {
-      background: #2980b9;
-    }
-    #keyboard {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 14px;
-      max-width: 380px;
-      margin: 28px auto;
-      width: 100%;
-    }
-    .key {
-      aspect-ratio: 1;
-      font-size: 1.9rem;
-      background: white;
-      border: 2px solid #bdc3c7;
-      border-radius: 14px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      transition: background 0.15s, transform 0.1s;
-      font-weight: 600;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-      position: relative;
-    }
-    .key:active {
-      transform: scale(0.96);
-    }
-    .key.disabled {
-      background: #fdf2f2;
-      border-color: #e74c3c;
-    }
-    .key.disabled::after {
-      content: "❌";
-      position: absolute;
-      font-size: 2.4rem;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #e74c3c;
-      pointer-events: none;
-    }
-    .key.confirmed {
-      background: #e8f5e9;
-      border-color: #2ecc71;
-    }
-    .key.confirmed::after {
-      content: "✓";
-      position: absolute;
-      font-size: 2.2rem;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #27ae60;
-      font-weight: bold;
-      pointer-events: none;
-    }
-    .key.confirmed,
-    .key.disabled {
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <h1>Угадай число</h1>
-  
-  <div id="secret"></div>
-  
-  <div id="input"></div>
-  
-  <div id="attempts">Осталось попыток: <span id="count">5</span></div>
-  
-  <div id="message"></div>
-  
-  <button id="next-btn">Следующий уровень</button>
-  <button id="retry-btn">Повторить уровень</button>
-  <button id="menu-btn">Вернуться в меню</button>
+  };
 
-  <div id="keyboard"></div>
+  let currentLang = localStorage.getItem('lang') || 'ru';
+  const langBtn = document.getElementById('lang-btn');
+  const menuBtn = document.getElementById('menu-btn');
 
-  <script>
-    const LEVELS = [
-      { digits: 2, attempts: 5 },
-      { digits: 3, attempts: 6 },
-      { digits: 4, attempts: 7 },
-      { digits: 5, attempts: 8 }
-    ];
+  function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('lang', lang);
+    langBtn.textContent = lang === 'ru' ? '🇷🇺' : '🌎';
+    updateTexts();
+  }
 
-    let currentLevel = 0;
-    let secretNumber = '';
-    let attemptsLeft = 0;
-    let input = [];
-    let disabledDigits = new Set();
-    let confirmedDigits = new Set();
-    let revealed = [];
+  function updateTexts() {
+    const t = translations[currentLang];
+    document.getElementById('title').textContent = t.title;
+    document.getElementById('attempts').innerHTML = `${t.attempts} <span id="count">${attemptsLeft}</span>`;
+    document.getElementById('next-btn').textContent = t.nextBtn;
+    document.getElementById('retry-btn').textContent = t.retryBtn;
+    menuBtn.textContent = t.menuBtn;
 
-    function initLevel() {
-      const level = LEVELS[currentLevel];
-      attemptsLeft = level.attempts;
-      document.getElementById('count').textContent = attemptsLeft;
-      
-      let firstDigit = Math.floor(Math.random() * 9) + 1;
-      let rest = '';
-      for (let i = 1; i < level.digits; i++) {
-        rest += Math.floor(Math.random() * 10);
-      }
-      secretNumber = firstDigit + rest;
-      
-      revealed = Array(level.digits).fill(null);
-      input = Array(level.digits).fill(null);
-      disabledDigits.clear();
-      confirmedDigits.clear();
-      
-      renderAll();
-      document.getElementById('message').textContent = '';
-      document.getElementById('next-btn').style.display = 'none';
-      document.getElementById('retry-btn').style.display = 'none';
-      document.getElementById('menu-btn').style.display = 'none';
+    // Обновление сообщения при смене языка
+    const msgDiv = document.getElementById('message');
+    const msg = msgDiv.textContent.trim();
+    if (msg === secretNumber.toString()) {
+      // уже показан ответ — оставляем как есть
+    } else if (msg.includes('🎉')) {
+      msgDiv.textContent = t.win;
+    } else if (msg.includes('🏆')) {
+      msgDiv.textContent = t.allLevels;
+    } else if (msg.includes('Загадано:') || msg.includes('The number was:')) {
+      msgDiv.textContent = `${t.lose} ${secretNumber}`;
     }
+  }
 
-    function renderAll() {
-      renderSecret();
-      renderInput();
-      renderKeyboard();
-    }
+  langBtn.onclick = () => {
+    setLanguage(currentLang === 'ru' ? 'en' : 'ru');
+  };
 
-    function renderSecret() {
-      const container = document.getElementById('secret');
-      container.innerHTML = '';
-      for (let i = 0; i < revealed.length; i++) {
-        const box = document.createElement('div');
-        box.className = 'digit-box ' + (revealed[i] === null ? 'hidden' : '');
-        box.textContent = revealed[i] || '?';
-        container.appendChild(box);
-      }
-    }
+  menuBtn.onclick = () => {
+    window.location.href = '../index.html';
+  };
 
-    function renderInput() {
-      const container = document.getElementById('input');
-      container.innerHTML = '';
-      for (let i = 0; i < input.length; i++) {
-        const box = document.createElement('div');
-        if (revealed[i] !== null) {
-          box.className = 'input-digit fixed';
-          box.textContent = revealed[i];
-          input[i] = revealed[i];
-        } else {
-          box.className = 'input-digit';
-          box.textContent = input[i] || '';
-        }
-        container.appendChild(box);
-      }
-    }
+  // Уровни — только количество цифр
+  const LEVELS = [2, 3, 4, 5]; // digits per level
 
-    function renderKeyboard() {
-      const container = document.getElementById('keyboard');
-      container.innerHTML = '';
-      for (let d = 0; d <= 9; d++) {
-        const digitStr = String(d);
-        const btn = document.createElement('div');
-        btn.className = 'key';
-        if (disabledDigits.has(digitStr)) {
-          btn.classList.add('disabled');
-        } else if (confirmedDigits.has(digitStr)) {
-          btn.classList.add('confirmed');
-        }
-        btn.textContent = d;
-        if (!disabledDigits.has(digitStr) && !confirmedDigits.has(digitStr)) {
-          btn.onclick = () => handleKeyClick(d);
-        }
-        container.appendChild(btn);
-      }
-    }
+  let currentLevel = 0;
+  let secretNumber = '';
+  const TOTAL_ATTEMPTS = 10;
+  let attemptsLeft = TOTAL_ATTEMPTS;
+  let input = [];
+  let disabledDigits = new Set();
+  let confirmedDigits = new Set();
+  let revealed = [];
 
-    function handleKeyClick(digit) {
-      const digitStr = String(digit);
-      let inserted = false;
-      for (let i = 0; i < input.length; i++) {
-        if (revealed[i] === null && input[i] === null) {
-          input[i] = digitStr;
-          inserted = true;
-          break;
-        }
-      }
-      if (inserted) {
-        renderInput();
-        if (input.every(x => x !== null)) {
-          processGuess();
-        }
-      }
-    }
-
-    function processGuess() {
-      const guess = input.join('');
-
-      for (const d of new Set(guess)) {
-        if (secretNumber.includes(d)) {
-          confirmedDigits.add(d);
-          for (let i = 0; i < secretNumber.length; i++) {
-            if (secretNumber[i] === d) {
-              revealed[i] = d;
-            }
-          }
-        } else {
-          disabledDigits.add(d);
-        }
-      }
-
-      for (let i = 0; i < input.length; i++) {
-        if (revealed[i] === null) {
-          input[i] = null;
-        }
-      }
-
-      renderAll();
-
-      // Победа
-      if (revealed.every(d => d !== null)) {
-        document.getElementById('message').textContent = '🎉 Победа!';
-        document.getElementById('next-btn').style.display = 'inline-block';
-        document.getElementById('menu-btn').style.display = 'inline-block';
-
-        document.getElementById('next-btn').onclick = () => {
-          if (currentLevel < LEVELS.length - 1) {
-            currentLevel++;
-            initLevel();
-          } else {
-            document.getElementById('message').textContent = '🏆 Все уровни пройдены!';
-            document.getElementById('next-btn').style.display = 'none';
-            // Кнопка «меню» остаётся видимой
-          }
-        };
-        return;
-      }
-
-      attemptsLeft--;
-      document.getElementById('count').textContent = attemptsLeft;
-
-      // Проигрыш
-      if (attemptsLeft <= 0) {
-        document.getElementById('message').textContent = `Проигрыш! Загадано: ${secretNumber}`;
-        document.getElementById('retry-btn').style.display = 'inline-block';
-        document.getElementById('menu-btn').style.display = 'inline-block';
-        document.getElementById('retry-btn').onclick = () => initLevel();
-      }
-    }
-
-    // Обработчик кнопки «Вернуться в меню»
-    document.getElementById('menu-btn').onclick = () => {
-      window.location.href = '../index.html';
-    };
-
-    // Старт
+  function resetGame() {
+    currentLevel = 0;
+    attemptsLeft = TOTAL_ATTEMPTS;
     initLevel();
-  </script>
-</body>
-</html>
+  }
+
+  function initLevel() {
+    const digits = LEVELS[currentLevel];
+    
+    // Генерация числа: первая цифра ≠ 0
+    let firstDigit = Math.floor(Math.random() * 9) + 1;
+    let rest = '';
+    for (let i = 1; i < digits; i++) {
+      rest += Math.floor(Math.random() * 10);
+    }
+    secretNumber = firstDigit + rest;
+    
+    revealed = Array(digits).fill(null);
+    input = Array(digits).fill(null);
+    disabledDigits.clear();
+    confirmedDigits.clear();
+    
+    renderAll();
+    document.getElementById('message').textContent = '';
+    document.getElementById('next-btn').style.display = 'none';
+    document.getElementById('retry-btn').style.display = 'none';
+    updateTexts(); // обновляем надписи и счётчик
+  }
+
+  function renderAll() {
+    renderSecret();
+    renderInput();
+    renderKeyboard();
+  }
+
+  function renderSecret() {
+    const container = document.getElementById('secret');
+    container.innerHTML = '';
+    for (let i = 0; i < revealed.length; i++) {
+      const box = document.createElement('div');
+      box.className = 'digit-box ' + (revealed[i] === null ? 'hidden' : '');
+      box.textContent = revealed[i] || '?';
+      container.appendChild(box);
+    }
+  }
+
+  function renderInput() {
+    const container = document.getElementById('input');
+    container.innerHTML = '';
+    for (let i = 0; i < input.length; i++) {
+      const box = document.createElement('div');
+      if (revealed[i] !== null) {
+        box.className = 'input-digit fixed';
+        box.textContent = revealed[i];
+        input[i] = revealed[i];
+      } else {
+        box.className = 'input-digit';
+        box.textContent = input[i] || '';
+      }
+      container.appendChild(box);
+    }
+  }
+
+  function renderKeyboard() {
+    const container = document.getElementById('keyboard');
+    container.innerHTML = '';
+    for (let d = 0; d <= 9; d++) {
+      const digitStr = String(d);
+      const btn = document.createElement('div');
+      btn.className = 'key';
+      if (disabledDigits.has(digitStr)) {
+        btn.classList.add('disabled');
+      } else if (confirmedDigits.has(digitStr)) {
+        btn.classList.add('confirmed');
+      }
+      btn.textContent = d;
+      if (!disabledDigits.has(digitStr) && !confirmedDigits.has(digitStr)) {
+        btn.onclick = () => handleKeyClick(d);
+      }
+      container.appendChild(btn);
+    }
+  }
+
+  function handleKeyClick(digit) {
+    const digitStr = String(digit);
+    let inserted = false;
+    for (let i = 0; i < input.length; i++) {
+      if (revealed[i] === null && input[i] === null) {
+        input[i] = digitStr;
+        inserted = true;
+        break;
+      }
+    }
+    if (inserted) {
+      renderInput();
+      if (input.every(x => x !== null)) {
+        processGuess();
+      }
+    }
+  }
+
+  function processGuess() {
+    const guess = input.join('');
+
+    for (const d of new Set(guess)) {
+      if (secretNumber.includes(d)) {
+        confirmedDigits.add(d);
+        for (let i = 0; i < secretNumber.length; i++) {
+          if (secretNumber[i] === d) {
+            revealed[i] = d;
+          }
+        }
+      } else {
+        disabledDigits.add(d);
+      }
+    }
+
+    for (let i = 0; i < input.length; i++) {
+      if (revealed[i] === null) {
+        input[i] = null;
+      }
+    }
+
+    renderAll();
+
+    // Победа на уровне
+    if (revealed.every(d => d !== null)) {
+      const t = translations[currentLang];
+      document.getElementById('message').textContent = t.win;
+      
+      if (currentLevel < LEVELS.length - 1) {
+        document.getElementById('next-btn').style.display = 'inline-block';
+        document.getElementById('next-btn').onclick = () => {
+          currentLevel++;
+          initLevel();
+        };
+      } else {
+        // Все уровни пройдены
+        document.getElementById('message').textContent = t.allLevels;
+        document.getElementById('retry-btn').style.display = 'inline-block';
+        document.getElementById('retry-btn').onclick = resetGame;
+      }
+      return;
+    }
+
+    // Использована одна попытка
+    attemptsLeft--;
+    document.getElementById('count').textContent = attemptsLeft;
+
+    // Проигрыш — кончились попытки
+    if (attemptsLeft <= 0) {
+      const t = translations[currentLang];
+      document.getElementById('message').textContent = `${t.lose} ${secretNumber}`;
+      document.getElementById('retry-btn').style.display = 'inline-block';
+      document.getElementById('retry-btn').onclick = resetGame;
+    }
+  }
+
+  // Старт игры
+  setLanguage(currentLang);
+  resetGame(); // начинаем с начала и 10 попытками
+</script>
