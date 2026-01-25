@@ -9,16 +9,16 @@
 
     /* Фоновые слои с летящими сердечками */
     .heart-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
-    .heart-layer:nth-child(1){opacity:0.2;animation:parallaxUp 30s linear infinite}
-    .heart-layer:nth-child(2){opacity:0.4;animation:parallaxUp 20s linear infinite}
-    .heart-layer:nth-child(3){opacity:0.6;animation:parallaxUp 15s linear infinite}
-    .heart-layer:nth-child(4){opacity:0.8;animation:parallaxUp 10s linear infinite}
+    .heart-layer:nth-child(1){opacity:0.15;animation:parallaxUp 40s linear infinite}
+    .heart-layer:nth-child(2){opacity:0.3;animation:parallaxUp 30s linear infinite}
+    .heart-layer:nth-child(3){opacity:0.5;animation:parallaxUp 20s linear infinite}
+    .heart-layer:nth-child(4){opacity:0.7;animation:parallaxUp 15s linear infinite}
 
-    .heart{position:absolute;font-size:1.5rem;color:#e74c3c;transform:translateY(100vh);animation:floatHeart 4s ease-in-out infinite}
+    .heart{position:absolute;font-size:1.5rem;color:#e74c3c;transform:translateY(100vh);animation:floatHeart 15s ease-in-out infinite}
     @keyframes floatHeart{
-      0%{transform:translateY(100vh) scale(0.8) rotate(0deg)}
-      50%{transform:translateY(-20px) scale(1.1) rotate(10deg)}
-      100%{transform:translateY(-100vh) scale(0.8) rotate(0deg)}
+      0%{transform:translateY(100vh) scale(0.9) rotate(0deg)}
+      50%{transform:translateY(-10px) scale(1.0) rotate(3deg)}
+      100%{transform:translateY(-100vh) scale(0.9) rotate(0deg)}
     }
 
     @keyframes parallaxUp{
@@ -163,9 +163,9 @@
         // Рандомное положение по X
         heart.style.left = Math.random() * 100 + '%';
 
-        // Разная скорость анимации для разных слоёв
-        heart.style.animationDuration = (4 - index * 0.5) + 's';
-        heart.style.animationDelay = Math.random() * 4 + 's';
+        // Разная скорость анимации для разных слоёв (медленнее!)
+        heart.style.animationDuration = (15 + index * 5) + 's'; // от 15 до 30 сек
+        heart.style.animationDelay = Math.random() * 10 + 's'; // задержка до 10 сек
 
         layer.appendChild(heart);
       }
