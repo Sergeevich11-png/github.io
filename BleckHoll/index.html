@@ -511,8 +511,8 @@ if (isEnemy) size = playerRadius * (0.4 + Math.random() * 0.4);
 else size = (Math.random() < 0.4) ? Math.random() * (playerRadius * 0.5) : 0.3 + Math.random() * 15;
 if (size < 0.3) size = 0.3;
 }
-const typeObj = isEnemy ? objectTypes[6] : getTypeBySize(size);
-const geometry = new THREE.SphereGeometry(size, 12, 12);
+const typeObj = isEnemy ? objectTypes[6] : (forcedSize === 0.05 ? objectTypes[7] : getTypeBySize(size));
+const geometry = new THREE.SphereGeometry(size, 8, 8); // low poly for particles
 const material = new THREE.MeshStandardMaterial({ color: typeObj.color, emissive: typeObj.emissive, roughness: typeObj.roughness, metalness: typeObj.metalness, emissiveIntensity: typeObj.emissiveIntensity || 1 });
 const obj = new THREE.Mesh(geometry, material);
 obj.userData = {
@@ -545,7 +545,6 @@ if (size <= 1.8) return objectTypes[0];
 if (size <= 3.2) return Math.random() < 0.3 ? objectTypes[2] : objectTypes[1];
 if (size <= 6.0) return objectTypes[3];
 if (size <= 12.0) return objectTypes[4];
-if (size <= 0.05) return objectTypes[7];
 return objectTypes[0];
 }
 
@@ -599,8 +598,8 @@ return groupCenter;
 }
 
 function spawnBackgroundParticles(count) {
-if (qualityMode === 'low') count = Math.max(10, Math.floor(count * 0.4));
-for (let i = 0; i < count && objects.length < MAX_OBJECTS; i++) {
+const actualCount = qualityMode === 'low' ? Math.max(100, Math.floor(count * 0.3)) : count;
+for (let i = 0; i < actualCount && objects.length < MAX_OBJECTS; i++) {
 const radius = Math.random() * worldSize;
 const theta = Math.random() * Math.PI * 2;
 const phi = Math.acos(2 * Math.random() - 1);
@@ -973,6 +972,17 @@ lastSpawn = now;
 
 maintainEnemyCount();
 
+if (window.animatedVolumetricNebulae) {
+window.animatedVolumetricNebulae.forEach(neb => {
+if (neb.mesh.material.uniforms?.uTime) neb.mesh.material.uniforms.uTime.value = time;
+});
+}
+if (window.animatedGalaxies) window.animatedGalaxies.forEach(gal => gal.sprite.rotation += gal.rotationSpeed);
+if (window.animatedClusters) window.animatedClusters.forEach(cl => cl.obj.rotation.y += cl.rotSpeed);
+if (window.backgroundLayers && player) {
+const camOffset = new THREE.Vector3().subVectors(camera.position, player.position);
+window.backgroundLayers.forEach(layer => layer.obj.position.copy(camOffset).multiplyScalar(-layer.speed));
+}
 renderer.render(scene, camera);
 }
 
@@ -1027,7 +1037,7 @@ spawnObjectGroup(true);
 while (objects.length < Math.min(200, MAX_OBJECTS)) {
 if (!spawnObjectGroup(false)) break;
 }
-spawnBackgroundParticles(qualityMode === 'low' ? 1000 : 5000);
+spawnBackgroundParticles(qualityMode === 'low' ? 800 : 2000);
 spawnEnemyBlackHoles(2 + Math.floor(Math.random() * 2));
 const canvas = renderer.domElement;
 let lookTouchId = null; let moveTouchId = null;
@@ -1101,8 +1111,7 @@ document.getElementById('resumeBtn').addEventListener('click', resumeGame);
 document.getElementById('pauseMenuBtn').addEventListener('click', backToMenu);
 document.getElementById('sensitivitySlider').addEventListener('input', (e) => {
 const val = parseFloat(e.target.value);
-// min = 10 → sens = 0.01, max = 50 → sens = 0.025
-LOOK_SENSITIVITY = 0.01 + (val - 10) / 40 * 0.015;
+LOOK_SENSITIVITY = 0.01 + (val - 10) / 40 * 0.04; // 10 → 0.01, 50 → 0.05
 });
 document.getElementById('musicToggle').addEventListener('change', (e) => {
 musicEnabled = e.target.value === 'on';
@@ -1160,6 +1169,7 @@ if (window.absorptionParticles) {
 window.absorptionParticles.forEach(p => safeRemove(p.points));
 window.absorptionParticles = [];
 }
+window.animatedNebulae = []; window.animatedGalaxies = []; window.animatedClusters = []; window.backgroundLayers = []; window.animatedVolumetricNebulae = [];
 }
 
 function initThreeJS() {
@@ -1190,6 +1200,158 @@ camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight,
 const canvas = document.querySelector('canvas');
 if (canvas) canvas.remove();
 renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
+createCosmicBackground();
+}
+
+function createCosmicBackground() {
+scene.background = new THREE.Color(0x020005);
+const loader = new THREE.TextureLoader();
+const nebulaTextures = [
+"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-1.jpg",
+"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-2.jpg",
+"https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/nebulae/nebula-3.jpg"
+].map(url => loader.load(url));
+const layers = [
+{ obj: createRichStarLayer(300, 0.1), speed: 1.2 },
+{ obj: createRichStarLayer(1200, 0.3), speed: 1.0 },
+{ obj: createRichStarLayer(3000, 0.6), speed: 0.6 },
+{ obj: createRichStarLayer(12000, 1.0), speed: 0.3 },
+{ obj: createRichStarLayer(25000, 1.8), speed: 0.12 },
+{ obj: createStarClusterLayer(120, 8000), speed: 0.2 },
+{ obj: createGalaxyLayer(10), speed: 0.08 },
+{ obj: createVolumetricNebulaLayer(nebulaTextures), speed: 0.05 },
+{ obj: createDustLayer(6), speed: 0.03 },
+{ obj: createMilkyWayDisk(), speed: 0.02 }
+];
+layers.forEach(layer => scene.add(layer.obj));
+window.backgroundLayers = layers;
+}
+
+function createRichStarLayer(count, depthFactor = 1.0) {
+const actualCount = qualityMode === 'low' ? Math.max(10, Math.floor(count * 0.4)) : count;
+const geometry = new THREE.BufferGeometry();
+const positions = new Float32Array(actualCount * 3);
+const colors = new Float32Array(actualCount * 3);
+const sizes = new Float32Array(actualCount);
+const starColors = [
+{ temp: 30000, color: new THREE.Color(0x8abfff) },
+{ temp: 20000, color: new THREE.Color(0xa0d1ff) },
+{ temp: 10000, color: new THREE.Color(0xc0e0ff) },
+{ temp: 7000,  color: new THREE.Color(0xfff0d0) },
+{ temp: 6000,  color: new THREE.Color(0xffe0b0) },
+{ temp: 5000,  color: new THREE.Color(0xffc080) },
+{ temp: 3500,  color: new THREE.Color(0xff8040) },
+];
+const weights = [0.5, 1, 2, 5, 8, 12, 20];
+for (let i = 0; i < actualCount; i++) {
+const radius = Math.random() * worldSize * depthFactor;
+const theta = Math.random() * Math.PI * 2;
+const phi = Math.acos(2 * Math.random() - 1);
+positions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+positions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
+positions[i*3+2] = radius * Math.cos(phi);
+let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+let idx = 0;
+for (let w of weights) {
+r -= w;
+if (r <= 0) break;
+idx++;
+}
+const starClass = starColors[Math.min(idx, starColors.length - 1)];
+colors[i*3] = starClass.color.r;
+colors[i*3+1] = starClass.color.g;
+colors[i*3+2] = starClass.color.b;
+const baseSize = 0.4 + (starClass.temp / 30000) * 5.0;
+const sizeVariation = 0.7 + Math.random() * 0.6;
+sizes[i] = baseSize * sizeVariation * (1.0 / depthFactor);
+}
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 3));
+const material = new THREE.PointsMaterial({ size: 1, vertexColors: true, sizeAttenuation: true, transparent: true, alphaTest: 0.1, blending: THREE.AdditiveBlending });
+const points = new THREE.Points(geometry, material);
+points.frustumCulled = false;
+return points;
+}
+
+function createStarClusterLayer(count, maxDist) {
+const actualCount = qualityMode === 'low' ? Math.max(1, Math.floor(count * 0.3)) : count;
+const group = new THREE.Group();
+const clusters = [];
+for (let i = 0; i < actualCount; i++) {
+const cluster = createRichStarLayer(80, 0.005);
+cluster.position.set((Math.random() - 0.5) * maxDist, (Math.random() - 0.5) * maxDist * 0.3, (Math.random() - 0.5) * maxDist);
+const rotSpeed = (Math.random() - 0.5) * 0.00005;
+clusters.push({ obj: cluster, rotSpeed }); group.add(cluster);
+}
+(window.animatedClusters ??= []).push(...clusters);
+return group;
+}
+
+function createGalaxyLayer(count) {
+const actualCount = qualityMode === 'low' ? Math.max(1, Math.floor(count * 0.4)) : count;
+const group = new THREE.Group();
+const loader = new THREE.TextureLoader();
+const texture = loader.load("https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/galaxy.png");
+const galaxies = [];
+for (let i = 0; i < actualCount; i++) {
+const mat = new THREE.SpriteMaterial({
+map: texture, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6 + Math.random() * 0.3
+});
+const sprite = new THREE.Sprite(mat);
+const d = 10000 + Math.random() * 30000;
+const a = Math.random() * Math.PI * 2;
+sprite.position.set(Math.cos(a) * d, (Math.random() - 0.5) * 3000, Math.sin(a) * d);
+const scale = 800 + Math.random() * 1200;
+sprite.scale.set(scale, scale, 1);
+const rotationSpeed = (0.8 + Math.random() * 0.7) * 0.0001;
+galaxies.push({ sprite, rotationSpeed }); group.add(sprite);
+}
+(window.animatedGalaxies ??= []).push(...galaxies);
+return group;
+}
+
+function createVolumetricNebulaLayer(textures) {
+const group = new THREE.Group();
+const nebulae = [];
+for (let i = 0; i < (qualityMode === 'low' ? 2 : 5); i++) {
+const tex = textures[Math.floor(Math.random() * textures.length)];
+const geometry = new THREE.BoxGeometry(8000, 8000, 8000);
+const material = new THREE.ShaderMaterial({
+uniforms: { uTexture: { value: tex }, uTime: { value: 0 } },
+vertexShader: `varying vec3 vPosition; void main() { vPosition = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+fragmentShader: `uniform sampler2D uTexture; uniform float uTime; varying vec3 vPosition; void main() { vec2 uv = vPosition.xy * 0.0001 + vec2(uTime * 0.01, 0.0); vec4 color = texture2D(uTexture, uv); color.a *= 0.6; if (color.a < 0.05) discard; gl_FragColor = color; }`,
+transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide
+});
+const mesh = new THREE.Mesh(geometry, material);
+mesh.position.set((Math.random() - 0.5) * worldSize * 0.8, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * worldSize * 0.8);
+mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+nebulae.push({ mesh }); group.add(mesh);
+}
+(window.animatedVolumetricNebulae ??= []).push(...nebulae);
+return group;
+}
+
+function createDustLayer(count) {
+if (qualityMode === 'low') return new THREE.Group();
+const group = new THREE.Group();
+for (let i = 0; i < count; i++) {
+const geo = new THREE.SphereGeometry(20000, 32, 32);
+const mat = new THREE.MeshBasicMaterial({ color: 0x1a0a2a, transparent: true, opacity: 0.03 });
+const mesh = new THREE.Mesh(geo, mat);
+mesh.position.set((Math.random() - 0.5) * worldSize, (Math.random() - 0.5) * 5000, (Math.random() - 0.5) * worldSize);
+group.add(mesh);
+}
+return group;
+}
+
+function createMilkyWayDisk() {
+if (qualityMode === 'low') return new THREE.Group();
+const geo = new THREE.RingGeometry(15000, 35000, 256);
+const mat = new THREE.MeshBasicMaterial({ color: 0xd0b0ff, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+const disk = new THREE.Mesh(geo, mat);
+disk.rotation.x = Math.PI / 2;
+return disk;
 }
 
 function setupPCControls() {
