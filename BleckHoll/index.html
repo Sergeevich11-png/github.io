@@ -1056,8 +1056,8 @@ function gameLoop() {
 		if (coordsEl) coordsEl.textContent = `X: ${Math.round(player.position.x)}  Y: ${Math.round(player.position.y)}  Z: ${Math.round(player.position.z)}`;
 	}
 	updateCamera();
-	const suctionRadius = Math.min(100800, 20300 + playerRadius * 10);
-	const maxPull = 290 + playerRadius * 1.5;
+	const suctionRadius = Math.min(90800, 20300 + playerRadius * 10);
+	const maxPull = 390 + playerRadius * 1.5;
 	for (const obj of objects) {
 		if (!obj || !obj.userData) continue;
 		if (obj.userData.isBlackHole) continue;
@@ -1093,7 +1093,9 @@ function gameLoop() {
 				const eIdx = enemyBlackHoles.indexOf(obj);
 				if (eIdx !== -1) enemyBlackHoles.splice(eIdx, 1);
 				score += obj.userData.points || 0;
-				playerRadius += obj.userData.radius * 0.2;
+				if (!obj.userData.isBlackHole) {
+  playerRadius += obj.userData.radius * 0.2;
+}
 				if (blackHoleMesh) blackHoleMesh.scale.setScalar(playerRadius / START_RADIUS);
 				growthCounter++;
 				if (growthCounter >= 5) { worldHalf += 500; worldSize = worldHalf * 2; growthCounter = 0; }
