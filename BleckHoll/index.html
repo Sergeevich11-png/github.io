@@ -1056,8 +1056,8 @@ function gameLoop() {
 		if (coordsEl) coordsEl.textContent = `X: ${Math.round(player.position.x)}  Y: ${Math.round(player.position.y)}  Z: ${Math.round(player.position.z)}`;
 	}
 	updateCamera();
-	const suctionRadius = Math.min(100800, 9300 + playerRadius * 10);
-	const maxPull = 190 + playerRadius * 1.5;
+	const suctionRadius = Math.min(100800, 20300 + playerRadius * 10);
+	const maxPull = 290 + playerRadius * 1.5;
 	for (const obj of objects) {
 		if (!obj || !obj.userData) continue;
 		if (obj.userData.isBlackHole) continue;
