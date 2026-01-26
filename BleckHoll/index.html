@@ -913,7 +913,7 @@ if (coordsEl) coordsEl.textContent = `X: ${Math.round(player.position.x)}  Y: ${
 
 updateCamera();
 
-const suctionRadius = Math.min(800, 300 + playerRadius * 10);
+const suctionRadius = Math.min(9800, 9300 + playerRadius * 10);
 const maxPull = 15 + playerRadius * 0.5;
 for (const obj of objects) {
 if (!obj || !obj.userData) continue;
