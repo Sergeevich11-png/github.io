@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Дневник</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #222;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ========== МЕНЮ ========== */
+    #menu {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 20px;
+      background: #111;
+      color: #ccc;
+    }
+
+    .menu-btn {
+      background: transparent;
+      border: 1px solid #555;
+      color: #ddd;
+      padding: 12px 30px;
+      font: inherit;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .menu-btn:hover {
+      background: #222;
+      border-color: #777;
+    }
+    /* ========== ЧТЕНИЕ ========== */
+    #reader {
+      display: none;
+      height: 100vh;
+      background: #f8f3e6;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 60px 40px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      opacity: 1;
+      transition: transform 0.5s ease-out, opacity 0.3s;
+    }
+
+    .page.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .page.leaving {
+      transform: translateX(-100%) rotateY(-15deg);
+    }
+
+    .page.entering {
+      transform: translateX(100%);
+    }
+
+    .page.active {
+      transform: translateX(0);
+    }
+
+    .page-content {
+      font-size: 18px;
+      line-height: 1.6;
+      max-width: 600px;
+      white-space: pre-wrap;
+    }
+    .choice {
+      font-weight: bold;
+      margin-top: 24px;
+      color: #000;
+      cursor: pointer;
+      padding: 8px 16px;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+
+    .choice:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    /* ========== КНОПКИ ЛИСТАНИЯ (для ПК) ========== */
+    .nav-buttons {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      color: #999;
+      font-size: 24px;
+      user-select: none;
+    }
+
+    .nav-btn {
+      cursor: pointer;
+    }
+
+    /* ========== ЗАКЛАДКИ ========== */
+    .bookmark {
+      position: absolute;
+      top: 12px;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    #saveBookmark {
+      left: 16px;
+      color: #d32f2f;
+    }
+
+    #exitBookmark {
+      right: 16px;
+      color: #000;    }
+
+    .bookmark-label {
+      position: absolute;
+      top: 30px;
+      left: -10px;
+      font-size: 10px;
+      color: #777;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      letter-spacing: 1px;
+    }
+
+    /* Анимация вытягивания закладки */
+    .bookmark.pulling {
+      transition: none;
+    }
+
+    /* ========== АДАПТИВ ДЛЯ МОБИЛЫ ========== */
+    @media (max-width: 768px) {
+      .nav-buttons { display: none; }
+      .page-content { font-size: 16px; padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- МЕНЮ -->
+<div id="menu">
+  <button class="menu-btn" id="newBtn">Новая история</button>
+  <button class="menu-btn" id="continueBtn" style="display:none;">Продолжить</button>
+  <button class="menu-btn" id="quitBtn">Выход</button>
+</div>
+
+<!-- РИДЕР -->
+<div id="reader">
+  <!-- Закладка-сохранение -->
+  <div class="bookmark" id="saveBookmark">
+    <svg viewBox="0 0 24 24" width="24" height="24">
+      <path d="M6,4 L12,10 L18,4 L18,20 L6,20 Z" fill="currentColor"/>
+    </svg>
+    <div class="bookmark-label">закладка</div>
+  </div>
+
+  <!-- Закладка-выход -->
+  <div class="bookmark" id="exitBookmark">
+    <svg viewBox="0 0 24 24" width="24" height="24">
+      <path d="M6,4 L12,10 L18,4 L18,20 L6,20 Z" fill="currentColor"/>
+    </svg>
+  </div>
+  <!-- Страницы будут здесь -->
+  <div class="nav-buttons">
+    <span class="nav-btn" id="prevBtn">◁</span>
+    <span class="nav-btn" id="nextBtn">▷</span>
+  </div>
+</div>
+
+<script>
+  // Сюжет: ID страницы → { text, choices? }
+  const story = {
+    start: {
+      text: "???\n???\n???"
+    },
+    page1: {
+      text: "???\n???\n???"
+    },
+    choicePage: {
+      text: "???\n???\n???",
+      choices: [
+        { label: "Выбор первый", next: "page2a" },
+        { label: "Выбор второй", next: "page2b" }
+      ]
+    },
+    page2a: {
+      text: "???\n???\n???"
+    },
+    page2b: {
+      text: "???\n???\n???"
+    }
+  };
+
+  // Глобальное состояние
+  let currentPageId = 'start';
+  let isAnimating = false;
+
+  // DOM элементы
+  const menu = document.getElementById('menu');
+  const reader = document.getElementById('reader');
+  const newBtn = document.getElementById('newBtn');
+  const continueBtn = document.getElementById('continueBtn');
+  const quitBtn = document.getElementById('quitBtn');
+  const saveBookmark = document.getElementById('saveBookmark');
+  const exitBookmark = document.getElementById('exitBookmark');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  // Инициализация
+  function init() {
+    const saved = localStorage.getItem('diarySave');    if (saved) {
+      continueBtn.style.display = 'block';
+    } else {
+      continueBtn.style.display = 'none';
+    }
+  }
+
+  // Показать страницу
+  function showPage(pageId) {
+    if (isAnimating) return;
+    const pageData = story[pageId];
+    if (!pageData) return;
+
+    // Создаём новую страницу
+    const newPage = document.createElement('div');
+    newPage.className = 'page entering';
+    let content = `<div class="page-content">${pageData.text}</div>`;
+    
+    if (pageData.choices) {
+      const choicesHtml = pageData.choices.map(c => 
+        `<div class="choice" data-next="${c.next}">${c.label}</div>`
+      ).join('');
+      content += `<div>${choicesHtml}</div>`;
+    }
+    
+    newPage.innerHTML = content;
+    reader.appendChild(newPage);
+
+    // Найдём текущую активную страницу
+    const oldPage = reader.querySelector('.page.active');
+    if (oldPage) {
+      oldPage.classList.remove('active');
+      oldPage.classList.add('leaving');
+      setTimeout(() => {
+        if (oldPage.parentNode) oldPage.parentNode.removeChild(oldPage);
+      }, 500);
+    }
+
+    // Активируем новую
+    setTimeout(() => {
+      newPage.classList.remove('entering');
+      newPage.classList.add('active');
+    }, 50);
+
+    currentPageId = pageId;
+    isAnimating = false;
+
+    // Обработчики выбора
+    newPage.querySelectorAll('.choice').forEach(el => {
+      el.addEventListener('click', (e) => {        if (isAnimating) return;
+        isAnimating = true;
+        const nextId = e.target.getAttribute('data-next');
+        setTimeout(() => showPage(nextId), 300); // имитация "реакции"
+      });
+    });
+  }
+
+  // Навигация вперёд/назад (для ПК)
+  let pageHistory = ['start'];
+  let historyIndex = 0;
+
+  function goToNext() {
+    if (isAnimating) return;
+    const current = story[currentPageId];
+    if (current.choices) {
+      // Если есть выбор — нельзя листать дальше вручную
+      return;
+    }
+    // В демо просто идём по порядку
+    const keys = Object.keys(story);
+    const idx = keys.indexOf(currentPageId);
+    if (idx < keys.length - 1) {
+      isAnimating = true;
+      showPage(keys[idx + 1]);
+      if (historyIndex === pageHistory.length - 1) {
+        pageHistory.push(keys[idx + 1]);
+        historyIndex++;
+      }
+    }
+  }
+
+  function goToPrev() {
+    if (isAnimating || historyIndex <= 0) return;
+    isAnimating = true;
+    historyIndex--;
+    showPage(pageHistory[historyIndex]);
+  }
+
+  // Инициализация событий
+  newBtn.addEventListener('click', () => {
+    localStorage.removeItem('diarySave');
+    menu.style.display = 'none';
+    reader.style.display = 'block';
+    pageHistory = ['start'];
+    historyIndex = 0;
+    isAnimating = false;
+    showPage('start');
+  });
+  continueBtn.addEventListener('click', () => {
+    const saved = localStorage.getItem('diarySave');
+    if (saved) {
+      menu.style.display = 'none';
+      reader.style.display = 'block';
+      const state = JSON.parse(saved);
+      currentPageId = state.page;
+      pageHistory = state.history || [currentPageId];
+      historyIndex = pageHistory.length - 1;
+      isAnimating = false;
+      showPage(currentPageId);
+    }
+  });
+
+  quitBtn.addEventListener('click', () => {
+    // ничего не делаем — просто остаёмся в меню
+  });
+
+  exitBookmark.addEventListener('click', () => {
+    reader.style.display = 'none';
+    menu.style.display = 'block';
+    init();
+  });
+
+  // Закладка-сохранение с "потягиванием"
+  let startY = 0;
+  let currentY = 0;
+  let isPulling = false;
+
+  saveBookmark.addEventListener('mousedown', startPull);
+  saveBookmark.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startPull(e.touches[0]);
+  });
+
+  function startPull(e) {
+    isPulling = true;
+    startY = e.clientY || e.pageY;
+    saveBookmark.classList.add('pulling');
+    document.addEventListener('mousemove', onPull);
+    document.addEventListener('touchmove', onPullTouch);
+    document.addEventListener('mouseup', endPull);
+    document.addEventListener('touchend', endPull);
+  }
+
+  function onPull(e) {
+    if (!isPulling) return;
+    currentY = e.clientY;
+    const pullDistance = currentY - startY;
+    if (pullDistance > 0) {      saveBookmark.style.transform = `scaleY(${1 + pullDistance / 100}) translateY(${pullDistance}px)`;
+    }
+  }
+
+  function onPullTouch(e) {
+    if (!isPulling) return;
+    currentY = e.touches[0].clientY;
+    const pullDistance = currentY - startY;
+    if (pullDistance > 0) {
+      saveBookmark.style.transform = `scaleY(${1 + pullDistance / 100}) translateY(${pullDistance}px)`;
+    }
+  }
+
+  function endPull() {
+    const pullDistance = currentY - startY;
+    if (pullDistance > window.innerHeight * 0.5) {
+      // Сохраняем
+      localStorage.setItem('diarySave', JSON.stringify({
+        page: currentPageId,
+        history: pageHistory.slice(0, historyIndex + 1)
+      }));
+      reader.style.display = 'none';
+      menu.style.display = 'block';
+      init();
+    }
+    // Сброс
+    saveBookmark.classList.remove('pulling');
+    saveBookmark.style.transform = '';
+    isPulling = false;
+    document.removeEventListener('mousemove', onPull);
+    document.removeEventListener('touchmove', onPullTouch);
+    document.removeEventListener('mouseup', endPull);
+    document.removeEventListener('touchend', endPull);
+  }
+
+  // Кнопки навигации (ПК)
+  nextBtn.addEventListener('click', goToNext);
+  prevBtn.addEventListener('click', goToPrev);
+
+  // Свайп (мобильные)
+  let touchStartX = 0;
+  reader.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+  });
+
+  reader.addEventListener('touchend', (e) => {
+    if (!touchStartX) return;
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {        goToNext();
+      } else {
+        goToPrev();
+      }
+    }
+    touchStartX = 0;
+  });
+
+  // Запуск
+  init();
+</script>
+
+</body>
+</html>
