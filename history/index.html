@@ -9,7 +9,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      touch-action: manipulation;
+      touch-action: pan-y; /* разрешаем только вертикальный скролл, свайп по X — наш */
     }
 
     body {
@@ -55,6 +55,9 @@
       background: #f8f3e6;
       position: relative;
       overflow: hidden;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
     }
 
     .page {
@@ -93,9 +96,9 @@
     .page-content {
       font-size: 18px;
       line-height: 1.6;
-      max-width: 600px;
-      white-space: pre-wrap;
+      max-width: 600px;      white-space: pre-wrap;
     }
+
     .choice {
       font-weight: bold;
       margin-top: 24px;
@@ -108,24 +111,6 @@
 
     .choice:hover {
       background: rgba(0,0,0,0.05);
-    }
-
-    /* ========== КНОПКИ ЛИСТАНИЯ (для ПК) ========== */
-    .nav-buttons {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      padding: 0 40px;
-      color: #999;
-      font-size: 24px;
-      user-select: none;
-    }
-
-    .nav-btn {
-      cursor: pointer;
     }
 
     /* ========== ЗАКЛАДКИ ========== */
@@ -145,7 +130,8 @@
 
     #exitBookmark {
       right: 16px;
-      color: #000;    }
+      color: #000;
+    }
 
     .bookmark-label {
       position: absolute;
@@ -157,21 +143,9 @@
       transform: rotate(180deg);
       letter-spacing: 1px;
     }
-
-    /* Анимация вытягивания закладки */
-    .bookmark.pulling {
-      transition: none;
-    }
-
-    /* ========== АДАПТИВ ДЛЯ МОБИЛЫ ========== */
-    @media (max-width: 768px) {
-      .nav-buttons { display: none; }
-      .page-content { font-size: 16px; padding: 0 20px; }
-    }
   </style>
 </head>
 <body>
-
 <!-- МЕНЮ -->
 <div id="menu">
   <button class="menu-btn" id="newBtn">Новая история</button>
@@ -195,22 +169,12 @@
       <path d="M6,4 L12,10 L18,4 L18,20 L6,20 Z" fill="currentColor"/>
     </svg>
   </div>
-  <!-- Страницы будут здесь -->
-  <div class="nav-buttons">
-    <span class="nav-btn" id="prevBtn">◁</span>
-    <span class="nav-btn" id="nextBtn">▷</span>
-  </div>
 </div>
 
 <script>
-  // Сюжет: ID страницы → { text, choices? }
   const story = {
-    start: {
-      text: "???\n???\n???"
-    },
-    page1: {
-      text: "???\n???\n???"
-    },
+    start: { text: "???\n???\n???" },
+    page1: { text: "???\n???\n???" },
     choicePage: {
       text: "???\n???\n???",
       choices: [
@@ -218,45 +182,36 @@
         { label: "Выбор второй", next: "page2b" }
       ]
     },
-    page2a: {
-      text: "???\n???\n???"
-    },
-    page2b: {
-      text: "???\n???\n???"
-    }
+    page2a: { text: "???\n???\n???" },
+    page2b: { text: "???\n???\n???" }
   };
 
-  // Глобальное состояние
   let currentPageId = 'start';
   let isAnimating = false;
+  let pageHistory = ['start'];
+  let historyIndex = 0;
 
-  // DOM элементы
   const menu = document.getElementById('menu');
   const reader = document.getElementById('reader');
   const newBtn = document.getElementById('newBtn');
-  const continueBtn = document.getElementById('continueBtn');
-  const quitBtn = document.getElementById('quitBtn');
+  const continueBtn = document.getElementById('continueBtn');  const quitBtn = document.getElementById('quitBtn');
   const saveBookmark = document.getElementById('saveBookmark');
   const exitBookmark = document.getElementById('exitBookmark');
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
 
   // Инициализация
   function init() {
-    const saved = localStorage.getItem('diarySave');    if (saved) {
-      continueBtn.style.display = 'block';
-    } else {
-      continueBtn.style.display = 'none';
-    }
+    const saved = localStorage.getItem('diarySave');
+    continueBtn.style.display = saved ? 'block' : 'none';
   }
 
-  // Показать страницу
+  // Показ страницы
   function showPage(pageId) {
     if (isAnimating) return;
     const pageData = story[pageId];
     if (!pageData) return;
 
-    // Создаём новую страницу
+    isAnimating = true;
+
     const newPage = document.createElement('div');
     newPage.className = 'page entering';
     let content = `<div class="page-content">${pageData.text}</div>`;
@@ -271,92 +226,109 @@
     newPage.innerHTML = content;
     reader.appendChild(newPage);
 
-    // Найдём текущую активную страницу
     const oldPage = reader.querySelector('.page.active');
     if (oldPage) {
       oldPage.classList.remove('active');
       oldPage.classList.add('leaving');
       setTimeout(() => {
-        if (oldPage.parentNode) oldPage.parentNode.removeChild(oldPage);
+        if (oldPage.parentNode) oldPage.remove();
       }, 500);
     }
 
-    // Активируем новую
     setTimeout(() => {
       newPage.classList.remove('entering');
       newPage.classList.add('active');
+      isAnimating = false;
     }, 50);
 
     currentPageId = pageId;
-    isAnimating = false;
 
-    // Обработчики выбора
-    newPage.querySelectorAll('.choice').forEach(el => {
-      el.addEventListener('click', (e) => {        if (isAnimating) return;
+    newPage.querySelectorAll('.choice').forEach(el => {      el.addEventListener('click', (e) => {
+        if (isAnimating) return;
         isAnimating = true;
         const nextId = e.target.getAttribute('data-next');
-        setTimeout(() => showPage(nextId), 300); // имитация "реакции"
+        setTimeout(() => showPage(nextId), 300);
       });
     });
   }
 
-  // Навигация вперёд/назад (для ПК)
-  let pageHistory = ['start'];
-  let historyIndex = 0;
-
+  // Навигация
   function goToNext() {
     if (isAnimating) return;
     const current = story[currentPageId];
-    if (current.choices) {
-      // Если есть выбор — нельзя листать дальше вручную
-      return;
-    }
-    // В демо просто идём по порядку
+    if (current.choices) return; // нельзя листать, если выбор
+
     const keys = Object.keys(story);
     const idx = keys.indexOf(currentPageId);
-    if (idx < keys.length - 1) {
-      isAnimating = true;
-      showPage(keys[idx + 1]);
+    if (idx !== -1 && idx < keys.length - 1) {
+      const nextPageId = keys[idx + 1];
       if (historyIndex === pageHistory.length - 1) {
-        pageHistory.push(keys[idx + 1]);
+        pageHistory.push(nextPageId);
+        historyIndex++;
+      } else {
+        pageHistory = pageHistory.slice(0, historyIndex + 1);
+        pageHistory.push(nextPageId);
         historyIndex++;
       }
+      showPage(nextPageId);
     }
   }
 
   function goToPrev() {
     if (isAnimating || historyIndex <= 0) return;
-    isAnimating = true;
     historyIndex--;
     showPage(pageHistory[historyIndex]);
   }
 
-  // Инициализация событий
+  // === СВАЙП НА МОБИЛЕ ===
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  reader.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].clientX;
+  });
+
+  reader.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].clientX;
+    handleSwipe();
+  });
+  function handleSwipe() {
+    if (!touchStartX || !touchEndX) return;
+    const diff = touchStartX - touchEndX;
+    const threshold = 50; // минимум 50px свайпа
+
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        goToNext(); // свайп влево → следующая
+      } else {
+        goToPrev(); // свайп вправо → предыдущая
+      }
+    }
+    touchStartX = 0;
+    touchEndX = 0;
+  }
+
+  // === СОБЫТИЯ ===
   newBtn.addEventListener('click', () => {
     localStorage.removeItem('diarySave');
     menu.style.display = 'none';
     reader.style.display = 'block';
     pageHistory = ['start'];
     historyIndex = 0;
-    isAnimating = false;
     showPage('start');
   });
+
   continueBtn.addEventListener('click', () => {
     const saved = localStorage.getItem('diarySave');
     if (saved) {
-      menu.style.display = 'none';
-      reader.style.display = 'block';
       const state = JSON.parse(saved);
       currentPageId = state.page;
       pageHistory = state.history || [currentPageId];
       historyIndex = pageHistory.length - 1;
-      isAnimating = false;
+      menu.style.display = 'none';
+      reader.style.display = 'block';
       showPage(currentPageId);
     }
-  });
-
-  quitBtn.addEventListener('click', () => {
-    // ничего не делаем — просто остаёмся в меню
   });
 
   exitBookmark.addEventListener('click', () => {
@@ -365,87 +337,18 @@
     init();
   });
 
-  // Закладка-сохранение с "потягиванием"
-  let startY = 0;
-  let currentY = 0;
-  let isPulling = false;
-
-  saveBookmark.addEventListener('mousedown', startPull);
-  saveBookmark.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    startPull(e.touches[0]);
+  // Закладка-сохранение (упрощённая: клик для сохранения + выход)
+  // На мобиле потянуть сложно — сделаем просто: нажал → сохранил и вышел
+  saveBookmark.addEventListener('click', () => {
+    localStorage.setItem('diarySave', JSON.stringify({
+      page: currentPageId,      history: pageHistory.slice(0, historyIndex + 1)
+    }));
+    reader.style.display = 'none';
+    menu.style.display = 'block';
+    init();
   });
 
-  function startPull(e) {
-    isPulling = true;
-    startY = e.clientY || e.pageY;
-    saveBookmark.classList.add('pulling');
-    document.addEventListener('mousemove', onPull);
-    document.addEventListener('touchmove', onPullTouch);
-    document.addEventListener('mouseup', endPull);
-    document.addEventListener('touchend', endPull);
-  }
-
-  function onPull(e) {
-    if (!isPulling) return;
-    currentY = e.clientY;
-    const pullDistance = currentY - startY;
-    if (pullDistance > 0) {      saveBookmark.style.transform = `scaleY(${1 + pullDistance / 100}) translateY(${pullDistance}px)`;
-    }
-  }
-
-  function onPullTouch(e) {
-    if (!isPulling) return;
-    currentY = e.touches[0].clientY;
-    const pullDistance = currentY - startY;
-    if (pullDistance > 0) {
-      saveBookmark.style.transform = `scaleY(${1 + pullDistance / 100}) translateY(${pullDistance}px)`;
-    }
-  }
-
-  function endPull() {
-    const pullDistance = currentY - startY;
-    if (pullDistance > window.innerHeight * 0.5) {
-      // Сохраняем
-      localStorage.setItem('diarySave', JSON.stringify({
-        page: currentPageId,
-        history: pageHistory.slice(0, historyIndex + 1)
-      }));
-      reader.style.display = 'none';
-      menu.style.display = 'block';
-      init();
-    }
-    // Сброс
-    saveBookmark.classList.remove('pulling');
-    saveBookmark.style.transform = '';
-    isPulling = false;
-    document.removeEventListener('mousemove', onPull);
-    document.removeEventListener('touchmove', onPullTouch);
-    document.removeEventListener('mouseup', endPull);
-    document.removeEventListener('touchend', endPull);
-  }
-
-  // Кнопки навигации (ПК)
-  nextBtn.addEventListener('click', goToNext);
-  prevBtn.addEventListener('click', goToPrev);
-
-  // Свайп (мобильные)
-  let touchStartX = 0;
-  reader.addEventListener('touchstart', (e) => {
-    touchStartX = e.touches[0].clientX;
-  });
-
-  reader.addEventListener('touchend', (e) => {
-    if (!touchStartX) return;
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {        goToNext();
-      } else {
-        goToPrev();
-      }
-    }
-    touchStartX = 0;
-  });
+  quitBtn.addEventListener('click', () => {});
 
   // Запуск
   init();
