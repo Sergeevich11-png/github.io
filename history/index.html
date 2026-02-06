@@ -1,420 +1,759 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Дневник</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      user-select: none;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Дневник Тьмы</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
 
-    body {
-      font-family: 'Courier New', monospace;
-      background: #0a0a0a;
-      color: #222;
-      height: 100vh;
-      overflow: hidden;
-      position: relative;
-    }
+        body {
+            font-family: 'Times New Roman', serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e6e6e6;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+        }
 
-    #menu {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      gap: 20px;
-      background: #111;
-      color: #ccc;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 100;
-    }
+        #app {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-    .menu-btn {
-      background: transparent;
-      border: 1px solid #555;
-      color: #ddd;
-      padding: 12px 30px;
-      font: inherit;
-      font-size: 18px;
-      cursor: pointer;
-      transition: all 0.3s;    }
+        /* Главное меню */
+        #main-menu {
+            position: absolute;
+            width: 90%;
+            max-width: 800px;
+            background: rgba(30, 30, 40, 0.95);
+            border: 2px solid #5d4037;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            transition: all 0.5s ease;
+        }
 
-    .menu-btn:hover {
-      background: #222;
-      border-color: #777;
-    }
+        #main-menu h1 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: #d4af37;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            font-style: italic;
+            letter-spacing: 3px;
+        }
 
-    #reader {
-      display: none;
-      height: 100vh;
-      position: relative;
-      overflow: hidden;
-    }
+        .menu-button {
+            display: block;
+            width: 80%;
+            margin: 15px auto;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #5d4037 0%, #3e2723 100%);
+            color: #e6e6e6;
+            border: none;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-style: italic;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        }
 
-    #paper {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #f9f4e7;
-      background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f9f4e7'/%3E%3Cpath d='M0,0 L100,100 M100,0 L0,100' stroke='%23e0d8c5' stroke-width='0.2' opacity='0.3'/%3E%3Ccircle cx='20' cy='30' r='2' fill='%23d0c6b0' opacity='0.4'/%3E%3Ccircle cx='70' cy='60' r='1.5' fill='%23c0b5a0' opacity='0.3'/%3E%3C/svg%3E"),
-        radial-gradient(circle at 20% 30%, rgba(0,0,0,0.02) 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(0,0,0,0.015) 0%, transparent 50%);
-    }
+        .menu-button:hover {
+            background: linear-gradient(135deg, #6d4c41 0%, #4e342e 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+        }
 
-    .page {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: calc(100% - 80px);
-      padding: 60px 40px 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      opacity: 1;
-      transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s;
-    }
+        .menu-button:active {
+            transform: translateY(1px);
+        }
 
-    .page.leaving {
-      transform: translateX(-100%) rotateY(-15deg);
-      opacity: 0;
-    }
+        #language-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(93, 64, 55, 0.8);
+            color: #e6e6e6;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-style: italic;
+            transition: all 0.3s ease;
+        }
 
-    .page.entering {
-      transform: translateX(100%);    }
+        #language-toggle:hover {
+            background: rgba(109, 76, 65, 0.9);
+        }
 
-    .page.active {
-      transform: translateX(0);
-      opacity: 1;
-    }
+        /* Дневник */
+        #diary {
+            position: absolute;
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            max-height: 700px;
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d3 100%);
+            border: 10px solid #8b4513;
+            border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+            display: none;
+            z-index: 50;
+            perspective: 1000px;
+        }
 
-    .page-content {
-      font-size: 18px;
-      line-height: 1.6;
-      max-width: 600px;
-      white-space: pre-wrap;
-      color: #333;
-    }
+        .diary-page {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            padding: 40px;
+            overflow-y: auto;
+            font-style: italic;
+            font-size: 18px;
+            line-height: 1.8;
+            color: #3e2723;
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d3 100%);
+            border-right: 3px dashed #8b4513;
+            transition: transform 0.5s ease;
+            transform-style: preserve-3d;
+        }
 
-    .choice {
-      font-weight: bold;
-      margin-top: 24px;
-      color: #000;
-      cursor: pointer;
-      padding: 8px 16px;
-      display: inline-block;
-      transition: background 0.2s;
-    }
+        .diary-page.left {
+            left: 0;
+            text-align: right;
+        }
 
-    .choice:hover {
-      background: rgba(0,0,0,0.05);
-    }
+        .diary-page.right {
+            right: 0;
+            text-align: left;
+            border-right: none;
+        }
 
-    .nav-container {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      padding: 0 30px;
-      pointer-events: none;
-    }
+        .diary-page.active {
+            transform: translateX(0);
+        }
 
-    .nav-btn {
-      font-size: 28px;
-      color: #777;
-      cursor: pointer;
-      pointer-events: auto;
-      user-select: none;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-    }
-    .nav-btn:hover {
-      opacity: 1;
-    }
+        .diary-page.hidden-left {
+            transform: translateX(-100%);
+        }
 
-    .bookmark {
-      position: absolute;
-      top: 12px;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      z-index: 10;
-    }
+        .diary-page.hidden-right {
+            transform: translateX(100%);
+        }
 
-    #saveBookmark {
-      left: 16px;
-      color: #d32f2f;
-    }
+        .page-content {
+            position: relative;
+            height: 100%;
+        }
 
-    #exitBookmark {
-      right: 16px;
-      color: #000;
-    }
+        .stain {
+            position: absolute;
+            background: rgba(139, 69, 19, 0.1);
+            border-radius: 50%;
+            opacity: 0.3;
+        }
 
-    .bookmark-label {
-      position: absolute;
-      top: 30px;
-      left: -10px;
-      font-size: 10px;
-      color: #777;
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      letter-spacing: 1px;
-    }
-  </style>
+        .choice-button {
+            display: inline-block;
+            margin: 15px 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #8b4513 0%, #6d4c41 100%);
+            color: #f5f5dc;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-style: italic;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .choice-button:hover {
+            background: linear-gradient(135deg, #a0522d 0%, #7d5a50 100%);
+            transform: scale(1.05);
+        }
+
+        .choice-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Элементы управления дневником */
+        .bookmark {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 30px;
+            height: 60px;
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            z-index: 60;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .bookmark:hover {
+            transform: scale(1.1);
+        }
+
+        .close-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #8b0000 0%, #6d0000 100%);
+            border: none;
+            border-radius: 50%;
+            color: #f5f5dc;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 60;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            background: linear-gradient(135deg, #a52a2a 0%, #8b0000 100%);
+            transform: scale(1.1);
+        }
+
+        .close-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes pageTurn {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(180deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            #main-menu {
+                width: 95%;
+                padding: 20px;
+            }
+
+            #main-menu h1 {
+                font-size: 32px;
+            }
+
+            .menu-button {
+                width: 90%;
+                padding: 12px 20px;
+                font-size: 18px;
+            }
+
+            #diary {
+                width: 95%;
+                height: 85%;
+            }
+
+            .diary-page {
+                padding: 25px;
+                font-size: 16px;
+            }
+
+            .choice-button {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            #main-menu {
+                padding: 20px;
+            }
+
+            #diary {
+                height: 85%;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div id="app">
+        <!-- Главное меню -->
+        <div id="main-menu" class="fade-in">
+            <h1 id="game-title">ДНЕВНИК ТЬМЫ</h1>
+            <button class="menu-button" id="start-button">Начать историю</button>
+            <button class="menu-button" id="continue-button" style="display: none;">Продолжить</button>
+            <button class="menu-button" id="exit-button">Выйти</button>
+        </div>
 
-<div id="menu">
-  <button class="menu-btn" id="newBtn">Новая история</button>
-  <button class="menu-btn" id="continueBtn" style="display:none;">Продолжить</button>
-  <button class="menu-btn" id="quitBtn">Выход</button>
-</div>
+        <button id="language-toggle">RU/EN</button>
 
-<div id="reader">
-  <div id="paper"></div>
+        <!-- Дневник -->
+        <div id="diary">
+            <div class="bookmark" id="bookmark"></div>
+            <button class="close-button" id="close-diary">×</button>
 
-  <div class="bookmark" id="saveBookmark">
-    <svg viewBox="0 0 24 24" width="24" height="24">
-      <path d="M6,4 L12,10 L18,4 L18,20 L6,20 Z" fill="currentColor"/>
-    </svg>    <div class="bookmark-label">закладка</div>
-  </div>
+            <div class="diary-page left active" id="page-left">
+                <div class="page-content" id="content-left"></div>
+            </div>
+            <div class="diary-page right hidden-right" id="page-right">
+                <div class="page-content" id="content-right"></div>
+            </div>
+        </div>
+    </div>
 
-  <div class="bookmark" id="exitBookmark">
-    <svg viewBox="0 0 24 24" width="24" height="24">
-      <path d="M6,4 L12,10 L18,4 L18,20 L6,20 Z" fill="currentColor"/>
-    </svg>
-  </div>
+    <script>
+        // Глобальные переменные
+        let currentPage = 0;
+        let currentStoryPath = 'a1';
+        let language = 'ru';
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let isSwiping = false;
 
-  <div class="nav-container">
-    <div class="nav-btn" id="prevBtn">‹</div>
-    <div class="nav-btn" id="nextBtn">›</div>
-  </div>
-</div>
+        // Структура истории
+        const story = {
+            a1: {
+                title: { ru: 'Начало пути', en: 'The Beginning' },
+                text: {
+                    ru: 'Я проснулся в темной комнате. Стены покрыты плесенью, а в воздухе витает запах сырости. Мой дневник лежит на столе, открытый на первой странице. Что-то не так с этим местом...',
+                    en: 'I woke up in a dark room. The walls are covered in mold, and the air smells of dampness. My diary lies on the table, open to the first page. Something is wrong with this place...'
+                },
+                choices: [
+                    { text: { ru: 'Осмотреть комнату внимательнее', en: 'Examine the room more carefully' }, next: 'a2' },
+                    { text: { ru: 'Выйти в коридор', en: 'Go out into the hallway' }, next: 'a3' }
+                ]
+            },
+            a2: {
+                title: { ru: 'Тайны комнаты', en: 'Room Secrets' },
+                text: {
+                    ru: 'При ближайшем рассмотрении я заметил странные символы, вырезанные на стене. Они светятся тусклым красным светом. На полу лежит старый ключ...',
+                    en: 'Upon closer examination, I noticed strange symbols carved into the wall. They glow with a dull red light. An old key lies on the floor...'
+                },
+                choices: [
+                    { text: { ru: 'Взять ключ', en: 'Take the key' }, next: 'b1' },
+                    { text: { ru: 'Игнорировать ключ', en: 'Ignore the key' }, next: 'b2' }
+                ]
+            },
+            a3: {
+                title: { ru: 'Коридор', en: 'The Hallway' },
+                text: {
+                    ru: 'Коридор был длинным и темным. В конце виднелась слабая подсветка. Слышались странные шорохи, словно кто-то или что-то двигалось в темноте...',
+                    en: 'The hallway was long and dark. A faint light was visible at the end. Strange rustling sounds could be heard, as if something was moving in the darkness...'
+                },
+                choices: [
+                    { text: { ru: 'Пойти к свету', en: 'Go towards the light' }, next: 'b3' },
+                    { text: { ru: 'Вернуться в комнату', en: 'Return to the room' }, next: 'b4' }
+                ]
+            },
+            b1: {
+                title: { ru: 'Ключ к тайнам', en: 'Key to Secrets' },
+                text: {
+                    ru: 'Ключ оказался тяжелым и холодным. На нем выгравированы странные символы, похожие на те, что на стене. Куда он может подойти?',
+                    en: 'The key was heavy and cold. Strange symbols were engraved on it, similar to those on the wall. Where could it fit?'
+                },
+                choices: [
+                    { text: { ru: 'Поискать замок', en: 'Look for a lock' }, next: 'c1' },
+                    { text: { ru: 'Спрятать ключ', en: 'Hide the key' }, next: 'c2' }
+                ]
+            },
+            b2: {
+                title: { ru: 'Пропущенная возможность', en: 'Missed Opportunity' },
+                text: {
+                    ru: 'Я решил не брать ключ. Возможно, это была ошибка. Символы на стене начали светиться ярче...',
+                    en: 'I decided not to take the key. Perhaps it was a mistake. The symbols on the wall began to glow brighter...'
+                },
+                choices: [
+                    { text: { ru: 'Потрогать символы', en: 'Touch the symbols' }, next: 'c3' },
+                    { text: { ru: 'Отойти от стены', en: 'Step away from the wall' }, next: 'c4' }
+                ]
+            },
+            b3: {
+                title: { ru: 'Свет в конце', en: 'Light at the End' },
+                text: {
+                    ru: 'Подойдя ближе к свету, я увидел старую лампу, висящую на цепи. Она мерцала, создавая жуткие тени на стенах...',
+                    en: 'As I approached the light, I saw an old lamp hanging from a chain. It flickered, creating eerie shadows on the walls...'
+                },
+                choices: [
+                    { text: { ru: 'Потрогать лампу', en: 'Touch the lamp' }, next: 'c5' },
+                    { text: { ru: 'Пройти мимо', en: 'Walk past it' }, next: 'c6' }
+                ]
+            },
+            b4: {
+                title: { ru: 'Возвращение', en: 'Return' },
+                text: {
+                    ru: 'Вернувшись в комнату, я обнаружил, что символы на стене изменились. Теперь они образовывали странную карту...',
+                    en: 'Returning to the room, I found that the symbols on the wall had changed. Now they formed a strange map...'
+                },
+                choices: [
+                    { text: { ru: 'Изучить карту', en: 'Study the map' }, next: 'c7' },
+                    { text: { ru: 'Закрыть глаза', en: 'Close my eyes' }, next: 'c8' }
+                ]
+            },
+            c1: {
+                title: { ru: 'Найденный замок', en: 'Found Lock' },
+                text: {
+                    ru: 'Я нашел старый сундук в углу комнаты. Ключ идеально подошел к замку. Внутри лежали странные артефакты...',
+                    en: 'I found an old chest in the corner of the room. The key fit perfectly into the lock. Strange artifacts lay inside...'
+                },
+                ending: true
+            },
+            c2: {
+                title: { ru: 'Спрятанный ключ', en: 'Hidden Key' },
+                text: {
+                    ru: 'Я спрятал ключ под половицей. Символы на стене погасли. Комната стала еще темнее...',
+                    en: 'I hid the key under the floorboard. The symbols on the wall went out. The room became even darker...'
+                },
+                ending: true
+            },
+            c3: {
+                title: { ru: 'Прикосновение к тьме', en: 'Touch of Darkness' },
+                text: {
+                    ru: 'Когда я коснулся символов, они обожгли мои пальцы. Стена начала двигаться, открывая тайный проход...',
+                    en: 'When I touched the symbols, they burned my fingers. The wall began to move, revealing a secret passage...'
+                },
+                ending: true
+            },
+            c4: {
+                title: { ru: 'Бегство', en: 'Escape' },
+                text: {
+                    ru: 'Я отступил от стены. Символы погасли, и комната вернулась в обычное состояние. Но я чувствовал, что что-то изменилось...',
+                    en: 'I stepped back from the wall. The symbols went out, and the room returned to its normal state. But I felt that something had changed...'
+                },
+                ending: true
+            },
+            c5: {
+                title: { ru: 'Опасное прикосновение', en: 'Dangerous Touch' },
+                text: {
+                    ru: 'Лампа была горячей. Когда я коснулся ее, она взорвалась, ослепив меня на мгновение. В темноте я услышал шаги...',
+                    en: 'The lamp was hot. When I touched it, it exploded, blinding me for a moment. In the darkness, I heard footsteps...'
+                },
+                ending: true
+            },
+            c6: {
+                title: { ru: 'Проход мимо', en: 'Walking Past' },
+                text: {
+                    ru: 'Я прошел мимо лампы. Коридор продолжался дальше, становясь все уже и уже. Стены начали сжиматься...',
+                    en: 'I walked past the lamp. The hallway continued further, becoming narrower and narrower. The walls began to close in...'
+                },
+                ending: true
+            },
+            c7: {
+                title: { ru: 'Тайная карта', en: 'Secret Map' },
+                text: {
+                    ru: 'Карта показывала путь к выходу из этого проклятого места. Я знал, что должен следовать ей...',
+                    en: 'The map showed the way out of this cursed place. I knew I had to follow it...'
+                },
+                ending: true
+            },
+            c8: {
+                title: { ru: 'Закрытые глаза', en: 'Closed Eyes' },
+                text: {
+                    ru: 'Когда я закрыл глаза, комната начала вращаться. Я почувствовал, как реальность распадается вокруг меня...',
+                    en: 'When I closed my eyes, the room began to spin. I felt reality dissolving around me...'
+                },
+                ending: true
+            }
+        };
 
-<script>
-const story = {
-  start: { text: "???\n???\n???" },
-  page1: { text: "???\n???\n???" },
-  choicePage: {
-    text: "???\n???\n???",
-    choices: [
-      { label: "Выбор первый", next: "page2a" },
-      { label: "Выбор второй", next: "page2b" }
-    ]
-  },
-  page2a: { text: "???\n???\n???" },
-  page2b: { text: "???\n???\n???" }
-};
+        // Локализация меню
+        const menuText = {
+            ru: {
+                title: 'ДНЕВНИК ТЬМЫ',
+                start: 'Начать историю',
+                continue: 'Продолжить',
+                exit: 'Выйти'
+            },
+            en: {
+                title: 'DIARY OF DARKNESS',
+                start: 'Start Story',
+                continue: 'Continue',
+                exit: 'Exit'
+            }
+        };
 
-let currentPageId = 'start';
-let isAnimating = false;
-let pageHistory = ['start'];
-let historyIndex = 0;
+        // DOM элементы
+        const $mainMenu = document.getElementById('main-menu');
+        const $diary = document.getElementById('diary');
+        const $startButton = document.getElementById('start-button');
+        const $continueButton = document.getElementById('continue-button');
+        const $exitButton = document.getElementById('exit-button');
+        const $languageToggle = document.getElementById('language-toggle');
+        const $bookmark = document.getElementById('bookmark');
+        const $closeDiary = document.getElementById('close-diary');
+        const $pageLeft = document.getElementById('page-left');
+        const $pageRight = document.getElementById('page-right');
+        const $contentLeft = document.getElementById('content-left');
+        const $contentRight = document.getElementById('content-right');
 
-const menu = document.getElementById('menu');
-const reader = document.getElementById('reader');
-const newBtn = document.getElementById('newBtn');
-const continueBtn = document.getElementById('continueBtn');
-const quitBtn = document.getElementById('quitBtn');
-const saveBookmark = document.getElementById('saveBookmark');
-const exitBookmark = document.getElementById('exitBookmark');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
+        // Инициализация
+        function init() {
+            loadSavedProgress();
+            setupEventListeners();
+            updateMenuLanguage();
+        }
 
-function init() {
-  const saved = localStorage.getItem('diarySave');
-  continueBtn.style.display = saved ? 'block' : 'none';
-}
-function updateNavButtons() {
-  const current = story[currentPageId];
-  const isFirst = historyIndex === 0;
-  const isLast = !current.choices && Object.keys(story).indexOf(currentPageId) === Object.keys(story).length - 1;
+        // Загрузка сохраненного прогресса
+        function loadSavedProgress() {
+            const saved = localStorage.getItem('diaryProgress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                currentStoryPath = progress.path || 'a1';
+                currentPage = progress.page || 0;
+                $continueButton.style.display = 'block';
+            }
+        }
 
-  prevBtn.style.display = isFirst ? 'none' : 'block';
-  nextBtn.style.display = (current.choices || isLast) ? 'none' : 'block';
-}
+        // Сохранение прогресса
+        function saveProgress() {
+            const progress = {
+                path: currentStoryPath,
+                page: currentPage
+            };
+            localStorage.setItem('diaryProgress', JSON.stringify(progress));
+        }
 
-function showPage(pageId) {
-  if (isAnimating) return;
-  const pageData = story[pageId];
-  if (!pageData) return;
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            $startButton.addEventListener('click', startNewGame);
+            $continueButton.addEventListener('click', continueGame);
+            $exitButton.addEventListener('click', exitToMenu);
+            $languageToggle.addEventListener('click', toggleLanguage);
+            $bookmark.addEventListener('click', saveBookmark);
+            $closeDiary.addEventListener('click', closeDiary);
+            
+            // Свайпы для десктопа
+            $diary.addEventListener('mousedown', handleTouchStart);
+            $diary.addEventListener('mouseup', handleTouchEnd);
+            $diary.addEventListener('mousemove', handleTouchMove);
+            
+            // Свайпы для мобильных
+            $diary.addEventListener('touchstart', handleTouchStart);
+            $diary.addEventListener('touchend', handleTouchEnd);
+            $diary.addEventListener('touchmove', handleTouchMove);
+        }
 
-  isAnimating = true;
+        // Начало новой игры
+        function startNewGame() {
+            currentStoryPath = 'a1';
+            currentPage = 0;
+            localStorage.removeItem('diaryProgress');
+            showDiary();
+            displayPage();
+        }
 
-  const newPage = document.createElement('div');
-  newPage.className = 'page entering';
-  let content = `<div class="page-content">${pageData.text}</div>`;
-  
-  if (pageData.choices) {
-    const choicesHtml = pageData.choices.map(c => 
-      `<div class="choice" data-next="${c.next}">${c.label}</div>`
-    ).join('');
-    content += `<div>${choicesHtml}</div>`;
-  }
-  
-  newPage.innerHTML = content;
-  reader.appendChild(newPage);
+        // Продолжение игры
+        function continueGame() {
+            showDiary();
+            displayPage();
+        }
 
-  const oldPage = reader.querySelector('.page.active');
-  if (oldPage) {
-    oldPage.classList.remove('active');
-    oldPage.classList.add('leaving');
-    setTimeout(() => {
-      if (oldPage.parentNode) oldPage.remove();
-    }, 800);
-  }
+        // Выход в меню
+        function exitToMenu() {
+            $diary.style.display = 'none';
+            $mainMenu.style.display = 'block';
+        }
 
-  setTimeout(() => {
-    newPage.classList.remove('entering');
-    newPage.classList.add('active');
-    isAnimating = false;
-    currentPageId = pageId;
-    updateNavButtons();
-  }, 50);
+        // Переключение языка
+        function toggleLanguage() {
+            language = language === 'ru' ? 'en' : 'ru';
+            updateMenuLanguage();
+            if ($diary.style.display !== 'none') {
+                displayPage();
+            }
+        }
 
-  newPage.querySelectorAll('.choice').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (isAnimating) return;      isAnimating = true;
-      const nextId = e.target.getAttribute('data-next');
-      setTimeout(() => showPage(nextId), 300);
-    });
-  });
-}
+        // Обновление языка меню
+        function updateMenuLanguage() {
+            document.getElementById('game-title').textContent = menuText[language].title;
+            $startButton.textContent = menuText[language].start;
+            $continueButton.textContent = menuText[language].continue;
+            $exitButton.textContent = menuText[language].exit;
+            $languageToggle.textContent = language === 'ru' ? 'RU/EN' : 'EN/RU';
+        }
 
-function goToNext() {
-  if (isAnimating) return;
-  const keys = Object.keys(story);
-  const idx = keys.indexOf(currentPageId);
-  if (idx !== -1 && idx < keys.length - 1) {
-    const nextPageId = keys[idx + 1];
-    if (historyIndex === pageHistory.length - 1) {
-      pageHistory.push(nextPageId);
-      historyIndex++;
-    } else {
-      pageHistory = pageHistory.slice(0, historyIndex + 1);
-      pageHistory.push(nextPageId);
-      historyIndex++;
-    }
-    showPage(nextPageId);
-  }
-}
+        // Показ дневника
+        function showDiary() {
+            $mainMenu.style.display = 'none';
+            $diary.style.display = 'block';
+            addRandomStains();
+        }
 
-function goToPrev() {
-  if (isAnimating || historyIndex <= 0) return;
-  historyIndex--;
-  showPage(pageHistory[historyIndex]);
-}
+        // Добавление случайных пятен на страницы
+        function addRandomStains() {
+            const pages = [$pageLeft, $pageRight];
+            pages.forEach(page => {
+                page.querySelectorAll('.stain').forEach(stain => stain.remove());
+                
+                const stainCount = Math.floor(Math.random() * 3);
+                for (let i = 0; i < stainCount; i++) {
+                    const stain = document.createElement('div');
+                    stain.className = 'stain';
+                    stain.style.width = `${Math.random() * 100 + 50}px`;
+                    stain.style.height = `${Math.random() * 100 + 50}px`;
+                    stain.style.top = `${Math.random() * 80 + 10}%`;
+                    stain.style.left = `${Math.random() * 80 + 10}%`;
+                    stain.style.opacity = `${Math.random() * 0.2 + 0.1}`;
+                    page.appendChild(stain);
+                }
+            });
+        }
 
-newBtn.addEventListener('click', () => {
-  localStorage.removeItem('diarySave');
-  menu.style.display = 'none';
-  reader.style.display = 'block';
-  pageHistory = ['start'];
-  historyIndex = 0;
-  showPage('start');
-});
+        // Отображение страницы
+        function displayPage() {
+            const pageData = story[currentStoryPath];
+            if (!pageData) return;
 
-continueBtn.addEventListener('click', () => {
-  const saved = localStorage.getItem('diarySave');
-  if (saved) {
-    const state = JSON.parse(saved);
-    currentPageId = state.page;
-    pageHistory = state.history || [currentPageId];
-    historyIndex = pageHistory.length - 1;
-    menu.style.display = 'none';
-    reader.style.display = 'block';
-    showPage(currentPageId);  }
-});
+            $contentLeft.innerHTML = '';
+            $contentRight.innerHTML = '';
 
-exitBookmark.addEventListener('click', () => {
-  reader.style.display = 'none';
-  menu.style.display = 'flex';
-  init();
-});
+            // Заголовок
+            const titleLeft = document.createElement('h2');
+            titleLeft.textContent = pageData.title[language];
+            titleLeft.style.marginBottom = '20px';
+            titleLeft.style.color = '#8b4513';
+            titleLeft.style.textAlign = 'right';
+            $contentLeft.appendChild(titleLeft);
 
-let startY = 0;
-let isPulling = false;
+            const titleRight = document.createElement('h2');
+            titleRight.textContent = pageData.title[language];
+            titleRight.style.marginBottom = '20px';
+            titleRight.style.color = '#8b4513';
+            titleRight.style.textAlign = 'left';
+            $contentRight.appendChild(titleRight);
 
-function startPull(e) {
-  isPulling = true;
-  startY = e.clientY || e.touches[0].clientY;
-  saveBookmark.style.transition = 'none';
-  document.addEventListener('mousemove', onPull);
-  document.addEventListener('touchmove', onPullTouch);
-  document.addEventListener('mouseup', endPull);
-  document.addEventListener('touchend', endPull);
-}
+            // Текст
+            const textLeft = document.createElement('p');
+            textLeft.textContent = pageData.text[language];
+            textLeft.style.marginBottom = '30px';
+            textLeft.style.textAlign = 'right';
+            $contentLeft.appendChild(textLeft);
 
-function onPull(e) {
-  if (!isPulling) return;
-  const y = e.clientY;
-  const dy = y - startY;
-  if (dy > 0) {
-    saveBookmark.style.transform = `translateY(${dy}px) scaleY(${1 + dy / 100})`;
-  }
-}
+            const textRight = document.createElement('p');
+            textRight.textContent = pageData.text[language];
+            textRight.style.marginBottom = '30px';
+            textRight.style.textAlign = 'left';
+            $contentRight.appendChild(textRight);
 
-function onPullTouch(e) {
-  if (!isPulling) return;
-  const y = e.touches[0].clientY;
-  const dy = y - startY;
-  if (dy > 0) {
-    saveBookmark.style.transform = `translateY(${dy}px) scaleY(${1 + dy / 100})`;
-  }
-}
+            // Варианты выбора
+            if (pageData.choices && pageData.choices.length > 0) {
+                pageData.choices.forEach((choice, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-button';
+                    button.textContent = choice.text[language];
+                    button.onclick = () => handleChoice(choice.next);
+                    
+                    if (index % 2 === 0) {
+                        $contentLeft.appendChild(button);
+                    } else {
+                        $contentRight.appendChild(button);
+                    }
+                });
+            }
 
-function endPull(e) {
-  if (!isPulling) return;
-  const y = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : startY);
-  const dy = y - startY;
-  const threshold = window.innerHeight * 0.4;
+            saveProgress();
+        }
 
-  if (dy > threshold) {
-    localStorage.setItem('diarySave', JSON.stringify({
-      page: currentPageId,
-      history: pageHistory.slice(0, historyIndex + 1)    }));
-  }
+        // Обработка выбора
+        function handleChoice(nextPath) {
+            currentStoryPath = nextPath;
+            turnPage();
+        }
 
-  saveBookmark.style.transform = '';
-  saveBookmark.style.transition = '';
-  isPulling = false;
-  document.removeEventListener('mousemove', onPull);
-  document.removeEventListener('touchmove', onPullTouch);
-  document.removeEventListener('mouseup', endPull);
-  document.removeEventListener('touchend', endPull);
-}
+        // Перелистывание страницы
+        function turnPage() {
+            $pageLeft.classList.remove('active');
+            $pageLeft.classList.add('hidden-left');
+            $pageRight.classList.remove('hidden-right');
+            $pageRight.classList.add('active');
 
-saveBookmark.addEventListener('mousedown', startPull);
-saveBookmark.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  startPull(e);
-});
+            setTimeout(() => {
+                $pageLeft.innerHTML = $pageRight.innerHTML;
+                $pageRight.classList.remove('active');
+                $pageRight.classList.add('hidden-right');
+                
+                setTimeout(() => {
+                    $pageLeft.classList.remove('hidden-left');
+                    $pageLeft.classList.add('active');
+                    displayPage();
+                    addRandomStains();
+                }, 100);
+            }, 500);
+        }
 
-prevBtn.addEventListener('click', goToPrev);
-nextBtn.addEventListener('click', goToNext);
+        // Сохранение закладки
+        function saveBookmark() {
+            saveProgress();
+            $bookmark.style.backgroundColor = '#ff0000';
+            setTimeout(() => {
+                $bookmark.style.backgroundColor = '';
+            }, 300);
+        }
 
-quitBtn.addEventListener('click', () => {});
+        // Закрытие дневника
+        function closeDiary() {
+            exitToMenu();
+        }
 
-init();
-</script>
+        // Обработка свайпов
+        function handleTouchStart(e) {
+            isSwiping = true;
+            touchStartX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        }
 
+        function handleTouchMove(e) {
+            if (!isSwiping) return;
+            touchEndX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        }
+
+        function handleTouchEnd() {
+            if (!isSwiping) return;
+            
+            const diff = touchStartX - touchEndX;
+            const threshold = 50;
+            
+            if (diff > threshold) {
+                // Свайп влево - следующая страница
+                if (story[currentStoryPath].choices && story[currentStoryPath].choices.length > 0) {
+                    turnPage();
+                }
+            } else if (diff < -threshold) {
+                // Свайп вправо - предыдущая страница
+                // Можно добавить логику возврата
+            }
+            
+            isSwiping = false;
+            touchStartX = 0;
+            touchEndX = 0;
+        }
+
+        // Инициализация при загрузке
+        window.addEventListener('load', init);
+    </script>
 </body>
 </html>
