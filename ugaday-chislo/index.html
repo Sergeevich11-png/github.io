@@ -234,13 +234,17 @@
       }
     };
 
-    let currentLang = localStorage.getItem('lang') || 'ru';
+    // ЕДИНЫЙ КЛЮЧ ДЛЯ ВСЕХ СТРАНИЦ
+    let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLang;
+
     const langBtn = document.getElementById('lang-btn');
     const menuBtn = document.getElementById('menu-btn');
 
     function setLanguage(lang) {
       currentLang = lang;
-      localStorage.setItem('lang', lang);
+      localStorage.setItem('preferredLanguage', lang); // ← Сохраняем в тот же ключ!
+      document.documentElement.lang = lang;
       langBtn.textContent = lang === 'ru' ? '🇷🇺' : '🌎';
       updateTexts();
     }
