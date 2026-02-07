@@ -161,10 +161,13 @@
       }
     };
 
-    let currentLang = 'ru';
+    // ЕДИНЫЙ ГЛОБАЛЬНЫЙ ЯЗЫК
+    let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLang;
 
     function toggleLang() {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
+      localStorage.setItem('preferredLanguage', currentLang); // ← Сохраняем глобально!
       updateUI();
     }
 
@@ -180,9 +183,10 @@
       const t = translations[currentLang];
       document.title = t.title;
       document.querySelector('h1').textContent = t.title;
-      document.querySelectorAll('.btn')[0].textContent = t.easy;
-      document.querySelectorAll('.btn')[1].textContent = t.medium;
-      document.querySelectorAll('.btn')[2].textContent = t.hard;
+      const menuButtons = document.querySelectorAll('#menu .btn');
+      if (menuButtons[0]) menuButtons[0].textContent = t.easy;
+      if (menuButtons[1]) menuButtons[1].textContent = t.medium;
+      if (menuButtons[2]) menuButtons[2].textContent = t.hard;
       document.getElementById('rulesBtn').textContent = t.rules;
       document.getElementById('langBtn').textContent = t.lang;
       document.getElementById('exitBtn').textContent = t.exit;
@@ -617,6 +621,8 @@
     }
 
     const game = new MineGame();
+    // Применяем язык при запуске
+    updateUI();
   </script>
 </body>
 </html>
