@@ -229,7 +229,9 @@
       }
     };
 
-    let currentLang = 'ru';
+    // Загружаем язык из localStorage или используем 'ru' по умолчанию
+    let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLang;
 
     function getTranslation(key) {
       return translations[currentLang][key] || key;
@@ -251,8 +253,12 @@
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
+      localStorage.setItem('preferredLanguage', currentLang); // ← Сохраняем выбор!
       updateText();
     });
+
+    // Применяем язык при загрузке страницы
+    updateText();
   </script>
 </body>
 </html>
