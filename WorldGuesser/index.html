@@ -53,7 +53,7 @@
       max-width: 300px;
     }
 
-    .btn.rules, .btn.difficulty, .btn.play, .btn.exit {
+    .btn.rules, .btn.difficulty, .btn.play, .btn.exit, .btn.lang {
       background: #4A90E2;
     }
 
@@ -69,7 +69,8 @@
     .game-header {
       width: 100%;
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      align-items: center;
       padding: 10px 0;
     }
 
@@ -138,31 +139,21 @@
       color: white;
     }
 
-    .keyboard {
+    .input-container {
       width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 6px;
-      margin-top: 20px;
+      margin: 20px 0;
     }
 
-    .key {
-      width: 36px;
-      height: 48px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #ddd;
-      border-radius: 6px;
-      font-size: 1.2rem;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .key.special {
-      width: 70px;
-      background: #bbb;
+    #wordInput {
+      width: 100%;
+      max-width: 300px;
+      padding: 12px;
+      font-size: 1.5rem;
+      text-align: center;
+      border: 2px solid #4A90E2;
+      border-radius: 8px;
+      text-transform: uppercase;
+      font-family: sans-serif;
     }
 
     .message {
@@ -182,19 +173,18 @@
   </style>
 </head>
 <body>
-  <!-- Главное меню -->
   <div id="menu" class="screen active">
-    <h1>СловоУгадайка</h1>
+    <h1 id="title">СловоУгадайка</h1>
     <button class="btn play" onclick="showScreen('game')">Играть</button>
     <button class="btn difficulty" onclick="showScreen('difficulty')">Сложность</button>
     <button class="btn rules" onclick="showScreen('rules')">Правила</button>
+    <button class="btn lang" onclick="toggleLanguage()">🇷🇺 / 🇬🇧</button>
     <button class="btn exit" onclick="window.location.href='https://sergeevich11-png.github.io/github.io/'">Выход</button>
   </div>
 
-  <!-- Правила -->
   <div id="rules" class="screen">
-    <h1>Правила</h1>
-    <div class="rules-text">Слово из N букв загадывается. Игрок должен отгадать его за 5 попыток.  
+    <h1 id="rules-title">Правила</h1>
+    <div class="rules-text" id="rules-text">Слово из N букв загадывается. Игрок должен отгадать его за 5 попыток.  
 Если буква есть в слове, но не на своём месте — она выделяется **синим**.  
 Если буква есть и стоит на своём месте — она выделяется **красным**.  
 Буква, отсутствующая в слове, остаётся без выделения.  
@@ -202,9 +192,8 @@
     <button class="btn btn-back" onclick="showScreen('menu')">Назад</button>
   </div>
 
-  <!-- Сложность -->
   <div id="difficulty" class="screen">
-    <h1>Сложность</h1>
+    <h1 id="difficulty-title">Сложность</h1>
     <button class="btn diff-easy" onclick="setDifficulty(3)">Легко</button>
     <button class="btn diff-medium" onclick="setDifficulty(5)">Средне</button>
     <button class="btn diff-hard" onclick="setDifficulty(7)">Сложно</button>
@@ -212,9 +201,9 @@
     <button class="btn btn-back" onclick="showScreen('menu')">Назад</button>
   </div>
 
-  <!-- Игровой экран -->
   <div id="game" class="screen">
     <div class="game-header">
+      <button class="btn lang" id="langBtn" onclick="toggleLanguage()">🇷🇺 / 🇬🇧</button>
       <button class="menu-btn" onclick="toggleMiniMenu()">⋮</button>
     </div>
 
@@ -227,27 +216,130 @@
     <div class="message" id="message"></div>
     <div class="grid" id="grid"></div>
 
-    <div class="keyboard" id="keyboard"></div>
+    <div class="input-container">
+      <input type="text" id="wordInput" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    </div>
 
     <button class="btn btn-back" id="endGameBtn" style="display:none;" onclick="showScreen('menu')">В меню</button>
   </div>
 
   <script>
-    // === БАЗА СЛОВ ===
-    const WORDS_3 = ['сон', 'дом', 'кот', 'нос', 'лес', 'рот', 'час', 'шар', 'сок', 'лук', 'дым', 'бег', 'вес', 'газ', 'дар', 'жар', 'кит', 'лоб', 'мех', 'пух'];
-    const WORDS_5 = ['осень', 'погода', 'лимон', 'арбуз', 'багаж', 'билет', 'вагон', 'ветер', 'вилка', 'вишня', 'вышка', 'герой', 'глина', 'город', 'груша', 'дверь', 'девиз', 'дождь', 'доска', 'драка', 'егерь', 'зерно', 'икона', 'книга', 'кошка', 'лампа', 'лента', 'ложка', 'пакет', 'пенал', 'пирог', 'ручка', 'сахар', 'сумка', 'трава', 'улица', 'фильм', 'чашка', 'школа', 'банан', 'апель', 'огонь', 'снег', 'молоко', 'стол', 'стена', 'окно', 'дверь', 'полка'];
-    const WORDS_7 = ['абрикос', 'автомат', 'акробат', 'алфавит', 'анализы', 'артисты', 'асфальт', 'баранка', 'бассейн', 'бегемот', 'бильярд', 'варенье', 'верёвка', 'галстук', 'девочка', 'ежевика', 'капуста', 'копейка', 'магазин', 'медведь', 'надежда', 'паспорт', 'подарок', 'помидор', 'предмет', 'природа', 'ресница', 'рисунок', 'рубашка', 'счастье', 'таблица', 'тарелка', 'телефон', 'темнота', 'тетрадь', 'тревога', 'уровень', 'человек', 'чистота', 'юноша'];
+    const translations = {
+      ru: {
+        title: "СловоУгадайка",
+        play: "Играть",
+        rules: "Правила",
+        difficulty: "Сложность",
+        exit: "Выход",
+        "rules-title": "Правила",
+        "rules-text": "Слово из N букв загадывается. Игрок должен отгадать его за 5 попыток.\nЕсли буква есть в слове, но не на своём месте — она выделяется **синим**.\nЕсли буква есть и стоит на своём месте — она выделяется **красным**.\nБуква, отсутствующая в слове, остаётся без выделения.\nВсего даётся 5 попыток. Не угадал — проиграл.",
+        "difficulty-title": "Сложность",
+        "menu-btn": "⋮",
+        easy: "Легко",
+        medium: "Средне",
+        hard: "Сложно",
+        free: "Свободно",
+        back: "Назад",
+        continue: "Продолжить",
+        restart: "Заново",
+        "to-menu": "Выход",
+        victory: "Победа!",
+        gameOver: "Слово:",
+        inputPlaceholder: "Введите слово...",
+        "end-game-btn": "В меню",
+        langBtn: "🇷🇺 / 🇬🇧"
+      },
+      en: {
+        title: "WordGuess",
+        play: "Play",
+        rules: "Rules",
+        difficulty: "Difficulty",
+        exit: "Exit",
+        "rules-title": "Rules",
+        "rules-text": "A word of N letters is hidden. The player must guess it in 5 attempts.\nIf a letter is in the word but not in its place — it is highlighted **blue**.\nIf a letter is in the word and in its place — it is highlighted **red**.\nA letter not in the word remains unhighlighted.\nYou have 5 attempts total. Failed to guess — you lose.",
+        "difficulty-title": "Difficulty",
+        "menu-btn": "⋮",
+        easy: "Easy",
+        medium: "Medium",
+        hard: "Hard",
+        free: "Free",
+        back: "Back",
+        continue: "Continue",
+        restart: "Restart",
+        "to-menu": "Exit",
+        victory: "Victory!",
+        gameOver: "Word:",
+        inputPlaceholder: "Enter word...",
+        "end-game-btn": "Menu",
+        langBtn: "🇷🇺 / 🇬🇧"
+      }
+    };
 
-    const WORDS_FREE = [...WORDS_3, ...WORDS_5, ...WORDS_7];
+    const WORDS_RU = {
+      3: ['сон', 'дом', 'кот', 'нос', 'лес', 'рот', 'час', 'шар', 'сок', 'лук', 'дым', 'бег', 'вес', 'газ', 'дар', 'жар', 'кит', 'лоб', 'мех', 'пух'],
+      5: ['осень', 'погода', 'лимон', 'арбуз', 'багаж', 'билет', 'вагон', 'ветер', 'вилка', 'вишня', 'вышка', 'герой', 'глина', 'город', 'груша', 'дверь', 'девиз', 'дождь', 'доска', 'драка', 'егерь', 'зерно', 'икона', 'книга', 'кошка', 'лампа', 'лента', 'ложка', 'пакет', 'пенал', 'пирог', 'ручка', 'сахар', 'сумка', 'трава', 'улица', 'фильм', 'чашка', 'школа', 'банан', 'апель', 'огонь', 'снег', 'молоко', 'стол', 'стена', 'окно', 'дверь', 'полка'],
+      7: ['абрикос', 'автомат', 'акробат', 'алфавит', 'анализы', 'артисты', 'асфальт', 'баранка', 'бассейн', 'бегемот', 'бильярд', 'варенье', 'верёвка', 'галстук', 'девочка', 'ежевика', 'капуста', 'копейка', 'магазин', 'медведь', 'надежда', 'паспорт', 'подарок', 'помидор', 'предмет', 'природа', 'ресница', 'рисунок', 'рубашка', 'счастье', 'таблица', 'тарелка', 'телефон', 'темнота', 'тетрадь', 'тревога', 'уровень', 'человек', 'чистота', 'юноша']
+    };
 
-    // === ГЛОБАЛЬНОЕ СОСТОЯНИЕ ===
-    let currentDifficulty = 5; // по умолчанию "средне"
+    const WORDS_EN = {
+      4: ['word', 'game', 'play', 'time', 'life', 'love', 'home', 'food', 'book', 'door', 'tree', 'fish', 'bird', 'hand', 'face', 'head', 'foot', 'road', 'rain', 'snow'],
+      5: ['apple', 'house', 'water', 'music', 'money', 'light', 'night', 'paper', 'phone', 'pizza', 'robot', 'smile', 'sound', 'storm', 'sugar', 'table', 'tiger', 'train', 'truck', 'watch', 'world', 'zebra', 'beach', 'bread', 'chair', 'cloud', 'dance', 'dream', 'earth', 'flame', 'glass', 'heart', 'horse', 'juice', 'knife', 'lemon', 'magic', 'ocean', 'peace', 'plant', 'queen', 'radio', 'river', 'snake', 'space', 'speed', 'spoon', 'stone', 'sweet', 'taste', 'teeth'],
+      6: ['animal', 'banana', 'beauty', 'bottle', 'butter', 'camera', 'castle', 'cheese', 'coffee', 'cookie', 'cotton', 'dragon', 'flower', 'forest', 'friend', 'garden', 'golden', 'hammer', 'island', 'jungle', 'kitten', 'ladder', 'laptop', 'mirror', 'monkey', 'orange', 'pencil', 'planet', 'rabbit', 'rocket', 'shadow', 'silver', 'singer', 'soccer', 'summer', 'sunset', 'tablet', 'target', 'ticket', 'turtle', 'winter', 'wizard', 'yellow', 'zigzag']
+    };
+
+    // ЕДИНЫЙ ГЛОБАЛЬНЫЙ ЯЗЫК
+    let currentLanguage = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLanguage;
+
+    let currentDifficulty = 5;
     let currentWord = '';
     let lastWord = '';
     let currentRow = 0;
-    let gameState = 'active'; // 'active', 'won', 'lost'
+    let gameState = 'active';
 
-    // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+    function t(key) {
+      return translations[currentLanguage][key] || key;
+    }
+
+    function updateTexts() {
+      document.getElementById('title').textContent = t('title');
+      document.querySelector('.btn.play').textContent = t('play');
+      document.querySelector('.btn.rules').textContent = t('rules');
+      document.querySelector('.btn.difficulty').textContent = t('difficulty');
+      document.querySelector('.btn.exit').textContent = t('exit');
+      document.getElementById('rules-title').textContent = t('rules-title');
+      document.getElementById('rules-text').textContent = t('rules-text');
+      document.getElementById('difficulty-title').textContent = t('difficulty-title');
+      
+      const diffButtons = document.querySelectorAll('.btn');
+      for (const btn of diffButtons) {
+        if (btn.classList.contains('diff-easy')) btn.textContent = t('easy');
+        else if (btn.classList.contains('diff-medium')) btn.textContent = t('medium');
+        else if (btn.classList.contains('diff-hard')) btn.textContent = t('hard');
+        else if (btn.classList.contains('diff-free')) btn.textContent = t('free');
+        else if (btn.classList.contains('btn-back')) btn.textContent = t('back');
+      }
+
+      const miniMenuBtns = document.querySelectorAll('.mini-menu .btn');
+      if (miniMenuBtns[0]) miniMenuBtns[0].textContent = t('continue');
+      if (miniMenuBtns[1]) miniMenuBtns[1].textContent = t('restart');
+      if (miniMenuBtns[2]) miniMenuBtns[2].textContent = t('to-menu');
+
+      document.getElementById('endGameBtn').textContent = t('end-game-btn');
+      document.getElementById('langBtn').textContent = t('langBtn');
+      document.getElementById('wordInput').placeholder = t('inputPlaceholder');
+    }
+
+    function toggleLanguage() {
+      currentLanguage = currentLanguage === 'ru' ? 'en' : 'ru';
+      document.documentElement.lang = currentLanguage;
+      localStorage.setItem('preferredLanguage', currentLanguage); // ← ЕДИНЫЙ КЛЮЧ!
+      updateTexts();
+      if (document.getElementById('game').classList.contains('active')) {
+        initGame();
+      }
+    }
+
     function getRandomWord(pool) {
       let word;
       do {
@@ -258,16 +350,40 @@
     }
 
     function getWordPool() {
+      const pool = currentLanguage === 'ru' ? WORDS_RU : WORDS_EN;
       if (currentDifficulty === 'free') {
-        return WORDS_FREE;
-      } else {
-        switch (currentDifficulty) {
-          case 3: return WORDS_3;
-          case 5: return WORDS_5;
-          case 7: return WORDS_7;
-          default: return WORDS_5;
+        const allWords = [];
+        for (let key in pool) {
+          allWords.push(...pool[key]);
         }
+        return allWords;
+      } else {
+        if (currentLanguage === 'ru') {
+          if (currentDifficulty === 3) return pool[3] || pool[5];
+          if (currentDifficulty === 5) return pool[5] || pool[3];
+          if (currentDifficulty === 7) return pool[7] || pool[5];
+        } else {
+          if (currentDifficulty === 3) return pool[4] || pool[5];
+          if (currentDifficulty === 5) return pool[5] || pool[4];
+          if (currentDifficulty === 7) return pool[6] || pool[5];
+        }
+        return pool[5] || Object.values(pool)[0];
       }
+    }
+
+    function getWordLengthForDifficulty() {
+      if (currentLanguage === 'ru') {
+        if (currentDifficulty === 3) return 3;
+        if (currentDifficulty === 5) return 5;
+        if (currentDifficulty === 7) return 7;
+        if (currentDifficulty === 'free') return null;
+      } else {
+        if (currentDifficulty === 3) return 4;
+        if (currentDifficulty === 5) return 5;
+        if (currentDifficulty === 7) return 6;
+        if (currentDifficulty === 'free') return null;
+      }
+      return 5;
     }
 
     function initGame() {
@@ -278,8 +394,10 @@
 
       document.getElementById('endGameBtn').style.display = 'none';
       document.getElementById('message').textContent = '';
+      document.getElementById('wordInput').value = '';
+      document.getElementById('wordInput').maxLength = currentWord.length;
+      document.getElementById('wordInput').focus();
 
-      // Очистка сетки
       const grid = document.getElementById('grid');
       grid.innerHTML = '';
 
@@ -296,72 +414,40 @@
         }
         grid.appendChild(row);
       }
-
-      renderKeyboard();
-    }
-
-    function renderKeyboard() {
-      const keyboardEl = document.getElementById('keyboard');
-      keyboardEl.innerHTML = '';
-
-      const letters = 'абвгдежзиклмнопрстуфхцчшщъыьэюя'.split('');
-
-      letters.forEach(letter => {
-        const key = document.createElement('div');
-        key.className = 'key';
-        key.textContent = letter;
-        key.onclick = () => inputLetter(letter);
-        keyboardEl.appendChild(key);
-      });
-
-      const backspace = document.createElement('div');
-      backspace.className = 'key special';
-      backspace.textContent = '⌫';
-      backspace.onclick = () => deleteLetter();
-      keyboardEl.appendChild(backspace);
-
-      const enter = document.createElement('div');
-      enter.className = 'key special';
-      enter.textContent = '↵';
-      enter.onclick = () => submitGuess();
-      keyboardEl.appendChild(enter);
     }
 
     function inputLetter(letter) {
       if (gameState !== 'active') return;
-      const row = document.querySelectorAll('.row')[currentRow];
-      const cells = row.querySelectorAll('.cell');
-      for (let cell of cells) {
-        if (!cell.textContent) {
-          cell.textContent = letter;
-          return;
-        }
+      const input = document.getElementById('wordInput');
+      if (input.value.length < currentWord.length) {
+        input.value += letter.toLowerCase();
       }
     }
 
     function deleteLetter() {
       if (gameState !== 'active') return;
-      const row = document.querySelectorAll('.row')[currentRow];
-      const cells = Array.from(row.querySelectorAll('.cell'));
-      for (let i = cells.length - 1; i >= 0; i--) {
-        if (cells[i].textContent) {
-          cells[i].textContent = '';
-          return;
-        }
-      }
+      const input = document.getElementById('wordInput');
+      input.value = input.value.slice(0, -1);
     }
 
     function submitGuess() {
       if (gameState !== 'active') return;
-      const row = document.querySelectorAll('.row')[currentRow];
-      const cells = row.querySelectorAll('.cell');
-      let guess = '';
-      for (let cell of cells) {
-        if (!cell.textContent) return; // неполное слово
-        guess += cell.textContent;
+      const input = document.getElementById('wordInput');
+      let guess = input.value.trim().toLowerCase();
+
+      if (guess.length !== currentWord.length) {
+        input.value = '';
+        input.focus();
+        return;
       }
 
-      // Анализ
+      const row = document.querySelectorAll('.row')[currentRow];
+      const cells = row.querySelectorAll('.cell');
+
+      for (let i = 0; i < cells.length; i++) {
+        cells[i].textContent = guess[i].toUpperCase();
+      }
+
       const result = analyzeGuess(guess, currentWord);
       for (let i = 0; i < cells.length; i++) {
         if (result[i] === 'correct') {
@@ -373,16 +459,21 @@
 
       if (guess === currentWord) {
         gameState = 'won';
-        document.getElementById('message').textContent = 'Победа!';
+        document.getElementById('message').textContent = t('victory');
         document.getElementById('endGameBtn').style.display = 'block';
+        document.getElementById('wordInput').disabled = true;
         return;
       }
 
       currentRow++;
+      input.value = '';
+      input.focus();
+
       if (currentRow >= 5) {
         gameState = 'lost';
-        document.getElementById('message').textContent = `Слово: ${currentWord}`;
+        document.getElementById('message').textContent = `${t('gameOver')} ${currentWord.toUpperCase()}`;
         document.getElementById('endGameBtn').style.display = 'block';
+        document.getElementById('wordInput').disabled = true;
       }
     }
 
@@ -391,15 +482,13 @@
       const wordChars = word.split('');
       const guessChars = guess.split('');
 
-      // Сначала — точные совпадения
       for (let i = 0; i < word.length; i++) {
         if (guessChars[i] === wordChars[i]) {
           result[i] = 'correct';
-          wordChars[i] = null; // помечаем как использованную
+          wordChars[i] = null;
         }
       }
 
-      // Затем — присутствующие, но не на месте
       for (let i = 0; i < word.length; i++) {
         if (result[i] !== 'correct') {
           const index = wordChars.indexOf(guessChars[i]);
@@ -413,7 +502,6 @@
       return result;
     }
 
-    // === УПРАВЛЕНИЕ ЭКРАНАМИ ===
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -442,11 +530,28 @@
       hideMiniMenu();
     }
 
-    // Инициализация
-    window.addEventListener('DOMContentLoaded', () => {
-      // Убедимся, что клавиатура не вызывается
-      document.querySelectorAll('input, textarea').forEach(el => el.setAttribute('readonly', 'true'));
+    document.addEventListener('DOMContentLoaded', () => {
+      updateTexts();
+
+      const input = document.getElementById('wordInput');
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          submitGuess();
+        }
+      });
+
+      input.addEventListener('input', (e) => {
+        let value = e.target.value;
+        const regex = currentLanguage === 'ru' ? /^[а-яё]*$/i : /^[a-z]*$/i;
+        if (!regex.test(value)) {
+          e.target.value = value.slice(0, -1);
+        }
+        if (value.length > currentWord.length) {
+          e.target.value = value.slice(0, currentWord.length);
+        }
+        e.target.value = e.target.value.toUpperCase();
+      });
     });
   </script>
 </body>
-  </html>
+</html>
