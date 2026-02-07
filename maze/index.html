@@ -131,7 +131,9 @@
       }
     };
 
-    let currentLang = 'ru';
+    // ЕДИНЫЙ ГЛОБАЛЬНЫЙ ЯЗЫК
+    let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLang;
 
     function getTranslation(key) {
       return translations[currentLang][key] || key;
@@ -145,10 +147,11 @@
       document.title = getTranslation('title');
     }
 
-    // Переключение языка
+    // Переключение языка — с сохранением в localStorage
     document.getElementById('langBtn').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
+      localStorage.setItem('preferredLanguage', currentLang); // ← Сохраняем глобально!
       updateText();
     });
 
@@ -443,9 +446,7 @@
                 window.addEventListener('devicemotion', handleMotion);
                 animFrameId = requestAnimationFrame(gameLoop);
               } else {
-                messageEl.textContent = currentLang === 'ru'
-                  ? 'Разреши доступ к сенсорам в настройках.'
-                  : 'Please allow sensor access in settings.';
+                messageEl.textContent = getTranslation('instructions'); // fallback to generic message
               }
             })
             .catch(() => {
@@ -463,7 +464,7 @@
       requestPermission();
     }
 
-    // Инициализация
+    // Инициализация — применяем язык сразу при загрузке
     updateText();
   </script>
 </body>
