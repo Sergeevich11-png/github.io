@@ -47,7 +47,8 @@
       padding: 12px 20px;
       border-radius: 8px;
       display: inline-block;
-      margin: 12px 0;      cursor: pointer;
+      margin: 12px 0;
+      cursor: pointer;
       user-select: none;
       transition: background 0.2s;
     }
@@ -96,7 +97,8 @@
     .legal-content {
       margin-top: 16px;
       font-size: 0.85rem;
-      color: #555;      line-height: 1.5;
+      color: #555;
+      line-height: 1.5;
       display: none;
       padding: 16px;
       background: #fff;
@@ -145,7 +147,8 @@
 
     <p data-key="voluntaryNote">Донаты абсолютно добровольны и не создают никаких обязательств ни для вас, ни для меня. Большое спасибо!</p>
 
-    <div class="legal-toggle" onclick="toggleLegal()" data-key="legalToggle">Правовая информация и важные нюансы ▼</div>    <div class="legal-content" id="legal">
+    <div class="legal-toggle" onclick="toggleLegal()" data-key="legalToggle">Правовая информация и важные нюансы ▼</div>
+    <div class="legal-content" id="legal">
       <p><strong data-key="noObligation">Безвозмездность:</strong> <span data-key="noObligationDesc">Вы вносите денежные средства добровольно и исключительно на основании собственного желания поддержать мой труд. Никакие обязательства, включая возврат платежа или предоставление встречных услуг, не возникают ни с моей стороны, ни с вашей.</span></p>
       <p><strong data-key="purpose">Назначение платежа:</strong> <span data-key="purposeDesc">Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.</span></p>
     </div>
@@ -158,26 +161,6 @@
     function toggleLegal() {
       const content = document.getElementById('legal');
       content.style.display = content.style.display === 'block' ? 'none' : 'block';
-    }
-
-    // Функция копирования номера
-    function copyPhone() {
-      const btn = document.getElementById('show-number-btn');
-      const cleanNumber = btn.getAttribute('data-phone');
-      const feedback = document.getElementById('copy-feedback');
-
-      navigator.clipboard.writeText(cleanNumber).then(() => {
-        const msg = currentLang === 'ru' ? 'Номер скопирован!' : 'Number copied!';
-        feedback.textContent = msg;
-        feedback.style.opacity = '1';
-
-        setTimeout(() => {
-          feedback.style.opacity = '0';
-        }, 1500);
-      }).catch(err => {
-        console.warn('Не удалось скопировать номер:', err);
-        // Опционально: можно показать alert, но лучше молча
-      });
     }
 
     // Локализация
@@ -194,7 +177,8 @@
         purpose: "Назначение платежа:",
         purposeDesc: "Денежные средства предназначены исключительно для поддержания моего творчества. Я имею право распоряжаться ими свободно по своему усмотрению, без ограничения сроков хранения или обязанности отчета о расходовании средств.",
         backBtn: "← Назад в меню"
-      },      en: {
+      },
+      en: {
         donateHeader: "Voluntary Donations",
         introText: "If you enjoyed my work, you can support me with a voluntary donation via the Fast Payment System (FPS). You can send funds:",
         spbOption: "By phone number \"Ozon Bank\"",
@@ -209,7 +193,9 @@
       }
     };
 
-    let currentLang = 'ru';
+    // ЕДИНЫЙ ГЛОБАЛЬНЫЙ ЯЗЫК
+    let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
+    document.documentElement.lang = currentLang;
 
     function getTranslation(key) {
       return translations[currentLang][key] || key;
@@ -223,6 +209,25 @@
       document.title = getTranslation('donateHeader');
     }
 
+    // Функция копирования номера — с учётом текущего языка
+    function copyPhone() {
+      const btn = document.getElementById('show-number-btn');
+      const cleanNumber = btn.getAttribute('data-phone');
+      const feedback = document.getElementById('copy-feedback');
+
+      navigator.clipboard.writeText(cleanNumber).then(() => {
+        const msg = getTranslation('showNumberBtn') + (currentLang === 'ru' ? ' скопирован!' : ' copied!');
+        feedback.textContent = msg;
+        feedback.style.opacity = '1';
+
+        setTimeout(() => {
+          feedback.style.opacity = '0';
+        }, 1500);
+      }).catch(err => {
+        console.warn('Не удалось скопировать номер:', err);
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       updateText();
       document.getElementById('show-number-btn').addEventListener('click', copyPhone);
@@ -231,6 +236,7 @@
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
+      localStorage.setItem('preferredLanguage', currentLang); // ← Сохраняем глобально!
       updateText();
     });
   </script>
