@@ -5,25 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Игры</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#ffcce6;color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden;height:100vh}
-    .heart-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
-    .heart-layer:nth-child(1){opacity:0.15;animation:parallaxUp 50s linear infinite}
-    .heart-layer:nth-child(2){opacity:0.3;animation:parallaxUp 35s linear infinite}
-    .heart-layer:nth-child(3){opacity:0.5;animation:parallaxUp 25s linear infinite}
-    .heart-layer:nth-child(4){opacity:0.7;animation:parallaxUp 18s linear infinite}
-    .heart{
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 50%,#f093fb 100%);color:#333;padding:40px 20px;text-align:center;line-height:1.6;position:relative;overflow-x:hidden;min-height:100vh}
+    .sparkle-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-1;overflow:hidden}
+    .sparkle-layer:nth-child(1){opacity:0.15;animation:parallaxUp 50s linear infinite}
+    .sparkle-layer:nth-child(2){opacity:0.3;animation:parallaxUp 35s linear infinite}
+    .sparkle-layer:nth-child(3){opacity:0.5;animation:parallaxUp 25s linear infinite}
+    .sparkle-layer:nth-child(4){opacity:0.7;animation:parallaxUp 18s linear infinite}
+    .sparkle{
       position:absolute;
       font-size:1.5rem;
-      color:#e74c3c;
+      color:#fff;
       transform:translateY(100vh);
-      animation: floatHeart linear infinite;
+      animation: floatSparkle linear infinite;
+      text-shadow:0 0 10px rgba(255,255,255,0.8);
     }
-    .heart::after{
-      content:'❤️';
+    .sparkle::after{
+      content:'✨';
       display:block;
       animation: swayAndScale 6s ease-in-out infinite alternate;
     }
-    @keyframes floatHeart{
+    @keyframes floatSparkle{
       0%{transform:translateY(100vh)}
       100%{transform:translateY(-10vh)}
     }
@@ -39,7 +40,7 @@
       font-family:'Brush Script MT','Lucida Handwriting',cursive,sans-serif;
       font-size:2.8rem;
       font-weight:bold;
-      background:linear-gradient(to right,#e74c3c,#ff6b6b,#e74c3c);
+      background:linear-gradient(to right,#fff,#f0f0f0,#fff);
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
@@ -49,9 +50,11 @@
       position:relative;
       z-index:5;
       padding:10px 20px;
-      background-color:#ffcce6;
+      background:linear-gradient(135deg,rgba(255,255,255,0.2),rgba(255,255,255,0.1));
       border-radius:20px;
       display:inline-block;
+      border:2px solid rgba(255,255,255,0.3);
+      box-shadow:0 4px 15px rgba(0,0,0,0.2);
     }
     .holiday-title::before{
       content:"";
@@ -60,15 +63,20 @@
       left:0;
       width:100%;
       height:100%;
-      background:linear-gradient(to right,#ffd700,#ffaa00,#ffd700);
+      background:linear-gradient(to right,rgba(255,215,0,0.3),rgba(255,170,0,0.3),rgba(255,215,0,0.3));
       border-radius:20px;
-      opacity:0.2;
+      opacity:0.4;
       z-index:-1;
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    @keyframes shimmer{
+      0%,100%{opacity:0.4}
+      50%{opacity:0.7}
     }
     h1{
       font-size:2.2rem;
       margin-bottom:30px;
-      color:#e74c3c;
+      color:#fff;
       text-shadow:0 2px 6px rgba(0,0,0,.4);
       font-weight:bold;
       position:relative;
@@ -88,28 +96,29 @@
       font-weight:600;
       position:relative;
       z-index:5;
+      border:2px solid rgba(255,255,255,0.4);
     }
     .game-link:hover{
       transform:translateY(-2px);
       box-shadow:0 6px 12px rgba(0,0,0,.4);
     }
-    .game-link.default{background:linear-gradient(to bottom,#e74c3c,#c0392b)}
-    .game-link.default:hover{background:linear-gradient(to bottom,#c0392b,#a93226)}
-    .game-link.support{background:linear-gradient(to bottom,#2ecc71,#27ae60)}
-    .game-link.support:hover{background:linear-gradient(to bottom,#27ae60,#219653)}
-    .game-link.qr{background:linear-gradient(to bottom,#3498db,#2980b9)}
-    .game-link.qr:hover{background:linear-gradient(to bottom,#2980b9,#1f618d)}
-    .game-link.share{background:linear-gradient(to bottom,#f1c40f,#d4ac0d);color:#2c3e50}
-    .game-link.share:hover{background:linear-gradient(to bottom,#d4ac0d,#b7950b)}
+    .game-link.default{background:linear-gradient(to bottom,#667eea,#5568d3)}
+    .game-link.default:hover{background:linear-gradient(to bottom,#5568d3,#4a59c4)}
+    .game-link.support{background:linear-gradient(to bottom,#11998e,#38ef7d)}
+    .game-link.support:hover{background:linear-gradient(to bottom,#38ef7d,#11998e)}
+    .game-link.qr{background:linear-gradient(to bottom,#4facfe,#00f2fe)}
+    .game-link.qr:hover{background:linear-gradient(to bottom,#00f2fe,#4facfe)}
+    .game-link.share{background:linear-gradient(to bottom,#fa709a,#fee140);color:#2c3e50}
+    .game-link.share:hover{background:linear-gradient(to bottom,#fee140,#fa709a)}
     .footer{
       margin-top:40px;
-      color:#ecf0f1;
+      color:#fff;
       font-size:.95rem;
       text-shadow:0 1px 2px rgba(0,0,0,.5);
       position:relative;
       z-index:5;
     }
-    .game-link::after{content:"❤️";margin-left:8px;font-size:.9em}
+    .game-link::after{content:"✨";margin-left:8px;font-size:.9em}
     .game-link.support::after{content:"☕"}
     .game-link.qr::after{content:"📱"}
     .game-link.share::after{content:"🎁"}
@@ -119,27 +128,32 @@
       line-height:1;
       pointer-events:none;
       z-index:10;
+      animation: floatCorner 4s ease-in-out infinite alternate;
     }
-    .top-right-corner{top:10px;right:10px;color:#e74c3c}
-    .top-left-bell{top:10px;left:10px;color:#27ae60}
+    @keyframes floatCorner{
+      0%{transform:translateY(0)}
+      100%{transform:translateY(-10px)}
+    }
+    .top-right-corner{top:10px;right:10px;color:#fff}
+    .top-left-bell{top:10px;left:10px;color:#fff}
     .top-right-bell{color:#ffd700;font-size:3rem;margin-left:5px}
   </style>
 </head>
 <body>
-  <div class="heart-layer" id="layer1"></div>
-  <div class="heart-layer" id="layer2"></div>
-  <div class="heart-layer" id="layer3"></div>
-  <div class="heart-layer" id="layer4"></div>
-  <div class="holiday-title" data-key="holidayTitle">С Днём Святого Валентина ❤️</div>
-  <div class="corner-decoration top-left-bell">💌</div>
-  <div class="corner-decoration top-right-corner">💖<span class="top-right-bell">💘</span></div>
+  <div class="sparkle-layer" id="layer1"></div>
+  <div class="sparkle-layer" id="layer2"></div>
+  <div class="sparkle-layer" id="layer3"></div>
+  <div class="sparkle-layer" id="layer4"></div>
+  <div class="holiday-title" data-key="holidayTitle">Добро пожаловать ✨</div>
+  <div class="corner-decoration top-left-bell">🌟</div>
+  <div class="corner-decoration top-right-corner">💫<span class="top-right-bell">⭐</span></div>
   <h1 data-key="menuTitle">Меню</h1>
   <button id="show-games-btn" class="game-link default" data-key="gamesBtn">Игры</button>
   <div id="games-container" style="display:none;"></div>
   <a href="support/index.html" class="game-link support" data-key="coffeeLink">На кофе</a>
   <button id="share-btn" class="game-link share" data-key="shareBtn">Поделиться</button>
   <button id="lang-toggle" class="game-link default" style="margin-top:10px;">🇷🇺/🌎</button>
-  <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ❤️</div>
+  <div class="footer" data-key="footer">© 2025 • Спасибо за интерес к моим работам! ✨</div>
   <script>
     const layers = [
       {el: document.getElementById('layer1'), count: 20, duration: 50},
@@ -202,12 +216,12 @@
 
     const translations = {
       ru: {
-        holidayTitle: "С Днём Святого Валентина ❤️",
+        holidayTitle: "Добро пожаловать ✨",
         menuTitle: "Меню",
         gamesBtn: "Игры",
         coffeeLink: "На кофе",
         shareBtn: "Поделиться",
-        footer: "© 2025 • Спасибо за интерес к моим работам! ❤️",
+        footer: "© 2025 • Спасибо за интерес к моим работам! ✨",
         hideGamesBtn: "Скрыть игры",
         shareTitle: " игры",
         shareText: "Попробуй  игры!",
@@ -215,12 +229,12 @@
         copyFailed: "Не удалось скопировать ссылку. Скопируй вручную:"
       },
       en: {
-        holidayTitle: "Happy Valentine's Day! ❤️",
+        holidayTitle: "Welcome! ✨",
         menuTitle: "Menu",
         gamesBtn: "Games",
         coffeeLink: "Buy me coffee",
         shareBtn: "Share",
-        footer: "© 2025 • Thank you for your interest in my work! ❤️",
+        footer: "© 2025 • Thank you for your interest in my work! ✨",
         hideGamesBtn: "Hide games",
         shareTitle: " Games",
         shareText: "Try these games!",
@@ -229,7 +243,7 @@
       }
     };
 
-    // Загружаем язык из localStorage или используем 'ru' по умолчанию
+   
     let currentLang = localStorage.getItem('preferredLanguage') || 'ru';
     document.documentElement.lang = currentLang;
 
@@ -253,11 +267,11 @@
     document.getElementById('lang-toggle').addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.lang = currentLang;
-      localStorage.setItem('preferredLanguage', currentLang); // ← Сохраняем выбор!
+      localStorage.setItem('preferredLanguage', currentLang); 
       updateText();
     });
 
-    // Применяем язык при загрузке страницы
+    
     updateText();
   </script>
 </body>
